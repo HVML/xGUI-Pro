@@ -35,8 +35,6 @@
 #include <sys/un.h>
 #include <sys/time.h>
 
-#include "lib/hiboxcompat.h"
-
 #include "server.h"
 #include "unixsocket.h"
 
@@ -63,7 +61,7 @@ int us_listen (USServer* server)
 
     /* create a Unix domain stream socket */
     if ((fd = socket (AF_UNIX, SOCK_STREAM, 0)) < 0) {
-        ULOG_ERR ("Error duing calling `socket` in us_listen: %s\n", strerror (errno));
+        purc_log_error ("Error duing calling `socket` in us_listen: %s\n", strerror (errno));
         return (-1);
     }
 
@@ -80,17 +78,17 @@ int us_listen (USServer* server)
 
     /* bind the name to the descriptor */
     if (bind (fd, (struct sockaddr *) &unix_addr, len) < 0) {
-        ULOG_ERR ("Error duing calling `bind` in us_listen: %s\n", strerror (errno));
+        purc_log_error ("Error duing calling `bind` in us_listen: %s\n", strerror (errno));
         goto error;
     }
     if (chmod (server->config->unixsocket, 0666) < 0) {
-        ULOG_ERR ("Error duing calling `chmod` in us_listen: %s\n", strerror (errno));
+        purc_log_error ("Error duing calling `chmod` in us_listen: %s\n", strerror (errno));
         goto error;
     }
 
     /* tell kernel we're a server */
     if (listen (fd, server->config->backlog) < 0) {
-        ULOG_ERR ("Error duing calling `listen` in us_listen: %s\n", strerror (errno));
+        purc_log_error ("Error duing calling `listen` in us_listen: %s\n", strerror (errno));
         goto error;
     }
 
@@ -127,25 +125,25 @@ static int us_accept (int listenfd, pid_t *pidptr, uid_t *uidptr)
     /* obtain the client's uid from its calling address */
     len -= sizeof(unix_addr.sun_family);
     if (len <= 0) {
-        ULOG_ERR ("Bad peer address in us_accept: %s\n", unix_addr.sun_path);
+        purc_log_error ("Bad peer address in us_accept: %s\n", unix_addr.sun_path);
         goto error;
     }
 
     unix_addr.sun_path[len] = 0;            /* null terminate */
-    ULOG_NOTE ("The peer address in us_accept: %s\n", unix_addr.sun_path);
+    purc_log_info ("The peer address in us_accept: %s\n", unix_addr.sun_path);
     if (stat (unix_addr.sun_path, &statbuf) < 0) {
-        ULOG_ERR ("Failed `stat` in us_accept: %s\n", strerror (errno));
+        purc_log_error ("Failed `stat` in us_accept: %s\n", strerror (errno));
         goto error;
     }
 #ifdef S_ISSOCK    /* not defined for SVR4 */
     if (S_ISSOCK(statbuf.st_mode) == 0) {
-        ULOG_ERR ("Not a socket: %s\n", unix_addr.sun_path);
+        purc_log_error ("Not a socket: %s\n", unix_addr.sun_path);
         goto error;
     }
 #endif
     if ((statbuf.st_mode & (S_IRWXG | S_IRWXO)) ||
             (statbuf.st_mode & S_IRWXU) != S_IRWXU) {
-        ULOG_ERR ("Bad RW mode (rwx------): %s\n", unix_addr.sun_path);
+        purc_log_error ("Bad RW mode (rwx------): %s\n", unix_addr.sun_path);
         goto error;
     }
 
@@ -153,7 +151,7 @@ static int us_accept (int listenfd, pid_t *pidptr, uid_t *uidptr)
     if (statbuf.st_atime < staletime ||
             statbuf.st_ctime < staletime ||
             statbuf.st_mtime < staletime) {
-        ULOG_ERR ("i-node is too old: %s\n", unix_addr.sun_path);
+        purc_log_error ("i-node is too old: %s\n", unix_addr.sun_path);
         goto error;
     }
 
@@ -179,7 +177,7 @@ inline static int
 set_nonblocking (int sock)
 {
     if (fcntl (sock, F_SETFL, fcntl (sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-        ULOG_ERR ("Unable to set socket as non-blocking: %s.",
+        purc_log_error ("Unable to set socket as non-blocking: %s.",
                 strerror (errno));
         return -1;
     }
@@ -198,7 +196,7 @@ us_handle_accept (USServer* server)
 
     usc = (USClient *)calloc (sizeof (USClient), 1);
     if (usc == NULL) {
-        ULOG_ERR ("Failed to callocate memory for Unix socket client\n");
+        purc_log_error ("Failed to callocate memory for Unix socket client\n");
         return NULL;
     }
 
@@ -207,7 +205,7 @@ us_handle_accept (USServer* server)
 
     newfd = us_accept (server->listener, &pid, &uid);
     if (newfd < 0) {
-        ULOG_ERR ("Failed to accept Unix socket: %d\n", newfd);
+        purc_log_error ("Failed to accept Unix socket: %d\n", newfd);
         goto failed;
     }
 
@@ -222,7 +220,7 @@ us_handle_accept (USServer* server)
     server->nr_clients++;
 
     if (server->nr_clients > MAX_CLIENTS_EACH) {
-        ULOG_WARN ("Too many clients (maximal clients allowed: %d)\n", MAX_CLIENTS_EACH);
+        purc_log_warn ("Too many clients (maximal clients allowed: %d)\n", MAX_CLIENTS_EACH);
         server->on_error (server, (SockClient *)usc, PCRDR_SC_SERVICE_UNAVAILABLE);
         goto cleanup;
     }
@@ -231,7 +229,7 @@ us_handle_accept (USServer* server)
         int ret_code;
         ret_code = server->on_accepted (server, (SockClient *)usc);
         if (ret_code != PCRDR_SC_OK) {
-            ULOG_WARN ("Internal error after accepted this client (%d): %d\n",
+            purc_log_warn ("Internal error after accepted this client (%d): %d\n",
                     newfd, ret_code);
 
             server->on_error (server, (SockClient *)usc, ret_code);
@@ -239,7 +237,7 @@ us_handle_accept (USServer* server)
         }
     }
 
-    ULOG_NOTE ("Accepted a client via Unix socket: fd (%d), pid (%d), uid (%d)\n",
+    purc_log_info ("Accepted a client via Unix socket: fd (%d), pid (%d), uid (%d)\n",
             newfd, pid, uid);
     return usc;
 
@@ -438,7 +436,7 @@ static int try_to_read_payload (USServer* server, USClient* usc)
     case US_OPCODE_BIN:
         if ((n = read (usc->fd, usc->packet, usc->header.sz_payload))
                 < usc->header.sz_payload) {
-            ULOG_ERR ("Failed to read payload from Unix socket: %s\n",
+            purc_log_error ("Failed to read payload from Unix socket: %s\n",
                     strerror (errno));
             return PCRDR_ERROR_IO;
         }
@@ -458,7 +456,7 @@ static int try_to_read_payload (USServer* server, USClient* usc)
 
         if ((n = read (usc->fd, usc->packet + usc->sz_read,
                 usc->header.sz_payload)) < usc->header.sz_payload) {
-            ULOG_ERR ("Failed to read payload from Unix socket: %s\n",
+            purc_log_error ("Failed to read payload from Unix socket: %s\n",
                     strerror (errno));
             return PCRDR_ERROR_IO;
         }
@@ -501,7 +499,7 @@ int us_handle_reads (USServer* server, USClient* usc)
     else {
         n = read (usc->fd, &usc->header, sizeof (USFrameHeader));
         if (n < (ssize_t)sizeof (USFrameHeader)) {
-            ULOG_ERR ("Failed to read frame header from Unix socket.\n");
+            purc_log_error ("Failed to read frame header from Unix socket.\n");
             err_code = PCRDR_ERROR_IO;
             sta_code = PCRDR_SC_EXPECTATION_FAILED;
             goto done;
@@ -515,7 +513,7 @@ int us_handle_reads (USServer* server, USClient* usc)
             header.sz_payload = 0;
             n = us_write (server, usc, &header, sizeof (USFrameHeader));
             if (n < 0) {
-                ULOG_ERR ("Error when wirting socket: %s\n", strerror (errno));
+                purc_log_error ("Error when wirting socket: %s\n", strerror (errno));
                 err_code = PCRDR_ERROR_IO;
                 sta_code = PCRDR_SC_IOERR;
             }
@@ -523,7 +521,7 @@ int us_handle_reads (USServer* server, USClient* usc)
         }
 
         case US_OPCODE_CLOSE:
-            ULOG_WARN ("Peer closed\n");
+            purc_log_warn ("Peer closed\n");
             err_code = PCRDR_ERROR_PEER_CLOSED;
             sta_code = 0;
             break;
@@ -555,7 +553,7 @@ int us_handle_reads (USServer* server, USClient* usc)
             /* always reserve a space for null character */
             usc->packet = malloc (usc->sz_packet + 1);
             if (usc->packet == NULL) {
-                ULOG_ERR ("Failed to allocate memory for packet (size: %u)\n",
+                purc_log_error ("Failed to allocate memory for packet (size: %u)\n",
                         usc->sz_packet);
                 err_code = PCRDR_ERROR_NOMEM;
                 sta_code = PCRDR_SC_INSUFFICIENT_STORAGE;
@@ -614,13 +612,13 @@ int us_handle_reads (USServer* server, USClient* usc)
 
             assert (endpoint);
 
-            ULOG_INFO ("Got a PONG frame from endpoint @%s/%s/%s\n",
+            purc_log_info ("Got a PONG frame from endpoint @%s/%s/%s\n",
                     endpoint->host_name, endpoint->app_name, endpoint->runner_name);
             break;
         }
 
         default:
-            ULOG_ERR ("Unknown frame opcode: %d\n", usc->header.op);
+            purc_log_error ("Unknown frame opcode: %d\n", usc->header.op);
             err_code = PCRDR_ERROR_PROTOCOL;
             sta_code = PCRDR_SC_EXPECTATION_FAILED;
             break;
@@ -650,7 +648,7 @@ got_packet:
     update_upper_entity_stats (usc->entity, usc->sz_pending, usc->sz_packet);
 
     if (sta_code != PCRDR_SC_OK) {
-        ULOG_WARN ("Internal error after got a packet: %d\n", sta_code);
+        purc_log_warn ("Internal error after got a packet: %d\n", sta_code);
 
         server->on_error (server, (SockClient*)usc, sta_code);
         err_code = PCRDR_ERROR_SERVER_ERROR;
@@ -738,7 +736,7 @@ int us_send_packet (USServer* server, USClient* usc,
         case US_OPCODE_CLOSE:
             return us_close_client (server, usc);
         default:
-            ULOG_WARN ("Unknown UnixSocket op code: %d\n", op);
+            purc_log_warn ("Unknown UnixSocket op code: %d\n", op);
             return -1;
     }
 
@@ -781,7 +779,7 @@ int us_send_packet (USServer* server, USClient* usc,
     }
 
     if (usc->status & US_ERR) {
-        ULOG_ERR ("Error when sending data to client: fd (%d), pid (%d)\n",
+        purc_log_error ("Error when sending data to client: fd (%d), pid (%d)\n",
                 usc->fd, usc->pid);
         return -1;
     }

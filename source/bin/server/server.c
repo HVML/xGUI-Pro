@@ -27,6 +27,7 @@
 #include <time.h>
 
 #include <purc/purc.h>
+#include <glib.h>
 
 #include "utils/kvlist.h"
 
@@ -35,11 +36,8 @@
 #include "unixsocket.h"
 #include "endpoint.h"
 
-extern hook_t *idle_hook;
-
 static Server the_server;
-
-#define srvcfg mc_global.rdr
+static ServerConfig srvcfg;
 
 #define PTR_FOR_US_LISTENER ((void *)1)
 #define PTR_FOR_WS_LISTENER ((void *)2)
@@ -78,13 +76,13 @@ on_packet (void* sock_srv, SockClient* client,
         Endpoint *endpoint = container_of (client->entity, Endpoint, entity);
 
         if (srvcfg.accesslog) {
-            ULOG_INFO ("Got a packet from @%s/%s/%s:\n%s\n",
+            purc_log_info ("Got a packet from @%s/%s/%s:\n%s\n",
                     endpoint->host_name, endpoint->app_name,
                     endpoint->runner_name, body);
         }
 
         if ((ret = pcrdr_parse_packet (body, sz_body, &msg))) {
-            ULOG_ERR ("Failed pcrdr_parse_packet: %s\n",
+            purc_log_error ("Failed pcrdr_parse_packet: %s\n",
                     purc_get_error_message (ret));
             return PCRDR_SC_UNPROCESSABLE_PACKET;
         }
@@ -142,7 +140,7 @@ on_pending (void* sock_srv, SockClient* client)
     ev.events = EPOLLIN | EPOLLOUT;
     ev.data.ptr = client;
     if (epoll_ctl (the_server.epollfd, EPOLL_CTL_MOD, client->fd, &ev) == -1) {
-        ULOG_ERR ("Failed epoll_ctl to the client fd (%d): %s\n",
+        purc_log_error ("Failed epoll_ctl to the client fd (%d): %s\n",
                 client->fd, strerror (errno));
         assert (0);
     }
@@ -150,7 +148,7 @@ on_pending (void* sock_srv, SockClient* client)
     (void)sock_srv;
 
     if (listen_new_client (client->fd, client, TRUE)) {
-        ULOG_ERR ("Failed to insert to the client AVL tree: %d\n", client->fd);
+        purc_log_error ("Failed to insert to the client AVL tree: %d\n", client->fd);
         assert (0);
     }
 #endif
@@ -165,14 +163,14 @@ on_close (void* sock_srv, SockClient* client)
     (void)sock_srv;
 
     if (epoll_ctl (the_server.epollfd, EPOLL_CTL_DEL, client->fd, NULL) == -1) {
-        ULOG_WARN ("Failed to call epoll_ctl to delete the client fd (%d): %s\n",
+        purc_log_warn ("Failed to call epoll_ctl to delete the client fd (%d): %s\n",
                 client->fd, strerror (errno));
     }
 #elif HAVE(SYS_SELECT_H)
     (void)sock_srv;
 
     if (remove_listening_client (client->fd)) {
-        ULOG_WARN ("Failed to delete the client fd (%d) from the listening fdset\n",
+        purc_log_warn ("Failed to delete the client fd (%d) from the listening fdset\n",
                 client->fd);
     }
 #endif
@@ -184,13 +182,13 @@ on_close (void* sock_srv, SockClient* client)
         if (assemble_endpoint_name (endpoint, endpoint_name) > 0) {
             if (kvlist_delete (&the_server.endpoint_list, endpoint_name)) {
                 the_server.nr_endpoints--;
-                ULOG_INFO ("An authenticated endpoint removed: %s (%p), %d endpoints left.\n",
+                purc_log_info ("An authenticated endpoint removed: %s (%p), %d endpoints left.\n",
                         endpoint_name, endpoint, the_server.nr_endpoints);
             }
         }
         else {
             remove_dangling_endpoint (&the_server, endpoint);
-            ULOG_INFO ("An endpoint not authenticated removed: (%p, %d), %d endpoints left.\n",
+            purc_log_info ("An endpoint not authenticated removed: (%p, %d), %d endpoints left.\n",
                     endpoint, endpoint->status, the_server.nr_endpoints);
         }
 
@@ -296,11 +294,11 @@ prepare_server (void)
 
     // create unix socket
     if ((the_server.us_listener = us_listen (the_server.us_srv)) < 0) {
-        ULOG_ERR ("Unable to listen on Unix socket (%s)\n",
+        purc_log_error ("Unable to listen on Unix socket (%s)\n",
                 srvcfg.unixsocket);
         goto error;
     }
-    ULOG_NOTE ("Listening on Unix Socket (%s)...\n", srvcfg.unixsocket);
+    purc_log_info ("Listening on Unix Socket (%s)...\n", srvcfg.unixsocket);
 
     the_server.us_srv->on_accepted = on_accepted;
     the_server.us_srv->on_packet = on_packet;
@@ -312,10 +310,10 @@ prepare_server (void)
     if (the_server.ws_srv) {
 #if HAVE(LIBSSL)
         if (srvcfg.sslcert && srvcfg.sslkey) {
-            ULOG_NOTE ("==Using TLS/SSL==\n");
+            purc_log_info ("==Using TLS/SSL==\n");
             srvcfg.use_ssl = 1;
             if (ws_initialize_ssl_ctx (the_server.ws_srv)) {
-                ULOG_ERR ("Unable to initialize_ssl_ctx\n");
+                purc_log_error ("Unable to initialize_ssl_ctx\n");
                 goto error;
             }
         }
@@ -324,7 +322,7 @@ prepare_server (void)
 #endif
 
         if ((the_server.ws_listener = ws_listen (the_server.ws_srv)) < 0) {
-            ULOG_ERR ("Unable to listen on Web socket (%s, %s)\n",
+            purc_log_error ("Unable to listen on Web socket (%s, %s)\n",
                     srvcfg.addr, srvcfg.port);
             goto error;
         }
@@ -335,20 +333,20 @@ prepare_server (void)
         the_server.ws_srv->on_close = on_close;
         the_server.ws_srv->on_error = on_error;
     }
-    ULOG_NOTE ("Listening on Web Socket (%s, %s) %s SSL...\n",
+    purc_log_info ("Listening on Web Socket (%s, %s) %s SSL...\n",
             srvcfg.addr, srvcfg.port, srvcfg.sslcert ? "with" : "without");
 
 #if HAVE(SYS_EPOLL_H)
     the_server.epollfd = epoll_create1 (EPOLL_CLOEXEC);
     if (the_server.epollfd == -1) {
-        ULOG_ERR ("Failed to call epoll_create1: %s\n", strerror (errno));
+        purc_log_error ("Failed to call epoll_create1: %s\n", strerror (errno));
         goto error;
     }
 
     ev.events = EPOLLIN;
     ev.data.ptr = PTR_FOR_US_LISTENER;
     if (epoll_ctl (the_server.epollfd, EPOLL_CTL_ADD, the_server.us_listener, &ev) == -1) {
-        ULOG_ERR ("Failed to call epoll_ctl with us_listener (%d): %s\n",
+        purc_log_error ("Failed to call epoll_ctl with us_listener (%d): %s\n",
                 the_server.us_listener, strerror (errno));
         goto error;
     }
@@ -357,7 +355,7 @@ prepare_server (void)
         ev.events = EPOLLIN;
         ev.data.ptr = PTR_FOR_WS_LISTENER;
         if (epoll_ctl (the_server.epollfd, EPOLL_CTL_ADD, the_server.ws_listener, &ev) == -1) {
-            ULOG_ERR ("Failed to call epoll_ctl with ws_listener (%d): %s\n",
+            purc_log_error ("Failed to call epoll_ctl with ws_listener (%d): %s\n",
                     the_server.ws_listener, strerror (errno));
             goto error;
         }
@@ -374,7 +372,7 @@ error:
 }
 
 #if HAVE(SYS_EPOLL_H)
-static void check_server_on_idle (void *data, void *info)
+void check_server_on_idle (void *data, void *info)
 {
     int nfds, n;
     struct epoll_event ev, events[MAX_EVENTS];
@@ -388,7 +386,7 @@ again:
             goto again;
         }
 
-        ULOG_ERR ("Failed to call epoll_wait: %s\n", strerror (errno));
+        purc_log_error ("Failed to call epoll_wait: %s\n", strerror (errno));
         goto error;
     }
     else if (nfds == 0) {
@@ -409,14 +407,14 @@ again:
         if (events[n].data.ptr == PTR_FOR_US_LISTENER) {
             USClient * client = us_handle_accept (the_server.us_srv);
             if (client == NULL) {
-                ULOG_NOTE ("Refused a client\n");
+                purc_log_info ("Refused a client\n");
             }
             else {
                 ev.events = EPOLLIN; /* do not use EPOLLET */
                 ev.data.ptr = client;
                 if (epoll_ctl (the_server.epollfd,
                             EPOLL_CTL_ADD, client->fd, &ev) == -1) {
-                    ULOG_ERR ("Failed epoll_ctl for connected unix socket (%d): %s\n",
+                    purc_log_error ("Failed epoll_ctl for connected unix socket (%d): %s\n",
                             client->fd, strerror (errno));
                     goto error;
                 }
@@ -426,14 +424,14 @@ again:
             WSClient * client = ws_handle_accept (the_server.ws_srv,
                     the_server.ws_listener);
             if (client == NULL) {
-                ULOG_NOTE ("Refused a client\n");
+                purc_log_info ("Refused a client\n");
             }
             else {
                 ev.events = EPOLLIN; /* do not use EPOLLET */
                 ev.data.ptr = client;
                 if (epoll_ctl(the_server.epollfd,
                             EPOLL_CTL_ADD, client->fd, &ev) == -1) {
-                    ULOG_ERR ("Failed epoll_ctl for connected web socket (%d): %s\n",
+                    purc_log_error ("Failed epoll_ctl for connected web socket (%d): %s\n",
                             client->fd, strerror (errno));
                     goto error;
                 }
@@ -462,7 +460,7 @@ again:
                         ev.data.ptr = usc;
                         if (epoll_ctl (the_server.epollfd,
                                     EPOLL_CTL_MOD, usc->fd, &ev) == -1) {
-                            ULOG_ERR ("Failed epoll_ctl for unix socket (%d): %s\n",
+                            purc_log_error ("Failed epoll_ctl for unix socket (%d): %s\n",
                                     usc->fd, strerror (errno));
                             goto error;
                         }
@@ -490,7 +488,7 @@ again:
                         ev.data.ptr = wsc;
                         if (epoll_ctl (the_server.epollfd,
                                     EPOLL_CTL_MOD, wsc->fd, &ev) == -1) {
-                            ULOG_ERR ("Failed epoll_ctl for web socket (%d): %s\n",
+                            purc_log_error ("Failed epoll_ctl for web socket (%d): %s\n",
                                     usc->fd, strerror (errno));
                             goto error;
                         }
@@ -498,7 +496,7 @@ again:
                 }
             }
             else {
-                ULOG_ERR ("Bad socket type (%d): %s\n",
+                purc_log_error ("Bad socket type (%d): %s\n",
                         usc->ct, strerror (errno));
                 goto error;
             }
@@ -511,7 +509,7 @@ error:
 
 #elif HAVE(SYS_SELECT_H)
 
-static void check_server_on_idle (void *data)
+void check_server_on_idle (void *data)
 {
     int retval;
     fd_set rset, wset;
@@ -537,7 +535,7 @@ again:
             goto again;
         }
 
-        ULOG_ERR ("unexpected error of select(): %m\n");
+        purc_log_error ("unexpected error of select(): %m\n");
         goto error;
     }
     else if (retval == 0) {
@@ -570,10 +568,10 @@ again:
                 if (cli_node == PTR_FOR_US_LISTENER) {
                     USClient * client = us_handle_accept (the_server.us_srv);
                     if (client == NULL) {
-                        ULOG_NOTE ("Refused a client\n");
+                        purc_log_info ("Refused a client\n");
                     }
                     else if (listen_new_client (client->fd, client, FALSE)) {
-                        ULOG_ERR ("Failed epoll_ctl for connected unix socket (%d): %s\n",
+                        purc_log_error ("Failed epoll_ctl for connected unix socket (%d): %s\n",
                                 client->fd, strerror (errno));
                         goto error;
                     }
@@ -581,10 +579,10 @@ again:
                 else if (cli_node == PTR_FOR_WS_LISTENER) {
                     WSClient * client = ws_handle_accept (the_server.ws_srv, the_server.ws_listener);
                     if (client == NULL) {
-                        ULOG_NOTE ("Refused a client\n");
+                        purc_log_info ("Refused a client\n");
                     }
                     else if (listen_new_client (client->fd, client, FALSE)) {
-                        ULOG_ERR ("Failed epoll_ctl for connected web socket (%d): %s\n",
+                        purc_log_error ("Failed epoll_ctl for connected web socket (%d): %s\n",
                                 client->fd, strerror (errno));
                         goto error;
                     }
@@ -611,7 +609,7 @@ again:
                         ws_handle_reads (the_server.ws_srv, wsc);
                     }
                     else {
-                        ULOG_ERR ("Bad socket type (%d): %s\n",
+                        purc_log_error ("Bad socket type (%d): %s\n",
                                 usc->ct, strerror (errno));
                         goto error;
                     }
@@ -682,7 +680,7 @@ init_server (void)
     ret = purc_init_ex (PURC_MODULE_EJSON,
             "cn.fmsoft.hvml.purcmc", "renderer", NULL);
     if (ret != PURC_ERROR_OK) {
-        ULOG_ERR ("Failed to initialize the PurC modules: %s\n",
+        purc_log_error ("Failed to initialize the PurC modules: %s\n",
                 purc_get_error_message (ret));
         return -1;
     }
@@ -756,7 +754,7 @@ deinit_server (void)
         endpoint = *(Endpoint **)data;
 
         if (endpoint->type != ET_BUILTIN) {
-            ULOG_INFO ("Deleting endpoint: %s (%p) in deinit_server\n", name, endpoint);
+            purc_log_info ("Deleting endpoint: %s (%p) in deinit_server\n", name, endpoint);
 
             if (endpoint->type == ET_UNIX_SOCKET && endpoint->entity.client) {
                 // avoid a duplicated call of del_endpoint
@@ -782,7 +780,7 @@ deinit_server (void)
 
         while (node) {
             endpoint = (Endpoint *)node->data;
-            ULOG_WARN ("Removing dangling endpoint: %p, type (%d), status (%d)\n",
+            purc_log_warn ("Removing dangling endpoint: %p, type (%d), status (%d)\n",
                     endpoint, endpoint->type, endpoint->status);
 
             if (endpoint->type == ET_UNIX_SOCKET) {
@@ -794,7 +792,7 @@ deinit_server (void)
                 ws_remove_dangling_client (the_server.ws_srv, wsc);
             }
             else {
-                ULOG_WARN ("Bad type of dangling endpoint\n");
+                purc_log_warn ("Bad type of dangling endpoint\n");
             }
 
             del_endpoint (&the_server, endpoint, CDE_EXITING);
@@ -811,7 +809,7 @@ deinit_server (void)
 
     free (the_server.server_name);
 
-    ULOG_INFO ("the_server.nr_endpoints: %d\n", the_server.nr_endpoints);
+    purc_log_info ("the_server.nr_endpoints: %d\n", the_server.nr_endpoints);
     assert (the_server.nr_endpoints == 0);
 
     if (srvcfg.unixsocket) {
@@ -838,30 +836,34 @@ purcmc_rdr_server_init (void)
     srandom (time (NULL));
 
     if ((retval = init_server ())) {
-        ULOG_ERR ("Error during init_server: %s\n",
+        purc_log_error ("Error during init_server: %s\n",
                 pcrdr_get_ret_message (retval));
         goto error;
     }
 
     if ((the_server.us_srv = us_init ((ServerConfig *)&srvcfg)) == NULL) {
-        ULOG_ERR ("Error during us_init\n");
+        purc_log_error ("Error during us_init\n");
         goto error;
     }
 
     if (!srvcfg.nowebsocket) {
         if ((the_server.ws_srv = ws_init ((ServerConfig *)&srvcfg)) == NULL) {
-            ULOG_ERR ("Error during ws_init\n");
+            purc_log_error ("Error during ws_init\n");
             goto error;
         }
     }
     else {
         the_server.ws_srv = NULL;
-        ULOG_NOTE ("Skip web socket");
+        purc_log_info ("Skip web socket");
     }
 
     setup_signal_pipe ();
     prepare_server ();
+
+    /* TODO
+    extern hook_t *idle_hook;
     add_hook (&idle_hook, check_server_on_idle, &the_server);
+    */
 
     return 0;
 

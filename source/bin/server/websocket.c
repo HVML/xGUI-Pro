@@ -50,10 +50,9 @@
 #include <sys/time.h>
 #include <sys/ioctl.h>
 
-#include "lib/hiboxcompat.h"
+#include "utils/sha1.h"
+#include "utils/base64.h"
 
-#include "sha1.h"
-#include "base64.h"
 #include "server.h"
 #include "websocket.h"
 
@@ -530,7 +529,7 @@ ws_initialize_ssl_ctx (WSServer * server)
 out:
   if (ret) {
     SSL_CTX_free (ctx);
-    ULOG_NOTE ("Error: %s\n", ERR_error_string (ERR_get_error (), NULL));
+    purc_log_info ("Error: %s\n", ERR_error_string (ERR_get_error (), NULL));
   }
 
   return ret;
@@ -544,45 +543,45 @@ log_return_message (int ret, int err, const char *fn)
 
   switch (err) {
   case SSL_ERROR_NONE:
-    ULOG_NOTE ("SSL: %s -> SSL_ERROR_NONE\n", fn);
-    ULOG_NOTE ("SSL: TLS/SSL I/O operation completed\n");
+    purc_log_info ("SSL: %s -> SSL_ERROR_NONE\n", fn);
+    purc_log_info ("SSL: TLS/SSL I/O operation completed\n");
     break;
   case SSL_ERROR_WANT_READ:
-    ULOG_NOTE ("SSL: %s -> SSL_ERROR_WANT_READ\n", fn);
-    ULOG_NOTE ("SSL: incomplete, data available for reading\n");
+    purc_log_info ("SSL: %s -> SSL_ERROR_WANT_READ\n", fn);
+    purc_log_info ("SSL: incomplete, data available for reading\n");
     break;
   case SSL_ERROR_WANT_WRITE:
-    ULOG_NOTE ("SSL: %s -> SSL_ERROR_WANT_WRITE\n", fn);
-    ULOG_NOTE ("SSL: incomplete, data available for writing\n");
+    purc_log_info ("SSL: %s -> SSL_ERROR_WANT_WRITE\n", fn);
+    purc_log_info ("SSL: incomplete, data available for writing\n");
     break;
   case SSL_ERROR_ZERO_RETURN:
-    ULOG_NOTE ("SSL: %s -> SSL_ERROR_ZERO_RETURN\n", fn);
-    ULOG_NOTE ("SSL: TLS/SSL connection has been closed\n");
+    purc_log_info ("SSL: %s -> SSL_ERROR_ZERO_RETURN\n", fn);
+    purc_log_info ("SSL: TLS/SSL connection has been closed\n");
     break;
   case SSL_ERROR_WANT_X509_LOOKUP:
-    ULOG_NOTE ("SSL: %s -> SSL_ERROR_WANT_X509_LOOKUP\n", fn);
+    purc_log_info ("SSL: %s -> SSL_ERROR_WANT_X509_LOOKUP\n", fn);
     break;
   case SSL_ERROR_SYSCALL:
-    ULOG_NOTE ("SSL: %s -> SSL_ERROR_SYSCALL\n", fn);
+    purc_log_info ("SSL: %s -> SSL_ERROR_SYSCALL\n", fn);
 
     e = ERR_get_error ();
     if (e > 0)
-      ULOG_NOTE ("SSL: %s -> %s\n", fn, ERR_error_string (e, NULL));
+      purc_log_info ("SSL: %s -> %s\n", fn, ERR_error_string (e, NULL));
 
     /* call was not successful because a fatal error occurred either at the
      * protocol level or a connection failure occurred. */
     if (ret != 0) {
-      ULOG_NOTE ("SSL bogus handshake interrupt: %s\n", strerror (errno));
+      purc_log_info ("SSL bogus handshake interrupt: %s\n", strerror (errno));
       break;
     }
     /* call not yet finished. */
-    ULOG_NOTE ("SSL: handshake interrupted, got EOF\n");
+    purc_log_info ("SSL: handshake interrupted, got EOF\n");
     if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
-      ULOG_NOTE ("SSL: %s -> not yet finished %s\n", fn, strerror (errno));
+      purc_log_info ("SSL: %s -> not yet finished %s\n", fn, strerror (errno));
     break;
   default:
-    ULOG_NOTE ("SSL: %s -> failed fatal error code: %d\n", fn, err);
-    ULOG_NOTE ("SSL: %s\n", ERR_error_string (ERR_get_error (), NULL));
+    purc_log_info ("SSL: %s -> failed fatal error code: %d\n", fn, err);
+    purc_log_info ("SSL: %s\n", ERR_error_string (ERR_get_error (), NULL));
     break;
   }
 }
@@ -611,13 +610,13 @@ shutdown_ssl (WSClient * client)
     break;
   case SSL_ERROR_SYSCALL:
     if (ret == 0) {
-      ULOG_NOTE ("SSL: SSL_shutdown, connection unexpectedly closed by peer.\n");
+      purc_log_info ("SSL: SSL_shutdown, connection unexpectedly closed by peer.\n");
       /* The shutdown is not yet finished. */
       if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
         client->sslstatus = WS_TLS_SHUTTING;
       break;
     }
-    ULOG_NOTE ("SSL: SSL_shutdown, probably unrecoverable, forcing close.\n");
+    purc_log_info ("SSL: SSL_shutdown, probably unrecoverable, forcing close.\n");
   case SSL_ERROR_ZERO_RETURN:
   case SSL_ERROR_WANT_X509_LOOKUP:
   default:
@@ -677,18 +676,18 @@ handle_accept_ssl (WSServer * server, WSClient * client)
   /* attempt to create SSL connection if we don't have one yet */
   if (!client->ssl) {
     if (!(client->ssl = SSL_new (server->ctx))) {
-      ULOG_NOTE ("SSL: SSL_new, new SSL structure failed.\n");
+      purc_log_info ("SSL: SSL_new, new SSL structure failed.\n");
       return;
     }
     if (!SSL_set_fd (client->ssl, client->fd)) {
-      ULOG_NOTE ("SSL: unable to set file descriptor\n");
+      purc_log_info ("SSL: unable to set file descriptor\n");
       return;
     }
   }
 
   /* attempt to initiate the TLS/SSL handshake */
   if (accept_ssl (client) == 0) {
-    ULOG_NOTE ("SSL Accepted: %d %s\n", client->fd, client->remote_ip);
+    purc_log_info ("SSL Accepted: %d %s\n", client->fd, client->remote_ip);
   }
 }
 
@@ -823,7 +822,7 @@ inline static void
 set_nonblocking (int sock)
 {
   if (fcntl (sock, F_SETFL, fcntl (sock, F_GETFL, 0) | O_NONBLOCK) == -1)
-    ULOG_ERR ("Unable to set socket as non-blocking: %s.", strerror (errno));
+    purc_log_error ("Unable to set socket as non-blocking: %s.", strerror (errno));
 }
 
 /* Accept a new connection on a socket and add it to the list of
@@ -841,12 +840,12 @@ accept_client (int listener /*, GSLList ** colist */)
 
   alen = sizeof (raddr);
   if ((newfd = accept (listener, (struct sockaddr *) &raddr, &alen)) == -1)
-    ULOG_ERR ("Unable to set accept: %s.", strerror (errno));
+    purc_log_error ("Unable to set accept: %s.", strerror (errno));
 
   fcntl (newfd, F_SETFD, FD_CLOEXEC);
 
   if (newfd == -1) {
-    ULOG_NOTE ("Unable to accept: %s.", strerror (errno));
+    purc_log_info ("Unable to accept: %s.", strerror (errno));
     return NULL;
   }
   src = ws_get_raddr ((struct sockaddr *) &raddr);
@@ -1332,17 +1331,17 @@ access_log (WSClient * client, int status_code)
   ref = escape_http_request (hdrs->referer);
   ua = escape_http_request (hdrs->agent);
 
-  ULOG_INFO ("%s ", client->remote_ip);
-  ULOG_INFO ("- - ");
-  ULOG_INFO ("%s ", buf);
-  ULOG_INFO ("\"%s ", hdrs->method);
-  ULOG_INFO ("%s ", req ? req : "-");
-  ULOG_INFO ("%s\" ", hdrs->protocol);
-  ULOG_INFO ("%d ", status_code);
-  ULOG_INFO ("%d ", hdrs->buflen);
-  ULOG_INFO ("\"%s\" ", ref ? ref : "-");
-  ULOG_INFO ("\"%s\" ", ua ? ua : "-");
-  ULOG_INFO ("%u\n", elapsed);
+  purc_log_info ("%s ", client->remote_ip);
+  purc_log_info ("- - ");
+  purc_log_info ("%s ", buf);
+  purc_log_info ("\"%s ", hdrs->method);
+  purc_log_info ("%s ", req ? req : "-");
+  purc_log_info ("%s\" ", hdrs->protocol);
+  purc_log_info ("%d ", status_code);
+  purc_log_info ("%d ", hdrs->buflen);
+  purc_log_info ("\"%s\" ", ref ? ref : "-");
+  purc_log_info ("\"%s\" ", ua ? ua : "-");
+  purc_log_info ("%u\n", elapsed);
 
   if (req)
     free (req);
@@ -1494,7 +1493,7 @@ ws_get_handshake (WSServer * server, WSClient * client)
   gettimeofday (&client->end_proc, NULL);
   if (server->config->accesslog)
     access_log (client, 101);
-  ULOG_NOTE ("Active: %d\n", server->nr_clients);
+  purc_log_info ("Active: %d\n", server->nr_clients);
 
   return ws_set_status (client, WS_OK, bytes);
 }
@@ -1553,7 +1552,7 @@ ws_send_packet (WSServer *server, WSClient *client, WSOpcode opcode, const char 
             return ws_send_frame (server, client, WS_OPCODE_CLOSE, NULL, 0);
 
         default:
-            ULOG_WARN ("Unknown WebSocket opcode: %d\n", opcode);
+            purc_log_warn ("Unknown WebSocket opcode: %d\n", opcode);
             return -1;
     }
 
@@ -1589,7 +1588,7 @@ ws_send_packet_safe (WSServer *server, WSClient *client,
             return ws_send_frame (server, client, WS_OPCODE_CLOSE, NULL, 0);
 
         default:
-            ULOG_WARN ("Unknown WebSocket opcode: %d\n", opcode);
+            purc_log_warn ("Unknown WebSocket opcode: %d\n", opcode);
             return -1;
     }
 
@@ -1784,11 +1783,11 @@ ws_validate_string (const char *str, int len)
   uint32_t state = UTF8_VALID;
 
   if (verify_utf8 (&state, str, len) == UTF8_INVAL) {
-    ULOG_NOTE ("Invalid UTF8 data!\n");
+    purc_log_info ("Invalid UTF8 data!\n");
     return 1;
   }
   if (state != UTF8_VALID) {
-    ULOG_NOTE ("Invalid UTF8 data!\n");
+    purc_log_info ("Invalid UTF8 data!\n");
     return 1;
   }
 
@@ -1844,7 +1843,7 @@ ws_manage_payload_opcode (WSServer * server, WSClient * client)
 
   switch ((*frm)->opcode) {
   case WS_OPCODE_CONTINUATION:
-    ULOG_NOTE ("CONTINUATION\n");
+    purc_log_info ("CONTINUATION\n");
     /* first frame can't be a continuation frame */
     if (!(*msg)->fragmented) {
       client->status = WS_ERR | WS_CLOSE;
@@ -1854,21 +1853,21 @@ ws_manage_payload_opcode (WSServer * server, WSClient * client)
     break;
   case WS_OPCODE_TEXT:
   case WS_OPCODE_BIN:
-    ULOG_NOTE ("TEXT\n");
+    purc_log_info ("TEXT\n");
     client->message->opcode = (*frm)->opcode;
     clock_gettime (CLOCK_MONOTONIC, &client->ts);
     ws_handle_text_bin (server, client);
     break;
   case WS_OPCODE_PONG:
-    ULOG_NOTE ("PONG\n");
+    purc_log_info ("PONG\n");
     ws_handle_pong (server, client);
     break;
   case WS_OPCODE_PING:
-    ULOG_NOTE ("PING\n");
+    purc_log_info ("PING\n");
     ws_handle_ping (server, client);
     break;
   default:
-    ULOG_NOTE ("CLOSE\n");
+    purc_log_info ("CLOSE\n");
     ws_handle_close (server, client);
   }
 }
@@ -2117,14 +2116,14 @@ read_client_data (WSServer * server, WSClient * client)
           int ret_code;
           ret_code = server->on_accepted (server, (SockClient *)client);
           if (ret_code != PCRDR_SC_OK) {
-              ULOG_WARN ("Internal error after accepted this WebSocket client (%d): %d\n",
+              purc_log_warn ("Internal error after accepted this WebSocket client (%d): %d\n",
                       client->fd, ret_code);
 
               server->on_error (server, (SockClient *)client, ret_code);
               ws_set_status (client, WS_READING, bytes);
           }
 
-          ULOG_NOTE ("Accepted after handshake: %d %s\n", client->fd, client->remote_ip);
+          purc_log_info ("Accepted after handshake: %d %s\n", client->fd, client->remote_ip);
       }
   }
   /* Message */
@@ -2170,7 +2169,7 @@ ws_cleanup_client (WSServer * server, WSClient * client)
 #endif
 
   server->nr_clients--;
-  ULOG_NOTE ("Active: %d\n", server->nr_clients);
+  purc_log_info ("Active: %d\n", server->nr_clients);
 }
 
 /* Handle a tcp read close connection. */
@@ -2196,7 +2195,7 @@ ws_handle_accept (WSServer * server, int listener)
 
   server->nr_clients++;
   if (server->nr_clients > MAX_CLIENTS_EACH) {
-    ULOG_WARN ("Too busy: %d %s.\n", client->fd, client->remote_ip);
+    purc_log_warn ("Too busy: %d %s.\n", client->fd, client->remote_ip);
 
     http_error (server, client, WS_TOO_BUSY_STR);
     handle_ws_read_close (server, client);
@@ -2322,12 +2321,12 @@ ws_listen (WSServer* server)
   hints.ai_socktype = SOCK_STREAM;
   /*hints.ai_flags = AI_PASSIVE; */
   if (getaddrinfo (server->config->addr, server->config->port, &hints, &ai) != 0)
-    ULOG_ERR ("Unable to set server: %s.", gai_strerror (errno));
+    purc_log_error ("Unable to set server: %s.", gai_strerror (errno));
 
   /* Create a TCP socket.  */
   listener = socket (ai->ai_family, ai->ai_socktype, ai->ai_protocol);
   if (listener < 0) {
-    ULOG_ERR ("Unable to create socket: %s.", strerror (errno));
+    purc_log_error ("Unable to create socket: %s.", strerror (errno));
     goto error;
   }
 
@@ -2335,20 +2334,20 @@ ws_listen (WSServer* server)
 
   /* Options */
   if (setsockopt (listener, SOL_SOCKET, SO_REUSEADDR, &ov, sizeof (ov)) == -1) {
-    ULOG_ERR ("Unable to set setsockopt: %s.", strerror (errno));
+    purc_log_error ("Unable to set setsockopt: %s.", strerror (errno));
     goto close_error;
   }
 
   /* Bind the socket to the address. */
   if (bind (listener, ai->ai_addr, ai->ai_addrlen) != 0) {
-    ULOG_ERR ("Unable to set bind: %s.", strerror (errno));
+    purc_log_error ("Unable to set bind: %s.", strerror (errno));
     goto close_error;
   }
   freeaddrinfo (ai);
 
   /* Tell the socket to accept connections. */
   if (listen (listener, SOMAXCONN) == -1) {
-    ULOG_ERR ("Unable to listen: %s.", strerror (errno));
+    purc_log_error ("Unable to listen: %s.", strerror (errno));
     goto close_error;
   }
 

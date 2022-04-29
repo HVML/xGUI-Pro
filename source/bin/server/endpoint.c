@@ -31,10 +31,6 @@
 #include "unixsocket.h"
 #include "websocket.h"
 
-#define srvcfg mc_global.rdr
-
-#define DEF_NR_HANDLES  4
-
 typedef struct PlainWindow {
     purc_variant_t      id;
     purc_variant_t      title;
@@ -48,7 +44,7 @@ struct SessionInfo_ {
     unsigned int        nr_wins;
 };
 
-Endpoint* new_endpoint (Server* srv, int type, void* client)
+Endpoint* new_endpoint(Server* srv, int type, void* client)
 {
     struct timespec ts;
     Endpoint* endpoint = NULL;
@@ -73,14 +69,14 @@ Endpoint* new_endpoint (Server* srv, int type, void* client)
             endpoint->app_name = NULL;
             endpoint->runner_name = NULL;
             if (!store_dangling_endpoint (srv, endpoint)) {
-                ULOG_ERR ("Failed to store dangling endpoint\n");
+                purc_log_error ("Failed to store dangling endpoint\n");
                 free (endpoint);
                 return NULL;
             }
             break;
 
         default:
-            ULOG_ERR ("Bad endpoint type\n");
+            purc_log_error ("Bad endpoint type\n");
             free (endpoint);
             return NULL;
     }
@@ -100,18 +96,22 @@ Endpoint* new_endpoint (Server* srv, int type, void* client)
 static void remove_window(Endpoint *endpoint, PlainWindow *win)
 {
     if (win->dom_doc) {
-        char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
+        char endpoint_name[PURC_LEN_ENDPOINT_NAME + 1];
 
-        assemble_endpoint_name (endpoint, endpoint_name);
+        assemble_endpoint_name(endpoint, endpoint_name);
+        /* TODO
         domview_detach_window_dom(endpoint_name,
             purc_variant_get_string_const(win->id));
         dom_cleanup_user_data(win->dom_doc);
         pcdom_document_destroy(win->dom_doc);
+        */
     }
 
+    /* TODO
     if (win->parser) {
         pchtml_html_parser_destroy(win->parser);
     }
+    */
 
     if (win->id)
         purc_variant_unref(win->id);
@@ -157,7 +157,7 @@ int del_endpoint (Server* srv, Endpoint* endpoint, int cause)
     if (endpoint->runner_name) free (endpoint->runner_name);
 
     free (endpoint);
-    ULOG_WARN ("Endpoint (%s) removed\n", endpoint_name);
+    purc_log_warn ("Endpoint (%s) removed\n", endpoint_name);
     return 0;
 }
 
@@ -196,21 +196,21 @@ bool make_endpoint_ready (Server* srv,
 {
     if (remove_dangling_endpoint (srv, endpoint)) {
         if (!kvlist_set (&srv->endpoint_list, endpoint_name, &endpoint)) {
-            ULOG_ERR ("Failed to store the endpoint: %s\n", endpoint_name);
+            purc_log_error ("Failed to store the endpoint: %s\n", endpoint_name);
             return false;
         }
 
         endpoint->t_living = purc_get_monotoic_time ();
         endpoint->avl.key = endpoint;
         if (avl_insert (&srv->living_avl, &endpoint->avl)) {
-            ULOG_ERR ("Failed to insert to the living AVL tree: %s\n", endpoint_name);
+            purc_log_error ("Failed to insert to the living AVL tree: %s\n", endpoint_name);
             assert (0);
             return false;
         }
         srv->nr_endpoints++;
     }
     else {
-        ULOG_ERR ("Not found endpoint in dangling list: %s\n", endpoint_name);
+        purc_log_error ("Not found endpoint in dangling list: %s\n", endpoint_name);
         return false;
     }
 
@@ -228,7 +228,7 @@ static void cleanup_endpoint_client (Server *srv, Endpoint* endpoint)
         ws_cleanup_client (srv->ws_srv, (WSClient*)endpoint->entity.client);
     }
 
-    ULOG_WARN ("The endpoint (@%s/%s/%s) client cleaned up\n",
+    purc_log_warn ("The endpoint (@%s/%s/%s) client cleaned up\n",
             endpoint->host_name, endpoint->app_name, endpoint->runner_name);
 }
 
@@ -238,7 +238,7 @@ int check_no_responding_endpoints (Server *srv)
     time_t t_curr = purc_get_monotoic_time ();
     Endpoint *endpoint, *tmp;
 
-    ULOG_INFO ("Checking no responding endpoints...\n");
+    purc_log_info ("Checking no responding endpoints...\n");
 
     avl_for_each_element_safe (&srv->living_avl, endpoint, avl, tmp) {
         char name [PURC_LEN_ENDPOINT_NAME + 1];
@@ -254,7 +254,7 @@ int check_no_responding_endpoints (Server *srv)
             srv->nr_endpoints--;
             n++;
 
-            ULOG_INFO ("A no-responding client: %s\n", name);
+            purc_log_info ("A no-responding client: %s\n", name);
         }
         else if (t_curr > endpoint->t_living + PCRDR_MAX_PING_TIME) {
             if (endpoint->type == ET_UNIX_SOCKET) {
@@ -264,16 +264,16 @@ int check_no_responding_endpoints (Server *srv)
                 ws_ping_client (srv->ws_srv, (WSClient *)endpoint->entity.client);
             }
 
-            ULOG_INFO ("Ping client: %s\n", name);
+            purc_log_info ("Ping client: %s\n", name);
         }
         else {
-            ULOG_INFO ("Skip left endpoints since (%s): %ld\n",
+            purc_log_info ("Skip left endpoints since (%s): %ld\n",
                     name, endpoint->t_living);
             break;
         }
     }
 
-    ULOG_INFO ("Total endpoints removed: %d\n", n);
+    purc_log_info ("Total endpoints removed: %d\n", n);
     return n;
 }
 
@@ -324,7 +324,7 @@ static int send_simple_response(Server* srv, Endpoint* endpoint,
 
     n = pcrdr_serialize_message_to_buffer (msg, buff, sizeof(buff));
     if (n > sizeof(buff)) {
-        ULOG_ERR ("The size of buffer for simple response packet is too small.\n");
+        purc_log_error ("The size of buffer for simple response packet is too small.\n");
         retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
     }
     else if (send_packet_to_endpoint (srv, endpoint, buff, n)) {
@@ -395,7 +395,7 @@ static int authenticate_endpoint(Server* srv, Endpoint* endpoint,
     if (prot_name == NULL || prot_ver > PCRDR_PURCMC_PROTOCOL_VERSION ||
             host_name == NULL || app_name == NULL || runner_name == NULL ||
             strcasecmp (prot_name, PCRDR_PURCMC_PROTOCOL_NAME)) {
-        ULOG_WARN ("Bad packet data for authentication: %s, %s, %s, %s\n",
+        purc_log_warn ("Bad packet data for authentication: %s, %s, %s, %s\n",
                 prot_name, host_name, app_name, runner_name);
         return PCRDR_SC_BAD_REQUEST;
     }
@@ -406,7 +406,7 @@ static int authenticate_endpoint(Server* srv, Endpoint* endpoint,
     if (!purc_is_valid_host_name (host_name) ||
             !purc_is_valid_app_name (app_name) ||
             !purc_is_valid_token (runner_name, PURC_LEN_RUNNER_NAME)) {
-        ULOG_WARN ("Bad endpoint name: @%s/%s/%s\n",
+        purc_log_warn ("Bad endpoint name: @%s/%s/%s\n",
                 host_name, app_name, runner_name);
         return PCRDR_SC_NOT_ACCEPTABLE;
     }
@@ -431,19 +431,19 @@ static int authenticate_endpoint(Server* srv, Endpoint* endpoint,
     purc_assemble_endpoint_name (host_name,
                     app_name, runner_name, endpoint_name);
 
-    ULOG_INFO ("New endpoint: %s (%p)\n", endpoint_name, endpoint);
+    purc_log_info ("New endpoint: %s (%p)\n", endpoint_name, endpoint);
 
     if (kvlist_get (&srv->endpoint_list, endpoint_name)) {
-        ULOG_WARN ("Duplicated endpoint: %s\n", endpoint_name);
+        purc_log_warn ("Duplicated endpoint: %s\n", endpoint_name);
         return PCRDR_SC_CONFLICT;
     }
 
     if (!make_endpoint_ready (srv, endpoint_name, endpoint)) {
-        ULOG_ERR ("Failed to store the endpoint: %s\n", endpoint_name);
+        purc_log_error ("Failed to store the endpoint: %s\n", endpoint_name);
         return PCRDR_SC_INSUFFICIENT_STORAGE;
     }
 
-    ULOG_INFO ("New endpoint stored: %s (%p), %d endpoints totally.\n",
+    purc_log_info ("New endpoint stored: %s (%p), %d endpoints totally.\n",
             endpoint_name, endpoint, srv->nr_endpoints);
 
     endpoint->host_name = strdup (host_name);
@@ -528,7 +528,7 @@ static int on_create_plain_window(Server* srv, Endpoint* endpoint,
         }
 
         if (kvlist_get(&endpoint->session_info->wins, str)) {
-            ULOG_WARN("Duplicated plain window: %s\n", str);
+            purc_log_warn("Duplicated plain window: %s\n", str);
             retv = PCRDR_SC_CONFLICT;
             goto failed;
         }
@@ -597,7 +597,7 @@ static int on_update_plain_window(Server* srv, Endpoint* endpoint,
     }
 
     if (win == NULL) {
-        ULOG_WARN("Specified plain window not found: %s\n", element);
+        purc_log_warn("Specified plain window not found: %s\n", element);
         retv = PCRDR_SC_NOT_FOUND;
         goto failed;
     }
@@ -613,7 +613,9 @@ static int on_update_plain_window(Server* srv, Endpoint* endpoint,
     if (win->title)
         purc_variant_unref(win->title);
     win->title = purc_variant_ref(msg->data);
+    /* TODO
     dom_set_title(win->dom_doc, purc_variant_get_string_const(win->title));
+    */
 
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
@@ -662,7 +664,7 @@ static int on_destroy_plain_window(Server* srv, Endpoint* endpoint,
     }
 
     if (win == NULL) {
-        ULOG_WARN("Specified plain window not found: %s\n", element);
+        purc_log_warn("Specified plain window not found: %s\n", element);
         retv = PCRDR_SC_NOT_FOUND;
         goto failed;
     }
@@ -743,9 +745,10 @@ static int on_load(Server* srv, Endpoint* endpoint,
         goto failed;
     }
 
-    char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
-    assemble_endpoint_name (endpoint, endpoint_name);
+    char endpoint_name[PURC_LEN_ENDPOINT_NAME + 1];
+    assemble_endpoint_name(endpoint, endpoint_name);
 
+    /* TODO
     if (win->dom_doc) {
         domview_detach_window_dom(endpoint_name,
             purc_variant_get_string_const(win->id));
@@ -758,6 +761,7 @@ static int on_load(Server* srv, Endpoint* endpoint,
             purc_variant_get_string_const(win->id),
             purc_variant_get_string_const(win->title),
             win->dom_doc);
+    */
 
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
@@ -837,6 +841,7 @@ static int on_write_begin(Server* srv, Endpoint* endpoint,
         goto failed;
     }
 
+    /* TODO
     if (win->dom_doc) {
         char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
 
@@ -847,6 +852,7 @@ static int on_write_begin(Server* srv, Endpoint* endpoint,
         pcdom_document_destroy(win->dom_doc);
     }
     win->dom_doc = pcdom_interface_document(html_doc);
+    */
 
 failed:
     if (retv != PCRDR_SC_OK) {
@@ -873,8 +879,6 @@ static int on_write_more(Server* srv, Endpoint* endpoint,
     const char *doc_text;
     size_t doc_len;
     PlainWindow *win = NULL;
-
-    pchtml_html_parser_t *parser = NULL;
 
     if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
             msg->data == PURC_VARIANT_INVALID) {
@@ -915,9 +919,11 @@ static int on_write_more(Server* srv, Endpoint* endpoint,
         goto failed;
     }
 
-    parser = win->parser;
-    pchtml_html_parse_chunk_process(parser,
+
+    /* TODO
+    pchtml_html_parse_chunk_process(win->parser,
                 (const unsigned char *)doc_text, doc_len);
+    */
 
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
@@ -984,14 +990,18 @@ static int on_write_end(Server* srv, Endpoint* endpoint,
     pchtml_html_parser_destroy(win->parser);
     win->parser = NULL;
 
+    /* TODO
     dom_prepare_user_data(win->dom_doc, true);
+    */
 
     char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
     assemble_endpoint_name (endpoint, endpoint_name);
+    /* TODO
     domview_attach_window_dom(endpoint_name,
             purc_variant_get_string_const(win->id),
             purc_variant_get_string_const(win->title),
             win->dom_doc);
+    */
 
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
@@ -1003,282 +1013,16 @@ failed:
     return send_simple_response(srv, endpoint, &response);
 }
 
-static PlainWindow *check_dom_request_msg(Endpoint *endpoint,
-        const pcrdr_msg *msg,
-        int *retv, const char **doc_text, size_t *doc_len)
-{
-    PlainWindow *win = NULL;
-
-    if (msg->target == PCRDR_MSG_TARGET_DOM && msg->targetValue != 0) {
-        const char *key;
-        void *data;
-
-        kvlist_for_each(&endpoint->session_info->wins, key, data) {
-            PlainWindow *tmp = *(PlainWindow **)data;
-            if (msg->targetValue == (uint64_t)tmp->dom_doc) {
-                win = tmp;
-                break;
-            }
-        }
-
-        if (win == NULL) {
-            *retv = PCRDR_SC_NOT_FOUND;
-            goto failed;
-        }
-
-        // any operation except `erase` and `clear` should have a text data.
-        const char *op = purc_variant_get_string_const(msg->operation);
-        if (strcmp(PCRDR_OPERATION_ERASE, op) &&
-                strcmp(PCRDR_OPERATION_ERASE, op)) {
-            if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
-                    msg->data == PURC_VARIANT_INVALID) {
-                *retv = PCRDR_SC_BAD_REQUEST;
-                goto failed;
-            }
-
-            *doc_text = purc_variant_get_string_const_ex(msg->data, doc_len);
-            if (*doc_text == NULL || *doc_len == 0) {
-                *retv = PCRDR_SC_BAD_REQUEST;
-                goto failed;
-            }
-        }
-    }
-    else {
-        *retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
-    /* we are in writeBegin/writeMore operations */
-    if (win->parser || win->dom_doc == NULL) {
-        win = NULL;
-        *retv = PCRDR_SC_PRECONDITION_FAILED;
-        goto failed;
-    }
-
-    *retv = PCRDR_SC_OK;
-
-failed:
-    return win;
-}
-
-static pcdom_element_t **get_dom_element_by_handle(pcdom_document_t *dom_doc,
-        const char *handle, size_t *nr_elements)
-{
-    uint64_t hval;
-    char *endptr;
-    pcdom_element_t *element;
-    pcdom_element_t **elements;
-
-    *nr_elements = 0;
-    elements = malloc(sizeof(pcdom_element_t *));
-    if (elements == NULL)
-        return NULL;
-
-    hval = strtoull(handle, &endptr, 16);
-    if (endptr == handle) {
-        goto done;
-    }
-
-    element = dom_get_element_by_handle(dom_doc, hval);
-    if (element == NULL) {
-        goto done;
-    }
-
-    *nr_elements = 1;
-    elements[0] = element;
-
-done:
-    return elements;
-}
-
-static pcdom_element_t **get_dom_elements_by_handles(pcdom_document_t *dom_doc,
-        const char *handles, size_t *nr_elements)
-{
-    pcdom_element_t **elements;
-    size_t allocated = DEF_NR_HANDLES;
-
-    *nr_elements = 0;
-    elements = malloc(sizeof(pcdom_element_t *) * DEF_NR_HANDLES);
-    while (*handles) {
-        uint64_t hval;
-        char *endptr;
-
-        hval = (uint64_t)strtoull(handles, &endptr, 16);
-        if (endptr == handles) {
-            break;
-        }
-
-        elements[*nr_elements] = dom_get_element_by_handle(dom_doc, hval);
-        if (elements[*nr_elements]) {
-            (*nr_elements)++;
-
-            if (*nr_elements > PCRDR_MAX_HANDLES) {
-                goto done;
-            }
-
-            if (*nr_elements > allocated) {
-                allocated += DEF_NR_HANDLES;
-                elements = realloc(elements, sizeof(pcdom_element_t *) * allocated);
-                if (elements == NULL)
-                    return NULL;
-            }
-        }
-        // skip not found
-
-        handles = endptr;
-        while (*handles) {
-            if (isxdigit(*handles))
-                break;
-            handles++;
-        }
-    }
-
-done:
-    return elements;
-}
-
 static int operate_dom_element(Server* srv, Endpoint* endpoint,
         const pcrdr_msg *msg, int op, pcrdr_msg *response)
 {
-    int retv;
-    const char *doc_frag_text;
-    size_t doc_frag_len;
-    PlainWindow *win;
-    pcdom_element_t **elements = NULL;
-    size_t nr_elements;
-    pcdom_node_t *subtree = NULL;
+    int retv = 200;
 
-    win = check_dom_request_msg(endpoint, msg,
-            &retv, &doc_frag_text, &doc_frag_len);
-    if (win == NULL)
-        goto failed;
-
-    if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
-        elements = get_dom_element_by_handle(win->dom_doc,
-                purc_variant_get_string_const(msg->element), &nr_elements);
-    }
-    else if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_HANDLES) {
-        elements = get_dom_elements_by_handles(win->dom_doc,
-                purc_variant_get_string_const(msg->element), &nr_elements);
-    }
-
-    if (elements == NULL) {
-        retv = PCRDR_SC_INSUFFICIENT_STORAGE;
-        goto failed;
-    }
-
-    if (nr_elements == 0) {
-        retv = PCRDR_SC_NOT_FOUND;
-        goto failed;
-    }
-
-    if (op == PCRDR_K_OPERATION_ERASE) {
-        const char *property;
-        property = purc_variant_get_string_const(msg->property);
-        if (property) {
-            for (size_t n = 0; n < nr_elements; n++) {
-                dom_remove_element_attr(win->dom_doc, elements[n], property);
-            }
-        }
-        else {
-            for (size_t n = 0; n < nr_elements; n++) {
-                dom_erase_element(win->dom_doc, elements[n]);
-            }
-        }
-    }
-    else if (op == PCRDR_K_OPERATION_CLEAR) {
-        for (size_t n = 0; n < nr_elements; n++) {
-            dom_clear_element(win->dom_doc, elements[n]);
-        }
-    }
-    else if (op == PCRDR_K_OPERATION_UPDATE) {
-        const char *property;
-        property = purc_variant_get_string_const(msg->property);
-        if (property == NULL) {
-            retv = PCRDR_SC_BAD_REQUEST;
-            goto failed;
-        }
-
-        for (size_t n = 0; n < nr_elements; n++) {
-            dom_update_element(win->dom_doc, elements[n], property,
-                    doc_frag_text, doc_frag_len);
-        }
-    }
-    else {
-        void (*dom_op)(pcdom_document_t *, pcdom_element_t *, pcdom_node_t *);
-        pcdom_element_t *parent = NULL;
-
-        switch (op) {
-        case PCRDR_K_OPERATION_APPEND:
-            dom_op = dom_append_subtree_to_element;
-            parent = elements[0];
-            break;
-
-        case PCRDR_K_OPERATION_PREPEND:
-            dom_op = dom_prepend_subtree_to_element;
-            parent = elements[0];
-            break;
-
-        case PCRDR_K_OPERATION_INSERTBEFORE:
-            dom_op = dom_insert_subtree_before_element;
-            parent = pcdom_interface_element(
-                    pcdom_node_parent(
-                        pcdom_interface_node(elements[0])));
-            break;
-
-        case PCRDR_K_OPERATION_INSERTAFTER:
-            dom_op = dom_insert_subtree_after_element;
-            parent = pcdom_interface_element(
-                    pcdom_node_parent(
-                        pcdom_interface_node(elements[0])));
-            break;
-
-        case PCRDR_K_OPERATION_DISPLACE:
-            dom_op = dom_displace_subtree_of_element;
-            parent = elements[0];
-            break;
-
-        default:
-            retv = PCRDR_SC_BAD_REQUEST;
-            goto failed;
-        }
-
-        subtree = dom_parse_fragment(win->dom_doc,
-                parent, doc_frag_text, doc_frag_len);
-        if (subtree == NULL) {
-            retv = PCRDR_SC_UNPROCESSABLE_PACKET;
-            goto failed;
-        }
-
-        for (size_t n = 1; n < nr_elements; n++) {
-            pcdom_node_t *cloned_subtree;
-            cloned_subtree = dom_clone_subtree(win->dom_doc, subtree, n);
-            if (cloned_subtree == NULL) {
-                retv = PCRDR_SC_INSUFFICIENT_STORAGE;
-                goto failed;
-            }
-
-            dom_op(win->dom_doc, elements[n], cloned_subtree);
-        }
-        dom_op(win->dom_doc, elements[0], subtree);
-        subtree = NULL;
-    }
-
-    char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
-    assemble_endpoint_name (endpoint, endpoint_name);
-    domview_reload_window_dom(endpoint_name,
-        purc_variant_get_string_const(win->id), elements[0]);
-
-failed:
-    if (elements)
-        free(elements);
-    if (subtree)
-        dom_destroy_subtree(subtree);
-
+    /* TODO */
     response->type = PCRDR_MSG_TYPE_RESPONSE;
     response->requestId = msg->requestId;
     response->retCode = retv;
-    response->resultValue = (uint64_t)(win ? win->dom_doc : 0);
+    response->resultValue = 0;
     response->dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
     return retv;
@@ -1486,7 +1230,7 @@ int on_got_message(Server* srv, Endpoint* endpoint, const pcrdr_msg *msg)
         request_handler handler = find_request_handler(
                 purc_variant_get_string_const(msg->operation));
 
-        ULOG_INFO("Got a request message: %s (handler: %p)\n",
+        purc_log_info("Got a request message: %s (handler: %p)\n",
                 purc_variant_get_string_const(msg->operation), handler);
 
         if (handler == NOT_FOUND_HANDLER) {
@@ -1515,12 +1259,12 @@ int on_got_message(Server* srv, Endpoint* endpoint, const pcrdr_msg *msg)
     }
     else if (msg->type == PCRDR_MSG_TYPE_EVENT) {
         // TODO
-        ULOG_INFO("Got an event message: %s\n",
+        purc_log_info("Got an event message: %s\n",
                 purc_variant_get_string_const(msg->event));
     }
     else {
         // TODO
-        ULOG_INFO("Got an unknown message: %d\n", msg->type);
+        purc_log_info("Got an unknown message: %d\n", msg->type);
     }
 
     return PCRDR_SC_OK;
