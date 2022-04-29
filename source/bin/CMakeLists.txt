@@ -1,0 +1,40 @@
+set_property(DIRECTORY . PROPERTY FOLDER "bin")
+
+include(GlobalCommon)
+include(target/xGUIPro)
+include(MyMacros.cmake)
+
+XGUIPRO_EXECUTABLE_DECLARE(xguipro)
+
+list(APPEND xguipro_PRIVATE_INCLUDE_DIRECTORIES
+    "${CMAKE_BINARY_DIR}"
+    "${xGUIPro_DERIVED_SOURCES_DIR}"
+    "${XGUIPRO_LIB_DIR}"
+    "${XGUIPRO_BIN_DIR}"
+)
+
+list(APPEND xguipro_SYSTEM_INCLUDE_DIRECTORIES
+    ${GLIB_INCLUDE_DIRS}
+)
+
+XGUIPRO_EXECUTABLE(xguipro)
+
+set(xguipro_PLATFORM_INDEPENDENT_DIRS
+    "server"
+)
+
+APPEND_ALL_SOURCE_FILES_IN_DIRLIST(xguipro_SOURCES "${xguipro_PLATFORM_INDEPENDENT_DIRS}")
+
+list(APPEND xguipro_SOURCES
+)
+
+set(xguipro_LIBRARIES
+    xGUIPro::xGUIPro
+    PurC::PurC
+    pthread
+)
+
+XGUIPRO_COMPUTE_SOURCES(xguipro)
+XGUIPRO_FRAMEWORK(xguipro)
+
+install(TARGETS xguipro DESTINATION "${EXEC_INSTALL_DIR}/")
