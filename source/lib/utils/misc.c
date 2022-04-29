@@ -117,7 +117,7 @@ void *cbuf_alloc(unsigned int order)
 {
     char path[] = "/tmp/cbuf-XXXXXX";
     unsigned long size = cbuf_size(order);
-    void *ret = NULL;
+    char *ret = NULL;
     int fd;
 
     fd = mkstemp(path);

@@ -1,5 +1,10 @@
 /*
- * base64.h: internal interfaces for Base64.
+ * sha1 - Implementation of SHA1 hash function.
+ *
+ * From http://www.mirrors.wiretapped.net/security/cryptography/hashes/sha1/sha1.c
+ *
+ * Modify the source code with Unix C style by Vincent Wei
+ *  - Nov. 2020
  *
  * Copyright (C) 2020 FMSoft <https://www.fmsoft.cn>
  *
@@ -14,19 +19,34 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
  */
-#ifndef __MC_RENDERER_BASE64_H
-#define __MC_RENDERER_BASE64_H
+
+#ifndef __LIB_UTILS_SHA1_H
+#define __LIB_UTILS_SHA1_H
+
+#include <sys/types.h>
+#include <stdint.h>
+
+typedef struct {
+  uint32_t      state[5];
+  uint32_t      count[2];
+  uint8_t       buffer[64];
+} Sha1Context;
+
+#define SHA1_DIGEST_SIZE          (20)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-char *b64_encode_alloc (const void *buf, size_t size);
+void sha1_init (Sha1Context *context);
+void sha1_update (Sha1Context *context, uint8_t *data, uint32_t len);
+void sha1_finalize (Sha1Context *context, uint8_t *digest);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __MC_RENDERER_BASE64_H */
+#endif /* __LIB_UTILS_SHA1_H */
 
