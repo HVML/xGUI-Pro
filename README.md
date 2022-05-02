@@ -3,14 +3,21 @@
 xGUI Pro is a modern, cross-platform, and advanced [HVML] renderer which is
 based on tailored [WebKit].
 
+**Table of Contents**
+
+[//]:# (START OF TOC)
+
 - [Introduction](#introduction)
 - [Dependencies](#dependencies)
-- [Building xGUI](#building-xgui)
+- [Building xGUI Pro](#building-xgui-pro)
 - [Current Status](#current-status)
 - [TODO List](#todo-list)
 - [Copying](#copying)
    + [Commercial License](#commercial-license)
    + [Special Statement](#special-statement)
+- [Tradmarks](#tradmarks)
+
+[//]:# (END OF TOC)
 
 ## Introduction
 
@@ -92,6 +99,24 @@ If you have already downloaded it, you MUST destroy all of its copies.
 The Exception List is published by FMSoft and may be updated
 from time to time. For more information, please see
 <https://www.fmsoft.cn/exception-list>.
+
+## Tradmarks
+
+1) `HVML` is a registered tradmark of Beijing FMSoft Technologies. Co., Ltd. in China and other contries or regions.
+
+![HVML](https://www.fmsoft.cn/application/files/8116/1931/8777/HVML256132.jpg)
+
+2) `呼噜猫` is a registered tradmark of Beijing FMSoft Technologies. Co., Ltd. in China and other contries or regions.
+
+![呼噜猫](https://www.fmsoft.cn/application/files/8416/1931/8781/256132.jpg)
+
+3) `Purring Cat` is a tradmark of Beijing FMSoft Technologies. Co., Ltd. in China and other contries or regions.
+
+![Purring Cat](https://www.fmsoft.cn/application/files/2816/1931/9258/PurringCat256132.jpg)
+
+4) `PurC` is a tradmark of Beijing FMSoft Technologies. Co., Ltd. in China and other contries or regions.
+
+![PurC](https://www.fmsoft.cn/application/files/5716/2813/0470/PurC256132.jpg)
 
 [Beijing FMSoft Technologies Co., Ltd.]: https://www.fmsoft.cn
 [FMSoft Technologies]: https://www.fmsoft.cn
