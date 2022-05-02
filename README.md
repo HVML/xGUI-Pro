@@ -24,9 +24,9 @@ based on tailored [WebKit].
 During the development of [HybridOS], [Vincent Wei] proposed a new-style,
 general-purpose, and easy-to-learn programming language called `HVML`.
 
-HVML provides a totally different framework other than Java, C#, or Swift.
-In a complete HVML-based application framework, a standalone GUI renderer
-is usually included.
+HVML provides a totally different framework for GUI applications other than
+C/C++ Java, C#, or Swift. In a complete HVML-based application framework,
+a standalone GUI renderer is usually included.
 
 xGUI Pro is an open source implementation of the standalone GUI renderer
 for HVML programs. It licensed under GPLv3, and it is free for commercial
@@ -38,7 +38,8 @@ HVML programs. We reserve the JavaScript engine of WebKit, so it is possible
 to use some popular front-end framwork such as Bootstrap to help xGUI Pro to
 render contents in your user interfaces.
 
-For other open source tools of HVML, please refer to the following repositories:
+For documents and other open source tools of HVML, please refer to the
+following repositories:
 
 - HVML Specifications: <https://github.com/HVML/hvml-docs>.
 - PurC (the Prime hVml inteRpreter for C language): <https://github.com/HVML/purc>.
