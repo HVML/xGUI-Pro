@@ -103,19 +103,19 @@ from time to time. For more information, please see
 
 ## Tradmarks
 
-1) `HVML` is a registered tradmark of Beijing FMSoft Technologies. Co., Ltd. in China and other contries or regions.
+1) `HVML` is a registered tradmark of [FMSoft Technologies] in China and other contries or regions.
 
 ![HVML](https://www.fmsoft.cn/application/files/8116/1931/8777/HVML256132.jpg)
 
-2) `呼噜猫` is a registered tradmark of Beijing FMSoft Technologies. Co., Ltd. in China and other contries or regions.
+2) `呼噜猫` is a registered tradmark of [FMSoft Technologies] in China and other contries or regions.
 
 ![呼噜猫](https://www.fmsoft.cn/application/files/8416/1931/8781/256132.jpg)
 
-3) `Purring Cat` is a tradmark of Beijing FMSoft Technologies. Co., Ltd. in China and other contries or regions.
+3) `Purring Cat` is a tradmark of [FMSoft Technologies] in China and other contries or regions.
 
 ![Purring Cat](https://www.fmsoft.cn/application/files/2816/1931/9258/PurringCat256132.jpg)
 
-4) `PurC` is a tradmark of Beijing FMSoft Technologies. Co., Ltd. in China and other contries or regions.
+4) `PurC` is a tradmark of [FMSoft Technologies] in China and other contries or regions.
 
 ![PurC](https://www.fmsoft.cn/application/files/5716/2813/0470/PurC256132.jpg)
 
