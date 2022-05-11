@@ -1,5 +1,11 @@
 file(MAKE_DIRECTORY ${xGUIPro_DERIVED_SOURCES_DIR}/gtk)
 
+configure_file(gtk/BuildRevision.h.in ${xGUIPro_DERIVED_SOURCES_DIR}/gtk/BuildRevision.h)
+
+list(APPEND xguipro_PRIVATE_INCLUDE_DIRECTORIES
+    "${xGUIPro_DERIVED_SOURCES_DIR}/gtk"
+)
+
 list(APPEND xguipro_SOURCES
     ${xGUIPro_DERIVED_SOURCES_DIR}/gtk/BrowserMarshal.c
     gtk/BrowserCellRendererVariant.c
@@ -15,6 +21,10 @@ list(APPEND xguipro_SOURCES
     gtk/BrowserWindow.c
     gtk/BrowserWindow.h
     gtk/main.c
+)
+
+list(APPEND xguipro_LIBRARIES
+    GTK::GTK
 )
 
 add_custom_command(

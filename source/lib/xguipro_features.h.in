@@ -9,4 +9,4 @@
 #define SYSCONFDIR      "@SYSCONFDIR@"
 #define DATADIR         "@DATADIR@"
 #define EXTHELPERSDIR   "@EXTHELPERSDIR@"
-#define SAVERDIR        "@LIBEXEDIR@"
+#define SAVERDIR        "@LIBEXECDIR@"
