@@ -25,16 +25,14 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/source/cmake")
 # Determine which port will be built
 # -----------------------------------------------------------------------------
 set(ALL_PORTS
-    Linux
+    GTK
     Mac
-    Windows
-    AppleWin
 )
-set(PORT "NOPORT" CACHE STRING "choose which xGUIPro port to build (one of ${ALL_PORTS})")
+set(PORT "NOPORT" CACHE STRING "choose which xGUI Pro port to build (one of ${ALL_PORTS})")
 
 list(FIND ALL_PORTS ${PORT} RET)
 if (${RET} EQUAL -1)
-    message(FATAL_ERROR "Please choose which xGUIPro port to build (one of ${ALL_PORTS})")
+    message(FATAL_ERROR "Please choose which xGUI Pro port to build (one of ${ALL_PORTS})")
 endif ()
 
 string(TOLOWER ${PORT} XGUIPRO_PORT_DIR)
@@ -48,7 +46,7 @@ endif ()
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "7.3.0")
-        message(FATAL_ERROR "GCC 7.3 or newer is required to build xGUIPro. Use a newer GCC version or Clang.")
+        message(FATAL_ERROR "GCC 7.3 or newer is required to build xGUI Pro. Use a newer GCC version or Clang.")
     endif ()
 endif ()
 
@@ -136,8 +134,8 @@ include(GlobalCommon)
 SET_PROJECT_VERSION(0 0 1)
 set(XGUIPRO_API_VERSION 0.0)
 
-set(PACKAGE purcmc)
-set(PACKAGE_NAME "PurC Midnight Commander")
+set(PACKAGE xGUIPro)
+set(PACKAGE_NAME "xGUI Pro")
 set(SYSCONFDIR "${CMAKE_INSTALL_PREFIX}/etc/${PACKAGE}")
 set(DATAROOTDIR "${CMAKE_INSTALL_PREFIX}/share")
 set(LIBEXECDIR "${CMAKE_INSTALL_PREFIX}/libexec")
@@ -155,7 +153,7 @@ PRINT_XGUIPRO_OPTIONS()
 # Packing stuff
 set(CPACK_PACKAGE_VENDOR "FMSoft")
 set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "xGUIPro: An advanced HVML renderer.")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "xGUI Pro: an advanced HVML Renderer based on WebKit.")
 set(CPACK_SOURCE_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_SOURCE_IGNORE_FILES
