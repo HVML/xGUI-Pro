@@ -23,9 +23,11 @@ list(APPEND xguipro_SOURCES
     gtk/main.c
 )
 
-list(APPEND xguipro_LIBRARIES
-    GTK::GTK
-)
+list(APPEND xguipro_LIBRARIES GTK::GTK)
+
+if (HAVE_LIBSSL)
+    list(APPEND xguipro_LIBRARIES ${OPENSSL_LIBRARIES})
+endif (HAVE_LIBSSL)
 
 add_custom_command(
     OUTPUT ${xGUIPro_DERIVED_SOURCES_DIR}/gtk/BrowserMarshal.c

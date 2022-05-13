@@ -18,6 +18,11 @@ add_definitions(-DXGUIPRO_API_VERSION_STRING="${XGUIPRO_API_VERSION}")
 find_package(GLIB 2.44.0 REQUIRED COMPONENTS gio gio-unix gmodule)
 find_package(PurC 0.0.1 REQUIRED)
 
+find_package(OpenSSL)
+if (OpenSSL_FOUND)
+    XGUIPRO_OPTION_DEFINE(HAVE_LIBSSL "Whether having OpenSSL." PUBLIC ON)
+endif (OpenSSL_FOUND)
+
 # Public options specific to the HybridOS port. Do not add any options here unless
 # there is a strong reason we should support changing the value of the option,
 # and the option is not relevant to any other xGUIPro ports.
