@@ -1,18 +1,18 @@
 /**
  ** unixsocket.h: Utilities for Unix Domain Socket.
  **
- ** Copyright (c) 2020 FMSoft (http://www.fmsoft.cn)
+ ** Copyright (C) 2020 ~ 2022 FMSoft <http://www.fmsoft.cn>
  **
  ** Author: Vincent Wei (https://github.com/VincentWei)
  **
- ** This file is part of hiBus.
+ ** This file is part of xGUI Pro, and advanced HVML renderer.
  **
- ** hiBus is free software: you can redistribute it and/or modify
+ ** xGUI Pro is free software: you can redistribute it and/or modify
  ** it under the terms of the GNU General Public License as published by
  ** the Free Software Foundation, either version 3 of the License, or
  ** (at your option) any later version.
  **
- ** hiBus is distributed in the hope that it will be useful,
+ ** xGUI Pro is distributed in the hope that it will be useful,
  ** but WITHOUT ANY WARRANTY; without even the implied warranty of
  ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  ** GNU General Public License for more details.
@@ -20,8 +20,8 @@
  ** along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef MC_RENDERER_UNIXSOCKET_H
-#define MC_RENDERER_UNIXSOCKET_H
+#ifndef XGUIPRO_PURCMC_UNIXSOCKET_H
+#define XGUIPRO_PURCMC_UNIXSOCKET_H
 
 #include <stdint.h>
 #include <time.h>
@@ -113,5 +113,5 @@ int us_close_client (USServer* server, USClient* usc);
 int us_send_packet (USServer* server, USClient* usc,
         USOpcode op, const void *data, unsigned int sz);
 
-#endif /* MC_RENDERER_UNIXSOCKET_H */
+#endif /* XGUIPRO_PURCMC_UNIXSOCKET_H */
 

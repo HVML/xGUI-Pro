@@ -6,7 +6,8 @@
  * \____/  |__/|__//____/\____/\___/_/|_|\___/\__/
  *
  * The MIT License (MIT)
- * Copyright (c) 2009-2020 Gerardo Orellana <hello @ goaccess.io>
+ * Copyright (C) 2009-2020 Gerardo Orellana <hello @ goaccess.io>
+ * Copyright (C) 2021-2022 FMSoft <http://www.fmsoft.cn>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,8 +28,8 @@
  * SOFTWARE.
  */
 
-#ifndef MC_RENDERER_WEBSOCKET_H
-#define MC_RENDERER_WEBSOCKET_H
+#ifndef XGUIPRO_PURCMC_WEBSOCKET_H
+#define XGUIPRO_PURCMC_WEBSOCKET_H
 
 #include <config.h>
 
@@ -286,4 +287,4 @@ int ws_handle_writes (WSServer * server, WSClient * client);
 int ws_remove_dangling_client (WSServer * server, WSClient *client);
 void ws_cleanup_client (WSServer * server, WSClient * client);
 
-#endif // MC_RENDERER_WEBSOCKET_H
+#endif // XGUIPRO_PURCMC_WEBSOCKET_H

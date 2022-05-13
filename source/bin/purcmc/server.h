@@ -1,18 +1,18 @@
 /*
 ** server.h -- The internal interface for renderer server.
 **
-** Copyright (c) 2020 ~ 2021 FMSoft (http://www.fmsoft.cn)
+** Copyright (C) 2020 ~ 2022 FMSoft (http://www.fmsoft.cn)
 **
 ** Author: Vincent Wei (https://github.com/VincentWei)
 **
-** This file is part of PurC Midnight Commander (PurcMC).
+** This file is part of xGUI Pro, an advanced HVML renderer.
 **
-** PurcMC is free software: you can redistribute it and/or modify
+** xGUI Pro is free software: you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License as published by
 ** the Free Software Foundation, either version 3 of the License, or
 ** (at your option) any later version.
 **
-** PurcMC is distributed in the hope that it will be useful,
+** xGUI Pro is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
 ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ** GNU General Public License for more details.
@@ -20,8 +20,8 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#ifndef MC_RENDERER_SERVER_H_
-#define MC_RENDERER_SERVER_H_
+#ifndef XGUIPRO_PURCMC_SERVER_H
+#define XGUIPRO_PURCMC_SERVER_H
 
 #include <config.h>
 #include <time.h>
@@ -186,5 +186,5 @@ typedef struct ServerConfig_
     int backlog;
 } ServerConfig;
 
-#endif /* !MC_RENDERER_SERVER_H_*/
+#endif /* !XGUIPRO_PURCMC_SERVER_H*/
 

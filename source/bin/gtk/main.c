@@ -2,6 +2,7 @@
  * Copyright (C) 2006, 2007 Apple Inc.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2011 Igalia S.L.
+ * Copyright (C) 2022 HVML Community <https://github.com/HVML>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +35,7 @@
 #include <string.h>
 #include <webkit2/webkit2.h>
 
-#define MINI_BROWSER_ERROR (miniBrowserErrorQuark())
+#define XGUI_PRO_ERROR (xGUIProErrorQuark())
 
 static const gchar **uriArguments = NULL;
 static const gchar **ignoreHosts = NULL;
@@ -59,12 +60,12 @@ static gboolean webProcessCrashed;
 static gboolean printVersion;
 
 typedef enum {
-    MINI_BROWSER_ERROR_INVALID_ABOUT_PATH
-} MiniBrowserError;
+    XGUI_PRO_ERROR_INVALID_ABOUT_PATH
+} xGUIProError;
 
-static GQuark miniBrowserErrorQuark()
+static GQuark xGUIProErrorQuark()
 {
-    return g_quark_from_string("minibrowser-quark");
+    return g_quark_from_string("xguipro-quark");
 }
 
 static gchar *argumentToURL(const char *filename)
@@ -534,8 +535,8 @@ static void aboutURISchemeRequestCallback(WebKitURISchemeRequest *request, WebKi
     GError *error;
 
     path = webkit_uri_scheme_request_get_path(request);
-    if (!g_strcmp0(path, "minibrowser")) {
-        contents = g_strdup_printf("<html><body><h1>WebKitGTK MiniBrowser</h1><p>The test browser of WebKitGTK</p><p>WebKit version: %d.%d.%d</p></body></html>",
+    if (!g_strcmp0(path, "xguipro")) {
+        contents = g_strdup_printf("<html><body><h1>WebKitGTK xGUIPro</h1><p>The test browser of WebKitGTK</p><p>WebKit version: %d.%d.%d</p></body></html>",
             webkit_get_major_version(),
             webkit_get_minor_version(),
             webkit_get_micro_version());
@@ -549,7 +550,7 @@ static void aboutURISchemeRequestCallback(WebKitURISchemeRequest *request, WebKi
     else if (!g_strcmp0(path, "itp"))
         aboutITPHandleRequest(request, webContext);
     else {
-        error = g_error_new(MINI_BROWSER_ERROR, MINI_BROWSER_ERROR_INVALID_ABOUT_PATH, "Invalid about:%s page.", path);
+        error = g_error_new(XGUI_PRO_ERROR, XGUI_PRO_ERROR_INVALID_ABOUT_PATH, "Invalid about:%s page.", path);
         webkit_uri_scheme_request_finish_error(request, error);
         g_error_free(error);
     }
@@ -652,8 +653,8 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     if (privateMode || automationMode)
         manager = webkit_website_data_manager_new_ephemeral();
     else {
-        char *dataDirectory = g_build_filename(g_get_user_data_dir(), "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "MiniBrowser", NULL);
-        char *cacheDirectory = g_build_filename(g_get_user_cache_dir(), "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "MiniBrowser", NULL);
+        char *dataDirectory = g_build_filename(g_get_user_data_dir(), "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "xGUIPro", NULL);
+        char *cacheDirectory = g_build_filename(g_get_user_cache_dir(), "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "xGUIPro", NULL);
         manager = webkit_website_data_manager_new("base-data-directory", dataDirectory, "base-cache-directory", cacheDirectory, NULL);
         g_free(dataDirectory);
         g_free(cacheDirectory);
@@ -716,7 +717,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
         WebKitUserContentFilterStore *store = webkit_user_content_filter_store_new(filtersPath);
         g_free(filtersPath);
 
-        webkit_user_content_filter_store_save_from_file(store, "GTKMiniBrowserFilter", contentFilterFile, NULL, (GAsyncReadyCallback)filterSavedCallback, &saveData);
+        webkit_user_content_filter_store_save_from_file(store, "GUIProFilter", contentFilterFile, NULL, (GAsyncReadyCallback)filterSavedCallback, &saveData);
         saveData.mainLoop = g_main_loop_new(NULL, FALSE);
         g_main_loop_run(saveData.mainLoop);
         g_object_unref(store);
@@ -833,7 +834,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    GtkApplication *application = gtk_application_new("org.webkitgtk.MiniBrowser", G_APPLICATION_NON_UNIQUE);
+    GtkApplication *application = gtk_application_new("cn.fmsoft.HVML.xGUIPro", G_APPLICATION_NON_UNIQUE);
     g_signal_connect(application, "startup", G_CALLBACK(startup), NULL);
     g_signal_connect(application, "activate", G_CALLBACK(activate), webkitSettings);
     g_application_run(G_APPLICATION(application), 0, NULL);

@@ -1,18 +1,18 @@
 /*
 ** endpoint.h -- The endpoint management.
 **
-** Copyright (C) 2020, 2021 FMSoft (http://www.fmsoft.cn)
+** Copyright (C) 2021, 2022 FMSoft (http://www.fmsoft.cn)
 **
 ** Author: Vincent Wei (https://github.com/VincentWei)
 **
-** This file is part of PurC Midnight Commander.
+** This file is part of xGUI Pro, an advanced HVML renderer.
 **
-** PurcMC is free software: you can redistribute it and/or modify
+** xGUI Pro is free software: you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License as published by
 ** the Free Software Foundation, either version 3 of the License, or
 ** (at your option) any later version.
 **
-** PurcMC is distributed in the hope that it will be useful,
+** xGUI Pro is distributed in the hope that it will be useful,
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
 ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ** GNU General Public License for more details.
@@ -20,8 +20,8 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#ifndef MC_RENDERER_ENDPOINT_H_
-#define MC_RENDERER_ENDPOINT_H_
+#ifndef XGUIPRO_PURCMC_ENDPOINT_H
+#define XGUIPRO_PURCMC_ENDPOINT_H
 
 #include <time.h>
 #include <stdbool.h>
@@ -69,5 +69,5 @@ assemble_endpoint_name (Endpoint *endpoint, char *buff)
     return 0;
 }
 
-#endif /* !MC_RENDERER_ENDPOINT_H_ */
+#endif /* !XGUIPRO_PURCMC_ENDPOINT_H */
 
