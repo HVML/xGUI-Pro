@@ -36,18 +36,18 @@
 #include "unixsocket.h"
 #include "endpoint.h"
 
-static Server the_server;
-static ServerConfig srvcfg;
+static PurCMCServer the_server;
+static PurCMCServerConfig srvcfg;
 
 #define PTR_FOR_US_LISTENER ((void *)1)
 #define PTR_FOR_WS_LISTENER ((void *)2)
 
 /* callbacks for socket servers */
-// Allocate a Endpoint structure for a new client and send `auth` packet.
+// Allocate a PurCMCEndpoint structure for a new client and send `auth` packet.
 static int
 on_accepted (void* sock_srv, SockClient* client)
 {
-    Endpoint* endpoint;
+    PurCMCEndpoint* endpoint;
 
     (void)sock_srv;
     endpoint = new_endpoint (&the_server,
@@ -73,7 +73,7 @@ on_packet (void* sock_srv, SockClient* client,
     if (type == PT_TEXT) {
         int ret;
         pcrdr_msg *msg;
-        Endpoint *endpoint = container_of (client->entity, Endpoint, entity);
+        PurCMCEndpoint *endpoint = container_of (client->entity, PurCMCEndpoint, entity);
 
         if (srvcfg.accesslog) {
             purc_log_info ("Got a packet from @%s/%s/%s:\n%s\n",
@@ -176,7 +176,7 @@ on_close (void* sock_srv, SockClient* client)
 #endif
 
     if (client->entity) {
-        Endpoint *endpoint = container_of (client->entity, Endpoint, entity);
+        PurCMCEndpoint *endpoint = container_of (client->entity, PurCMCEndpoint, entity);
         char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
 
         if (assemble_endpoint_name (endpoint, endpoint_name) > 0) {
@@ -234,7 +234,7 @@ on_error (void* sock_srv, SockClient* client, int err_code)
 }
 
 static inline void
-update_endpoint_living_time (Server *srv, Endpoint* endpoint)
+update_endpoint_living_time (PurCMCServer *srv, PurCMCEndpoint* endpoint)
 {
     if (endpoint && endpoint->avl.key) {
         time_t t_curr = purc_get_monotoic_time ();
@@ -444,8 +444,8 @@ again:
                 if (events[n].events & EPOLLIN) {
 
                     if (usc->entity) {
-                        Endpoint *endpoint = container_of (usc->entity,
-                                Endpoint, entity);
+                        PurCMCEndpoint *endpoint = container_of (usc->entity,
+                                PurCMCEndpoint, entity);
                         update_endpoint_living_time (&the_server, endpoint);
                     }
 
@@ -472,8 +472,8 @@ again:
 
                 if (events[n].events & EPOLLIN) {
                     if (wsc->entity) {
-                        Endpoint *endpoint = container_of (usc->entity,
-                                Endpoint, entity);
+                        PurCMCEndpoint *endpoint = container_of (usc->entity,
+                                PurCMCEndpoint, entity);
                         update_endpoint_living_time (&the_server, endpoint);
                     }
 
@@ -591,8 +591,8 @@ again:
                     USClient *usc = (USClient *)cli_node;
                     if (usc->ct == CT_UNIX_SOCKET) {
                         if (usc->entity) {
-                            Endpoint *endpoint = container_of (usc->entity,
-                                    Endpoint, entity);
+                            PurCMCEndpoint *endpoint = container_of (usc->entity,
+                                    PurCMCEndpoint, entity);
                             update_endpoint_living_time (&the_server, endpoint);
                         }
 
@@ -601,8 +601,8 @@ again:
                     else if (usc->ct == CT_WEB_SOCKET) {
                         WSClient *wsc = (WSClient *)cli_node;
                         if (wsc->entity) {
-                            Endpoint *endpoint = container_of (usc->entity,
-                                    Endpoint, entity);
+                            PurCMCEndpoint *endpoint = container_of (usc->entity,
+                                    PurCMCEndpoint, entity);
                             update_endpoint_living_time (&the_server, endpoint);
                         }
 
@@ -654,8 +654,8 @@ error:
 static int
 comp_living_time (const void *k1, const void *k2, void *ptr)
 {
-    const Endpoint *e1 = k1;
-    const Endpoint *e2 = k2;
+    const PurCMCEndpoint *e1 = k1;
+    const PurCMCEndpoint *e2 = k2;
 
     (void)ptr;
     return e1->t_living - e2->t_living;
@@ -734,7 +734,7 @@ deinit_server (void)
 {
     const char* name;
     void *next, *data;
-    Endpoint *endpoint, *tmp;
+    PurCMCEndpoint *endpoint, *tmp;
 
 #if !HAVE(SYS_EPOLL_H) && HAVE(SYS_SELECT_H)
     sorted_array_destroy(the_server.fd2clients);
@@ -750,8 +750,8 @@ deinit_server (void)
     }
 
     kvlist_for_each_safe (&the_server.endpoint_list, name, next, data) {
-        //memcpy (&endpoint, data, sizeof (Endpoint*));
-        endpoint = *(Endpoint **)data;
+        //memcpy (&endpoint, data, sizeof (PurCMCEndpoint*));
+        endpoint = *(PurCMCEndpoint **)data;
 
         if (endpoint->type != ET_BUILTIN) {
             purc_log_info ("Deleting endpoint: %s (%p) in deinit_server\n", name, endpoint);
@@ -779,7 +779,7 @@ deinit_server (void)
         gs_list* node = the_server.dangling_endpoints;
 
         while (node) {
-            endpoint = (Endpoint *)node->data;
+            endpoint = (PurCMCEndpoint *)node->data;
             purc_log_warn ("Removing dangling endpoint: %p, type (%d), status (%d)\n",
                     endpoint, endpoint->type, endpoint->status);
 
@@ -841,13 +841,13 @@ purcmc_rdr_server_init (void)
         goto error;
     }
 
-    if ((the_server.us_srv = us_init ((ServerConfig *)&srvcfg)) == NULL) {
+    if ((the_server.us_srv = us_init ((PurCMCServerConfig *)&srvcfg)) == NULL) {
         purc_log_error ("Error during us_init\n");
         goto error;
     }
 
     if (!srvcfg.nowebsocket) {
-        if ((the_server.ws_srv = ws_init ((ServerConfig *)&srvcfg)) == NULL) {
+        if ((the_server.ws_srv = ws_init ((PurCMCServerConfig *)&srvcfg)) == NULL) {
             purc_log_error ("Error during ws_init\n");
             goto error;
         }

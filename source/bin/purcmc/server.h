@@ -42,6 +42,8 @@
 #include "utils/gslist.h"
 #include "utils/sorted-array.h"
 
+#include "purcmc.h"
+
 #define SERVER_FEATURES \
     PCRDR_PURCMC_PROTOCOL_NAME ":" PCRDR_PURCMC_PROTOCOL_VERSION_STRING "\n" \
     "HTML:5.3\n" \
@@ -54,14 +56,14 @@
 /* 1 MiB throttle threshold per client */
 #define SOCK_THROTTLE_THLD  (1024 * 1024)
 
-/* Endpoint types */
+/* PurCMCEndpoint types */
 enum {
     ET_BUILTIN = 0,
     ET_UNIX_SOCKET,
     ET_WEB_SOCKET,
 };
 
-/* Endpoint status */
+/* PurCMCEndpoint status */
 enum {
     ES_AUTHING = 0,     // authenticating
     ES_CLOSING,         // force to close the endpoint due to the failed authentication,
@@ -109,11 +111,8 @@ typedef struct SockClient_ {
     struct UpperEntity_    *entity;
 } SockClient;
 
-struct SessionInfo_;
-typedef struct SessionInfo_ SessionInfo;
-
-/* A PurcMC Endpoint */
-typedef struct Endpoint_
+/* A PurcMC PurCMCEndpoint */
+struct PurCMCEndpoint
 {
     int             type;
     unsigned int    status;
@@ -126,17 +125,17 @@ typedef struct Endpoint_
     char*   app_name;
     char*   runner_name;
 
-    SessionInfo *session_info;
+    PurCMCSessionInfo *session_info;
 
     /* AVL node for the AVL tree sorted by living time */
     struct avl_node avl;
-} Endpoint;
+};
 
 struct WSServer_;
 struct USServer_;
 
-/* The PurcMC Server */
-typedef struct Server_
+/* The PurcMC PurCMCServer */
+struct PurCMCServer
 {
     int us_listener;
     int ws_listener;
@@ -160,7 +159,7 @@ typedef struct Server_
     struct WSServer_ *ws_srv;
     struct USServer_ *us_srv;
 
-    /* The KV list using endpoint name as the key, and Endpoint* as the value */
+    /* The KV list using endpoint name as the key, and PurCMCEndpoint* as the value */
     struct kvlist endpoint_list;
 
     /* The accepted endpoints but waiting for authentification */
@@ -168,23 +167,7 @@ typedef struct Server_
 
     /* the AVL tree of endpoints sorted by living time */
     struct avl_tree living_avl;
-} Server;
-
-/* Config Options */
-typedef struct ServerConfig_
-{
-    int nowebsocket;
-    int accesslog;
-    int use_ssl;
-    char *unixsocket;
-    char *origin;
-    char *addr;
-    char *port;
-    char *sslcert;
-    char *sslkey;
-    int max_frm_size;
-    int backlog;
-} ServerConfig;
+};
 
 #endif /* !XGUIPRO_PURCMC_SERVER_H*/
 

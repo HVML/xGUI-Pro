@@ -38,7 +38,7 @@
 #include "server.h"
 #include "unixsocket.h"
 
-USServer *us_init (const ServerConfig* config)
+USServer *us_init (const PurCMCServerConfig* config)
 {
     USServer *server = calloc (1, sizeof (USServer));
 
@@ -608,7 +608,7 @@ int us_handle_reads (USServer* server, USClient* usc)
             break;
 
         case US_OPCODE_PONG: {
-            Endpoint *endpoint = container_of (usc->entity, Endpoint, entity);
+            PurCMCEndpoint *endpoint = container_of (usc->entity, PurCMCEndpoint, entity);
 
             assert (endpoint);
 

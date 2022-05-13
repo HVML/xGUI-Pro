@@ -39,17 +39,17 @@ typedef struct PlainWindow {
     pchtml_html_parser_t *parser;
 } PlainWindow;
 
-struct SessionInfo_ {
+struct PurCMCSessionInfo {
     struct kvlist       wins;
     unsigned int        nr_wins;
 };
 
-Endpoint* new_endpoint(Server* srv, int type, void* client)
+PurCMCEndpoint* new_endpoint(PurCMCServer* srv, int type, void* client)
 {
     struct timespec ts;
-    Endpoint* endpoint = NULL;
+    PurCMCEndpoint* endpoint = NULL;
 
-    endpoint = (Endpoint *)calloc (sizeof (Endpoint), 1);
+    endpoint = (PurCMCEndpoint *)calloc (sizeof (PurCMCEndpoint), 1);
     if (endpoint == NULL)
         return NULL;
 
@@ -93,7 +93,7 @@ Endpoint* new_endpoint(Server* srv, int type, void* client)
     return endpoint;
 }
 
-static void remove_window(Endpoint *endpoint, PlainWindow *win)
+static void remove_window(PurCMCEndpoint *endpoint, PlainWindow *win)
 {
     if (win->dom_doc) {
         char endpoint_name[PURC_LEN_ENDPOINT_NAME + 1];
@@ -120,7 +120,7 @@ static void remove_window(Endpoint *endpoint, PlainWindow *win)
     free(win);
 }
 
-static void remove_session(Endpoint* endpoint)
+static void remove_session(PurCMCEndpoint* endpoint)
 {
     const char *name;
     void *next, *data;
@@ -139,7 +139,7 @@ static void remove_session(Endpoint* endpoint)
     }
 }
 
-int del_endpoint (Server* srv, Endpoint* endpoint, int cause)
+int del_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint, int cause)
 {
     char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
 
@@ -157,11 +157,11 @@ int del_endpoint (Server* srv, Endpoint* endpoint, int cause)
     if (endpoint->runner_name) free (endpoint->runner_name);
 
     free (endpoint);
-    purc_log_warn ("Endpoint (%s) removed\n", endpoint_name);
+    purc_log_warn ("PurCMCEndpoint (%s) removed\n", endpoint_name);
     return 0;
 }
 
-bool store_dangling_endpoint (Server* srv, Endpoint* endpoint)
+bool store_dangling_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint)
 {
     if (srv->dangling_endpoints == NULL)
         srv->dangling_endpoints = gslist_create (endpoint);
@@ -175,7 +175,7 @@ bool store_dangling_endpoint (Server* srv, Endpoint* endpoint)
     return false;
 }
 
-bool remove_dangling_endpoint (Server* srv, Endpoint* endpoint)
+bool remove_dangling_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint)
 {
     gs_list* node = srv->dangling_endpoints;
 
@@ -191,8 +191,8 @@ bool remove_dangling_endpoint (Server* srv, Endpoint* endpoint)
     return false;
 }
 
-bool make_endpoint_ready (Server* srv,
-        const char* endpoint_name, Endpoint* endpoint)
+bool make_endpoint_ready (PurCMCServer* srv,
+        const char* endpoint_name, PurCMCEndpoint* endpoint)
 {
     if (remove_dangling_endpoint (srv, endpoint)) {
         if (!kvlist_set (&srv->endpoint_list, endpoint_name, &endpoint)) {
@@ -217,7 +217,7 @@ bool make_endpoint_ready (Server* srv,
     return true;
 }
 
-static void cleanup_endpoint_client (Server *srv, Endpoint* endpoint)
+static void cleanup_endpoint_client (PurCMCServer *srv, PurCMCEndpoint* endpoint)
 {
     if (endpoint->type == ET_UNIX_SOCKET) {
         endpoint->entity.client->entity = NULL;
@@ -232,11 +232,11 @@ static void cleanup_endpoint_client (Server *srv, Endpoint* endpoint)
             endpoint->host_name, endpoint->app_name, endpoint->runner_name);
 }
 
-int check_no_responding_endpoints (Server *srv)
+int check_no_responding_endpoints (PurCMCServer *srv)
 {
     int n = 0;
     time_t t_curr = purc_get_monotoic_time ();
-    Endpoint *endpoint, *tmp;
+    PurCMCEndpoint *endpoint, *tmp;
 
     purc_log_info ("Checking no responding endpoints...\n");
 
@@ -277,7 +277,7 @@ int check_no_responding_endpoints (Server *srv)
     return n;
 }
 
-int check_dangling_endpoints (Server *srv)
+int check_dangling_endpoints (PurCMCServer *srv)
 {
     int n = 0;
     time_t t_curr = purc_get_monotoic_time ();
@@ -285,7 +285,7 @@ int check_dangling_endpoints (Server *srv)
 
     while (node) {
         gs_list *next = node->next;
-        Endpoint* endpoint = (Endpoint *)node->data;
+        PurCMCEndpoint* endpoint = (PurCMCEndpoint *)node->data;
 
         if (t_curr > endpoint->t_created + PCRDR_MAX_NO_RESPONDING_TIME) {
             gslist_remove_node (&srv->dangling_endpoints, node);
@@ -300,8 +300,8 @@ int check_dangling_endpoints (Server *srv)
     return n;
 }
 
-int send_packet_to_endpoint (Server* srv,
-        Endpoint* endpoint, const char* body, int len_body)
+int send_packet_to_endpoint (PurCMCServer* srv,
+        PurCMCEndpoint* endpoint, const char* body, int len_body)
 {
     if (endpoint->type == ET_UNIX_SOCKET) {
         return us_send_packet (srv->us_srv, (USClient *)endpoint->entity.client,
@@ -315,7 +315,7 @@ int send_packet_to_endpoint (Server* srv,
     return -1;
 }
 
-static int send_simple_response(Server* srv, Endpoint* endpoint,
+static int send_simple_response(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
@@ -335,7 +335,7 @@ static int send_simple_response(Server* srv, Endpoint* endpoint,
     return retv;
 }
 
-int send_initial_response (Server* srv, Endpoint* endpoint)
+int send_initial_response (PurCMCServer* srv, PurCMCEndpoint* endpoint)
 {
     int retv = PCRDR_SC_OK;
     pcrdr_msg *msg = NULL;
@@ -357,10 +357,10 @@ failed:
     return retv;
 }
 
-typedef int (*request_handler)(Server* srv, Endpoint* endpoint,
+typedef int (*request_handler)(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg);
 
-static int authenticate_endpoint(Server* srv, Endpoint* endpoint,
+static int authenticate_endpoint(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         purc_variant_t data)
 {
     const char* prot_name = NULL;
@@ -454,17 +454,17 @@ static int authenticate_endpoint(Server* srv, Endpoint* endpoint,
     return PCRDR_SC_OK;
 }
 
-static int on_start_session(Server* srv, Endpoint* endpoint,
+static int on_start_session(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
-    SessionInfo *info = NULL;
+    PurCMCSessionInfo *info = NULL;
 
     int retv = authenticate_endpoint(srv, endpoint, msg->data);
 
     endpoint->session_info = NULL;
     if (retv == PCRDR_SC_OK) {
-        info = calloc(1, sizeof(SessionInfo));
+        info = calloc(1, sizeof(PurCMCSessionInfo));
         if (info == NULL) {
             retv = PCRDR_SC_INSUFFICIENT_STORAGE;
         }
@@ -483,7 +483,7 @@ static int on_start_session(Server* srv, Endpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_end_session(Server* srv, Endpoint* endpoint,
+static int on_end_session(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -499,7 +499,7 @@ static int on_end_session(Server* srv, Endpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_create_plain_window(Server* srv, Endpoint* endpoint,
+static int on_create_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
@@ -560,7 +560,7 @@ failed:
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_update_plain_window(Server* srv, Endpoint* endpoint,
+static int on_update_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
@@ -627,7 +627,7 @@ failed:
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_destroy_plain_window(Server* srv, Endpoint* endpoint,
+static int on_destroy_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
@@ -683,7 +683,7 @@ failed:
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_load(Server* srv, Endpoint* endpoint,
+static int on_load(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -773,7 +773,7 @@ failed:
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_write_begin(Server* srv, Endpoint* endpoint,
+static int on_write_begin(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -871,7 +871,7 @@ failed:
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_write_more(Server* srv, Endpoint* endpoint,
+static int on_write_more(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -935,7 +935,7 @@ failed:
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_write_end(Server* srv, Endpoint* endpoint,
+static int on_write_end(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1013,7 +1013,7 @@ failed:
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int operate_dom_element(Server* srv, Endpoint* endpoint,
+static int operate_dom_element(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg, int op, pcrdr_msg *response)
 {
     int retv = 200;
@@ -1028,7 +1028,7 @@ static int operate_dom_element(Server* srv, Endpoint* endpoint,
     return retv;
 }
 
-static int on_append(Server* srv, Endpoint* endpoint, const pcrdr_msg *msg)
+static int on_append(PurCMCServer* srv, PurCMCEndpoint* endpoint, const pcrdr_msg *msg)
 {
     pcrdr_msg response;
 
@@ -1047,7 +1047,7 @@ static int on_append(Server* srv, Endpoint* endpoint, const pcrdr_msg *msg)
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_prepend(Server* srv, Endpoint* endpoint,
+static int on_prepend(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1067,7 +1067,7 @@ static int on_prepend(Server* srv, Endpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_insert_after(Server* srv, Endpoint* endpoint,
+static int on_insert_after(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1087,7 +1087,7 @@ static int on_insert_after(Server* srv, Endpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_insert_before(Server* srv, Endpoint* endpoint,
+static int on_insert_before(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1107,7 +1107,7 @@ static int on_insert_before(Server* srv, Endpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_displace(Server* srv, Endpoint* endpoint,
+static int on_displace(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1127,7 +1127,7 @@ static int on_displace(Server* srv, Endpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_clear(Server* srv, Endpoint* endpoint,
+static int on_clear(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1136,7 +1136,7 @@ static int on_clear(Server* srv, Endpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_erase(Server* srv, Endpoint* endpoint,
+static int on_erase(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1145,7 +1145,7 @@ static int on_erase(Server* srv, Endpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_update(Server* srv, Endpoint* endpoint,
+static int on_update(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1224,7 +1224,7 @@ found:
     return handlers[mid].handler;
 }
 
-int on_got_message(Server* srv, Endpoint* endpoint, const pcrdr_msg *msg)
+int on_got_message(PurCMCServer* srv, PurCMCEndpoint* endpoint, const pcrdr_msg *msg)
 {
     if (msg->type == PCRDR_MSG_TYPE_REQUEST) {
         request_handler handler = find_request_handler(

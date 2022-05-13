@@ -32,7 +32,7 @@
 
 #include "server.h"
 
-Endpoint* new_endpoint (Server* srv, int type, void* client);
+PurCMCEndpoint* new_endpoint (PurCMCServer* srv, int type, void* client);
 
 /* causes to delete endpoint */
 enum {
@@ -43,23 +43,23 @@ enum {
     CDE_NO_RESPONDING,
 };
 
-int del_endpoint (Server* srv, Endpoint* endpoint, int cause);
+int del_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint, int cause);
 
-bool store_dangling_endpoint (Server* srv, Endpoint* endpoint);
-bool remove_dangling_endpoint (Server* srv, Endpoint* endpoint);
-bool make_endpoint_ready (Server* srv,
-        const char* endpoint_name, Endpoint* endpoint);
+bool store_dangling_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint);
+bool remove_dangling_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint);
+bool make_endpoint_ready (PurCMCServer* srv,
+        const char* endpoint_name, PurCMCEndpoint* endpoint);
 
-int check_no_responding_endpoints (Server *srv);
-int check_dangling_endpoints (Server *srv);
+int check_no_responding_endpoints (PurCMCServer *srv);
+int check_dangling_endpoints (PurCMCServer *srv);
 
-int send_packet_to_endpoint (Server* srv,
-        Endpoint* endpoint, const char* body, int len_body);
-int send_initial_response (Server* srv, Endpoint* endpoint);
-int on_got_message(Server* srv, Endpoint* endpoint, const pcrdr_msg *msg);
+int send_packet_to_endpoint (PurCMCServer* srv,
+        PurCMCEndpoint* endpoint, const char* body, int len_body);
+int send_initial_response (PurCMCServer* srv, PurCMCEndpoint* endpoint);
+int on_got_message(PurCMCServer* srv, PurCMCEndpoint* endpoint, const pcrdr_msg *msg);
 
 static inline int
-assemble_endpoint_name (Endpoint *endpoint, char *buff)
+assemble_endpoint_name (PurCMCEndpoint *endpoint, char *buff)
 {
     if (endpoint->host_name && endpoint->app_name && endpoint->runner_name) {
         return purc_assemble_endpoint_name (endpoint->host_name,
