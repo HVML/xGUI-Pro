@@ -34,8 +34,7 @@ struct PurCMCServer;
 typedef struct PurCMCServer PurCMCServer;
 
 /* Config Options */
-typedef struct PurCMCServerConfig
-{
+typedef struct PurCMCServerConfig {
     int nowebsocket;
     int accesslog;
     int use_ssl;
@@ -48,6 +47,9 @@ typedef struct PurCMCServerConfig
     int max_frm_size;
     int backlog;
 } PurCMCServerConfig;
+
+int purcmc_rdr_server_init(PurCMCServerConfig* srvcfg);
+int purcmc_rdr_server_deinit(void);
 
 #endif /* !XGUIPRO_PURCMC_PURCMC_H*/
 

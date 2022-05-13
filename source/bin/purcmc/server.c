@@ -37,7 +37,7 @@
 #include "endpoint.h"
 
 static PurCMCServer the_server;
-static PurCMCServerConfig srvcfg;
+static PurCMCServerConfig* the_srvcfg;
 
 #define PTR_FOR_US_LISTENER ((void *)1)
 #define PTR_FOR_WS_LISTENER ((void *)2)
@@ -75,7 +75,7 @@ on_packet (void* sock_srv, SockClient* client,
         pcrdr_msg *msg;
         PurCMCEndpoint *endpoint = container_of (client->entity, PurCMCEndpoint, entity);
 
-        if (srvcfg.accesslog) {
+        if (the_srvcfg->accesslog) {
             purc_log_info ("Got a packet from @%s/%s/%s:\n%s\n",
                     endpoint->host_name, endpoint->app_name,
                     endpoint->runner_name, body);
@@ -295,10 +295,10 @@ prepare_server (void)
     // create unix socket
     if ((the_server.us_listener = us_listen (the_server.us_srv)) < 0) {
         purc_log_error ("Unable to listen on Unix socket (%s)\n",
-                srvcfg.unixsocket);
+                the_srvcfg->unixsocket);
         goto error;
     }
-    purc_log_info ("Listening on Unix Socket (%s)...\n", srvcfg.unixsocket);
+    purc_log_info ("Listening on Unix Socket (%s)...\n", the_srvcfg->unixsocket);
 
     the_server.us_srv->on_accepted = on_accepted;
     the_server.us_srv->on_packet = on_packet;
@@ -309,21 +309,21 @@ prepare_server (void)
     // create web socket listener if enabled
     if (the_server.ws_srv) {
 #if HAVE(LIBSSL)
-        if (srvcfg.sslcert && srvcfg.sslkey) {
+        if (the_srvcfg->sslcert && the_srvcfg->sslkey) {
             purc_log_info ("==Using TLS/SSL==\n");
-            srvcfg.use_ssl = 1;
+            the_srvcfg->use_ssl = 1;
             if (ws_initialize_ssl_ctx (the_server.ws_srv)) {
                 purc_log_error ("Unable to initialize_ssl_ctx\n");
                 goto error;
             }
         }
 #else
-        srvcfg.sslcert = srvcfg.sslkey = NULL;
+        the_srvcfg->sslcert = the_srvcfg->sslkey = NULL;
 #endif
 
         if ((the_server.ws_listener = ws_listen (the_server.ws_srv)) < 0) {
             purc_log_error ("Unable to listen on Web socket (%s, %s)\n",
-                    srvcfg.addr, srvcfg.port);
+                    the_srvcfg->addr, the_srvcfg->port);
             goto error;
         }
 
@@ -334,7 +334,7 @@ prepare_server (void)
         the_server.ws_srv->on_error = on_error;
     }
     purc_log_info ("Listening on Web Socket (%s, %s) %s SSL...\n",
-            srvcfg.addr, srvcfg.port, srvcfg.sslcert ? "with" : "without");
+            the_srvcfg->addr, the_srvcfg->port, the_srvcfg->sslcert ? "with" : "without");
 
 #if HAVE(SYS_EPOLL_H)
     the_server.epollfd = epoll_create1 (EPOLL_CLOEXEC);
@@ -698,24 +698,24 @@ init_server (void)
     FD_ZERO(&the_server.wfdset);
 #endif
 
-    if (srvcfg.unixsocket == NULL) {
-        srvcfg.unixsocket = g_strdup(PCRDR_PURCMC_US_PATH);
+    if (the_srvcfg->unixsocket == NULL) {
+        the_srvcfg->unixsocket = g_strdup(PCRDR_PURCMC_US_PATH);
     }
 
-    if (srvcfg.addr == NULL) {
-        srvcfg.addr = g_strdup(PCRDR_LOCALHOST);
+    if (the_srvcfg->addr == NULL) {
+        the_srvcfg->addr = g_strdup(PCRDR_LOCALHOST);
     }
 
-    if (srvcfg.port == NULL) {
-        srvcfg.port = g_strdup(PCRDR_PURCMC_WS_PORT);
+    if (the_srvcfg->port == NULL) {
+        the_srvcfg->port = g_strdup(PCRDR_PURCMC_WS_PORT);
     }
 
-    if (srvcfg.max_frm_size == 0) {
-        srvcfg.max_frm_size = PCRDR_MAX_FRAME_PAYLOAD_SIZE;
+    if (the_srvcfg->max_frm_size == 0) {
+        the_srvcfg->max_frm_size = PCRDR_MAX_FRAME_PAYLOAD_SIZE;
     }
 
-    if (srvcfg.backlog == 0) {
-        srvcfg.backlog = SOMAXCONN;
+    if (the_srvcfg->backlog == 0) {
+        the_srvcfg->backlog = SOMAXCONN;
     }
 
     the_server.nr_endpoints = 0;
@@ -812,42 +812,46 @@ deinit_server (void)
     purc_log_info ("the_server.nr_endpoints: %d\n", the_server.nr_endpoints);
     assert (the_server.nr_endpoints == 0);
 
-    if (srvcfg.unixsocket) {
-        g_free (srvcfg.unixsocket);
-        srvcfg.unixsocket = NULL;
+    if (the_srvcfg->unixsocket) {
+        g_free (the_srvcfg->unixsocket);
+        the_srvcfg->unixsocket = NULL;
     }
 
-    if (srvcfg.addr) {
-        g_free (srvcfg.addr);
-        srvcfg.addr = NULL;
+    if (the_srvcfg->addr) {
+        g_free (the_srvcfg->addr);
+        the_srvcfg->addr = NULL;
     }
 
-    if (srvcfg.port) {
-        g_free (srvcfg.port);
-        srvcfg.port = NULL;
+    if (the_srvcfg->port) {
+        g_free (the_srvcfg->port);
+        the_srvcfg->port = NULL;
     }
 }
 
 int
-purcmc_rdr_server_init (void)
+purcmc_rdr_server_init(PurCMCServerConfig* srvcfg)
 {
     int retval;
 
-    srandom (time (NULL));
+    srandom(time(NULL));
 
-    if ((retval = init_server ())) {
+    assert(srvcfg != NULL);
+
+    the_srvcfg = srvcfg;
+
+    if ((retval = init_server())) {
         purc_log_error ("Error during init_server: %s\n",
                 pcrdr_get_ret_message (retval));
         goto error;
     }
 
-    if ((the_server.us_srv = us_init ((PurCMCServerConfig *)&srvcfg)) == NULL) {
+    if ((the_server.us_srv = us_init((PurCMCServerConfig *)the_srvcfg)) == NULL) {
         purc_log_error ("Error during us_init\n");
         goto error;
     }
 
-    if (!srvcfg.nowebsocket) {
-        if ((the_server.ws_srv = ws_init ((PurCMCServerConfig *)&srvcfg)) == NULL) {
+    if (!the_srvcfg->nowebsocket) {
+        if ((the_server.ws_srv = ws_init((PurCMCServerConfig *)the_srvcfg)) == NULL) {
             purc_log_error ("Error during ws_init\n");
             goto error;
         }
@@ -872,7 +876,7 @@ error:
 }
 
 int
-purcmc_rdr_server_term (void)
+purcmc_rdr_server_deinit(void)
 {
     deinit_server ();
     purc_cleanup ();

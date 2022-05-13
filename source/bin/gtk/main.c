@@ -26,16 +26,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cmakeconfig.h"
+#include "config.h"
 
 #include "BrowserWindow.h"
 #include "BuildRevision.h"
+#include "purcmc/purcmc.h"
+
 #include <errno.h>
 #include <gtk/gtk.h>
 #include <string.h>
 #include <webkit2/webkit2.h>
 
 #define XGUI_PRO_ERROR (xGUIProErrorQuark())
+
+static PurCMCServerConfig pcmcSrvCfg;
 
 static const gchar **uriArguments = NULL;
 static const gchar **ignoreHosts = NULL;
@@ -132,6 +136,19 @@ static gboolean parseBackgroundColor(const char *optionName, const char *value, 
 
 static const GOptionEntry commandLineOptions[] =
 {
+    { "pcmc-nowebsocket", 0, 0, G_OPTION_ARG_NONE, &pcmcSrvCfg.nowebsocket, "Without support for WebSocket", NULL },
+    { "pcmc-accesslog", 0, 0, G_OPTION_ARG_NONE, &pcmcSrvCfg.accesslog, "Logging the verbose socket access information", NULL },
+    { "pcmc-unixsocket", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.unixsocket, "The path of the Unix-domain socket to listen on", "PATH" },
+    { "pcmc-addr", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.addr, "The IPv4 address to bind to for WebSocket", NULL },
+    { "pcmc-port", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.port, "The port to bind to for WebSocket", NULL },
+    { "pcmc-origin", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.origin, "The origin to ensure clients send the specified origin header upon the WebSocket handshake", "FQDN" },
+#if HAVE(LIBSSL)
+    { "pcmc-sslcert", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.sslcert, "The path to SSL certificate", "FILE" },
+    { "pcmc-sslkey", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.sslkey, "The path to SSL private key", "FILE" },
+#endif
+    { "pcmc-maxfrmsize", 0, 0, G_OPTION_ARG_INT, &pcmcSrvCfg.max_frm_size, "The maximum size of a socket frame", "BYTES" },
+    { "pcmc-backlog", 0, 0, G_OPTION_ARG_INT, &pcmcSrvCfg.backlog, "The maximum length to which the queue of pending connections.", "NUMBER" },
+
     { "autoplay-policy", 0, 0, G_OPTION_ARG_CALLBACK, parseAutoplayPolicy, "Autoplay policy. Valid options are: allow, allow-without-sound, and deny", NULL },
     { "bg-color", 0, 0, G_OPTION_ARG_CALLBACK, parseBackgroundColor, "Background color", NULL },
     { "editor-mode", 'e', 0, G_OPTION_ARG_NONE, &editorMode, "Run in editor mode", NULL },
