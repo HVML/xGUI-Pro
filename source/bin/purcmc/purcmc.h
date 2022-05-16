@@ -37,6 +37,10 @@ typedef struct purcmc_endpoint purcmc_endpoint;
 struct purcmc_session;
 typedef struct purcmc_session purcmc_session;
 
+/* The PurcMC workspace */
+struct purcmc_workspace;
+typedef struct purcmc_workspace purcmc_workspace;
+
 /* The PurcMC plain window */
 struct purcmc_plainwin;
 typedef struct purcmc_plainwin purcmc_plainwin;
@@ -71,36 +75,56 @@ typedef struct purcmc_server_callbacks {
     purcmc_session *(*create_session)(purcmc_server *, purcmc_endpoint *);
     int (*remove_session)(purcmc_server *, purcmc_session *);
 
-    purcmc_plainwin *(*create_plainwin)(purcmc_server *, purcmc_session *,
-            const char *gid, const char *name,
-            const char *title, const char *style);
-    purcmc_plainwin *(*get_plainwin_by_handle)(purcmc_server *, purcmc_session *,
-            uint64_t handle);
-    purcmc_plainwin *(*get_plainwin_by_id)(purcmc_server *, purcmc_session *,
-            const char* id);
+    /* nullable */
+    purcmc_workspace *(*create_workspace)(purcmc_server *, purcmc_session *,
+            const char *name, const char *title, purc_variant_t properties);
+    /* null if create_workspace is null */
+    int (*update_workspace)(purcmc_server *, purcmc_workspace *,
+            const char *property, const char *value);
+    /* null if create_workspace is null */
+    int (*destroy_workspace)(purcmc_server *, purcmc_workspace *);
 
+    /* nullable */
+    int (*reset_page_group)(purcmc_server *, purcmc_workspace *,
+            const char* content, size_t length);
+    /* null if reset_page_group is null */
+    int (*add_page_group)(purcmc_server *, purcmc_workspace *,
+            const char* content, size_t length);
+
+    purcmc_plainwin *(*create_plainwin)(purcmc_server *, purcmc_session *,
+            const char *gid,
+            const char *name, const char *title, purc_variant_t properties,
+            int *retv);
     int (*update_plainwin)(purcmc_server *, purcmc_plainwin *,
             const char *property, const char *value);
-    int (*remove_plainwin)(purcmc_server *, purcmc_plainwin *);
+    int (*destroy_plainwin)(purcmc_server *, purcmc_plainwin *);
 
     purcmc_page *(*get_plainwin_page)(purcmc_server *, purcmc_plainwin *);
 
+    /* nullable */
+    purcmc_page *(*create_page)(purcmc_server *, purcmc_session *,
+            const char *gid, const char *classes,
+            const char *name, const char *title, purc_variant_t properties,
+            int *retv);
+    /* null if create_page is null */
+    int (*update_page)(purcmc_server *, purcmc_page *,
+            const char *property, const char *value);
+    /* null if create_page is null */
+    int (*destroy_page)(purcmc_server *, purcmc_page *);
+
     purcmc_dom *(*load)(purcmc_server *, purcmc_page *,
-            const char *content, size_t length);
+            const char *content, size_t length, int *retv);
+    purcmc_dom *(*write)(purcmc_server *, purcmc_page *,
+            int op, const char *content, size_t length, int *retv);
 
-    purcmc_dom *(*write_begin)(purcmc_server *, purcmc_page *,
-            const char *content, size_t length);
-
-    purcmc_dom *(*write_more)(purcmc_server *, purcmc_page *,
-            const char *content, size_t length);
-
-    purcmc_dom *(*write_end)(purcmc_server *, purcmc_page *,
-            const char *content, size_t length);
-
-    purcmc_dom *(*get_dom_by_handle)(purcmc_server *, purcmc_session *,
-            uint64_t handle);
     int (*operate_dom_element)(purcmc_server *, purcmc_dom *,
             int op, const pcrdr_msg *msg);
+
+    purc_variant_t (*call_method)(purcmc_server *, purcmc_dom *,
+            const pcrdr_msg *msg, int* retv);
+    int (*call_method_noreturn)(purcmc_server *, purcmc_dom *,
+            const pcrdr_msg *msg);
+
 } purcmc_server_callbacks;
 
 #ifdef __cplusplus
@@ -115,6 +139,9 @@ int purcmc_rdrsrv_check(purcmc_server *srv);
 
 /* Deinitialize the PurCMC renderer server */
 int purcmc_rdrsrv_deinit(purcmc_server *srv);
+
+/* Post a message (generally an event) to HVML interpreter */
+int purcmc_post_message(const pcrdr_msg *msg);
 
 /* Return the host name of the specified endpoint */
 const char *purcmc_endpt_host_name(purcmc_endpoint *endpt);
