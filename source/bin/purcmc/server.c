@@ -36,18 +36,18 @@
 #include "unixsocket.h"
 #include "endpoint.h"
 
-static PurCMCServer the_server;
-static PurCMCServerConfig* the_srvcfg;
+static purcmc_server the_server;
+static purcmc_server_config* the_srvcfg;
 
 #define PTR_FOR_US_LISTENER ((void *)1)
 #define PTR_FOR_WS_LISTENER ((void *)2)
 
 /* callbacks for socket servers */
-// Allocate a PurCMCEndpoint structure for a new client and send `auth` packet.
+// Allocate a purcmc_endpoint structure for a new client and send `auth` packet.
 static int
 on_accepted (void* sock_srv, SockClient* client)
 {
-    PurCMCEndpoint* endpoint;
+    purcmc_endpoint* endpoint;
 
     (void)sock_srv;
     endpoint = new_endpoint (&the_server,
@@ -73,7 +73,7 @@ on_packet (void* sock_srv, SockClient* client,
     if (type == PT_TEXT) {
         int ret;
         pcrdr_msg *msg;
-        PurCMCEndpoint *endpoint = container_of (client->entity, PurCMCEndpoint, entity);
+        purcmc_endpoint *endpoint = container_of (client->entity, purcmc_endpoint, entity);
 
         if (the_srvcfg->accesslog) {
             purc_log_info ("Got a packet from @%s/%s/%s:\n%s\n",
@@ -141,7 +141,7 @@ on_pending (void* sock_srv, SockClient* client)
     ev.data.ptr = client;
     if (epoll_ctl (the_server.epollfd, EPOLL_CTL_MOD, client->fd, &ev) == -1) {
         purc_log_error ("Failed epoll_ctl to the client fd (%d): %s\n",
-                client->fd, strerror (errno));
+                client->fd, strerror(errno));
         assert (0);
     }
 #elif HAVE(SYS_SELECT_H)
@@ -164,7 +164,7 @@ on_close (void* sock_srv, SockClient* client)
 
     if (epoll_ctl (the_server.epollfd, EPOLL_CTL_DEL, client->fd, NULL) == -1) {
         purc_log_warn ("Failed to call epoll_ctl to delete the client fd (%d): %s\n",
-                client->fd, strerror (errno));
+                client->fd, strerror(errno));
     }
 #elif HAVE(SYS_SELECT_H)
     (void)sock_srv;
@@ -176,7 +176,7 @@ on_close (void* sock_srv, SockClient* client)
 #endif
 
     if (client->entity) {
-        PurCMCEndpoint *endpoint = container_of (client->entity, PurCMCEndpoint, entity);
+        purcmc_endpoint *endpoint = container_of (client->entity, purcmc_endpoint, entity);
         char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
 
         if (assemble_endpoint_name (endpoint, endpoint_name) > 0) {
@@ -234,7 +234,7 @@ on_error (void* sock_srv, SockClient* client, int err_code)
 }
 
 static inline void
-update_endpoint_living_time (PurCMCServer *srv, PurCMCEndpoint* endpoint)
+update_endpoint_living_time (purcmc_server *srv, purcmc_endpoint* endpoint)
 {
     if (endpoint && endpoint->avl.key) {
         time_t t_curr = purc_get_monotoic_time ();
@@ -339,7 +339,7 @@ prepare_server (void)
 #if HAVE(SYS_EPOLL_H)
     the_server.epollfd = epoll_create1 (EPOLL_CLOEXEC);
     if (the_server.epollfd == -1) {
-        purc_log_error ("Failed to call epoll_create1: %s\n", strerror (errno));
+        purc_log_error ("Failed to call epoll_create1: %s\n", strerror(errno));
         goto error;
     }
 
@@ -347,7 +347,7 @@ prepare_server (void)
     ev.data.ptr = PTR_FOR_US_LISTENER;
     if (epoll_ctl (the_server.epollfd, EPOLL_CTL_ADD, the_server.us_listener, &ev) == -1) {
         purc_log_error ("Failed to call epoll_ctl with us_listener (%d): %s\n",
-                the_server.us_listener, strerror (errno));
+                the_server.us_listener, strerror(errno));
         goto error;
     }
 
@@ -356,7 +356,7 @@ prepare_server (void)
         ev.data.ptr = PTR_FOR_WS_LISTENER;
         if (epoll_ctl (the_server.epollfd, EPOLL_CTL_ADD, the_server.ws_listener, &ev) == -1) {
             purc_log_error ("Failed to call epoll_ctl with ws_listener (%d): %s\n",
-                    the_server.ws_listener, strerror (errno));
+                    the_server.ws_listener, strerror(errno));
             goto error;
         }
     }
@@ -372,31 +372,31 @@ error:
 }
 
 #if HAVE(SYS_EPOLL_H)
-void check_server_on_idle (void *data, void *info)
+int purcmc_rdrsrv_check(purcmc_server *srv)
 {
     int nfds, n;
     struct epoll_event ev, events[MAX_EVENTS];
 
-    (void)data;
+    (void)srv;
 
 again:
-    nfds = epoll_wait (the_server.epollfd, events, MAX_EVENTS, 0);
+    nfds = epoll_wait(the_server.epollfd, events, MAX_EVENTS, 0);
     if (nfds < 0) {
         if (errno == EINTR) {
             goto again;
         }
 
-        purc_log_error ("Failed to call epoll_wait: %s\n", strerror (errno));
+        purc_log_error("Failed to call epoll_wait: %s\n", strerror(errno));
         goto error;
     }
     else if (nfds == 0) {
-        the_server.t_elapsed = purc_get_monotoic_time () - the_server.t_start;
+        the_server.t_elapsed = purc_get_monotoic_time() - the_server.t_start;
         if (the_server.t_elapsed != the_server.t_elapsed_last) {
             if (the_server.t_elapsed % 10 == 0) {
-                check_no_responding_endpoints (&the_server);
+                check_no_responding_endpoints(&the_server);
             }
             else if (the_server.t_elapsed % 5 == 0) {
-                check_dangling_endpoints (&the_server);
+                check_dangling_endpoints(&the_server);
             }
 
             the_server.t_elapsed_last = the_server.t_elapsed;
@@ -405,34 +405,34 @@ again:
 
     for (n = 0; n < nfds; ++n) {
         if (events[n].data.ptr == PTR_FOR_US_LISTENER) {
-            USClient * client = us_handle_accept (the_server.us_srv);
+            USClient * client = us_handle_accept(the_server.us_srv);
             if (client == NULL) {
-                purc_log_info ("Refused a client\n");
-            }
-            else {
-                ev.events = EPOLLIN; /* do not use EPOLLET */
-                ev.data.ptr = client;
-                if (epoll_ctl (the_server.epollfd,
-                            EPOLL_CTL_ADD, client->fd, &ev) == -1) {
-                    purc_log_error ("Failed epoll_ctl for connected unix socket (%d): %s\n",
-                            client->fd, strerror (errno));
-                    goto error;
-                }
-            }
-        }
-        else if (events[n].data.ptr == PTR_FOR_WS_LISTENER) {
-            WSClient * client = ws_handle_accept (the_server.ws_srv,
-                    the_server.ws_listener);
-            if (client == NULL) {
-                purc_log_info ("Refused a client\n");
+                purc_log_info("Refused a client\n");
             }
             else {
                 ev.events = EPOLLIN; /* do not use EPOLLET */
                 ev.data.ptr = client;
                 if (epoll_ctl(the_server.epollfd,
                             EPOLL_CTL_ADD, client->fd, &ev) == -1) {
-                    purc_log_error ("Failed epoll_ctl for connected web socket (%d): %s\n",
-                            client->fd, strerror (errno));
+                    purc_log_error("Failed epoll_ctl for connected unix socket (%d): %s\n",
+                            client->fd, strerror(errno));
+                    goto error;
+                }
+            }
+        }
+        else if (events[n].data.ptr == PTR_FOR_WS_LISTENER) {
+            WSClient * client = ws_handle_accept(the_server.ws_srv,
+                    the_server.ws_listener);
+            if (client == NULL) {
+                purc_log_info("Refused a client\n");
+            }
+            else {
+                ev.events = EPOLLIN; /* do not use EPOLLET */
+                ev.data.ptr = client;
+                if (epoll_ctl(the_server.epollfd,
+                            EPOLL_CTL_ADD, client->fd, &ev) == -1) {
+                    purc_log_error("Failed epoll_ctl for connected web socket (%d): %s\n",
+                            client->fd, strerror(errno));
                     goto error;
                 }
             }
@@ -444,12 +444,12 @@ again:
                 if (events[n].events & EPOLLIN) {
 
                     if (usc->entity) {
-                        PurCMCEndpoint *endpoint = container_of (usc->entity,
-                                PurCMCEndpoint, entity);
-                        update_endpoint_living_time (&the_server, endpoint);
+                        purcmc_endpoint *endpoint = container_of(usc->entity,
+                                purcmc_endpoint, entity);
+                        update_endpoint_living_time(&the_server, endpoint);
                     }
 
-                    us_handle_reads (the_server.us_srv, usc);
+                    us_handle_reads(the_server.us_srv, usc);
                 }
 
                 if (events[n].events & EPOLLOUT) {
@@ -458,10 +458,10 @@ again:
                     if (!(usc->status & US_SENDING) && !(usc->status & US_CLOSE)) {
                         ev.events = EPOLLIN;
                         ev.data.ptr = usc;
-                        if (epoll_ctl (the_server.epollfd,
+                        if (epoll_ctl(the_server.epollfd,
                                     EPOLL_CTL_MOD, usc->fd, &ev) == -1) {
-                            purc_log_error ("Failed epoll_ctl for unix socket (%d): %s\n",
-                                    usc->fd, strerror (errno));
+                            purc_log_error("Failed epoll_ctl for unix socket (%d): %s\n",
+                                    usc->fd, strerror(errno));
                             goto error;
                         }
                     }
@@ -472,44 +472,46 @@ again:
 
                 if (events[n].events & EPOLLIN) {
                     if (wsc->entity) {
-                        PurCMCEndpoint *endpoint = container_of (usc->entity,
-                                PurCMCEndpoint, entity);
-                        update_endpoint_living_time (&the_server, endpoint);
+                        purcmc_endpoint *endpoint = container_of(usc->entity,
+                                purcmc_endpoint, entity);
+                        update_endpoint_living_time(&the_server, endpoint);
                     }
 
-                    ws_handle_reads (the_server.ws_srv, wsc);
+                    ws_handle_reads(the_server.ws_srv, wsc);
                 }
 
                 if (events[n].events & EPOLLOUT) {
-                    ws_handle_writes (the_server.ws_srv, wsc);
+                    ws_handle_writes(the_server.ws_srv, wsc);
 
                     if (!(wsc->status & WS_SENDING) && !(wsc->status & WS_CLOSE)) {
                         ev.events = EPOLLIN;
                         ev.data.ptr = wsc;
-                        if (epoll_ctl (the_server.epollfd,
+                        if (epoll_ctl(the_server.epollfd,
                                     EPOLL_CTL_MOD, wsc->fd, &ev) == -1) {
-                            purc_log_error ("Failed epoll_ctl for web socket (%d): %s\n",
-                                    usc->fd, strerror (errno));
+                            purc_log_error("Failed epoll_ctl for web socket (%d): %s\n",
+                                    usc->fd, strerror(errno));
                             goto error;
                         }
                     }
                 }
             }
             else {
-                purc_log_error ("Bad socket type (%d): %s\n",
-                        usc->ct, strerror (errno));
+                purc_log_error("Bad socket type (%d): %s\n",
+                        usc->ct, strerror(errno));
                 goto error;
             }
         }
     }
 
+    return 0;
+
 error:
-    return;
+    return -1;
 }
 
 #elif HAVE(SYS_SELECT_H)
 
-void check_server_on_idle (void *data)
+int purcmc_rdrsrv_check(purcmc_server *srv)
 {
     int retval;
     fd_set rset, wset;
@@ -517,8 +519,6 @@ void check_server_on_idle (void *data)
     fd_set* wsetptr = NULL;
     fd_set* esetptr = NULL;
     struct timeval sel_timeout = { 0, 0 };
-
-    (void)data;
 
     /* a fdset got modified each time around */
     FD_COPY (&the_server.rfdset, &rset);
@@ -572,7 +572,7 @@ again:
                     }
                     else if (listen_new_client (client->fd, client, FALSE)) {
                         purc_log_error ("Failed epoll_ctl for connected unix socket (%d): %s\n",
-                                client->fd, strerror (errno));
+                                client->fd, strerror(errno));
                         goto error;
                     }
                 }
@@ -583,7 +583,7 @@ again:
                     }
                     else if (listen_new_client (client->fd, client, FALSE)) {
                         purc_log_error ("Failed epoll_ctl for connected web socket (%d): %s\n",
-                                client->fd, strerror (errno));
+                                client->fd, strerror(errno));
                         goto error;
                     }
                 }
@@ -591,8 +591,8 @@ again:
                     USClient *usc = (USClient *)cli_node;
                     if (usc->ct == CT_UNIX_SOCKET) {
                         if (usc->entity) {
-                            PurCMCEndpoint *endpoint = container_of (usc->entity,
-                                    PurCMCEndpoint, entity);
+                            purcmc_endpoint *endpoint = container_of (usc->entity,
+                                    purcmc_endpoint, entity);
                             update_endpoint_living_time (&the_server, endpoint);
                         }
 
@@ -601,8 +601,8 @@ again:
                     else if (usc->ct == CT_WEB_SOCKET) {
                         WSClient *wsc = (WSClient *)cli_node;
                         if (wsc->entity) {
-                            PurCMCEndpoint *endpoint = container_of (usc->entity,
-                                    PurCMCEndpoint, entity);
+                            purcmc_endpoint *endpoint = container_of (usc->entity,
+                                    purcmc_endpoint, entity);
                             update_endpoint_living_time (&the_server, endpoint);
                         }
 
@@ -610,13 +610,13 @@ again:
                     }
                     else {
                         purc_log_error ("Bad socket type (%d): %s\n",
-                                usc->ct, strerror (errno));
+                                usc->ct, strerror(errno));
                         goto error;
                     }
                 }
             }
 
-            if (FD_ISSET (fd, wsetptr)) {
+            if (FD_ISSET(fd, wsetptr)) {
                 if (cli_node == PTR_FOR_US_LISTENER ||
                         cli_node == PTR_FOR_WS_LISTENER) {
                     assert (0);
@@ -624,20 +624,20 @@ again:
                 else {
                     USClient *usc = (USClient *)cli_node;
                     if (usc->ct == CT_UNIX_SOCKET) {
-                        us_handle_writes (the_server.us_srv, usc);
+                        us_handle_writes(the_server.us_srv, usc);
 
                         if (!(usc->status & US_SENDING) &&
                                 !(usc->status & US_CLOSE)) {
-                            FD_CLR (fd, &the_server.wfdset);
+                            FD_CLR(fd, &the_server.wfdset);
                         }
                     }
                     else if (usc->ct == CT_WEB_SOCKET) {
                         WSClient *wsc = (WSClient *)cli_node;
-                        ws_handle_writes (the_server.ws_srv, wsc);
+                        ws_handle_writes(the_server.ws_srv, wsc);
 
                         if (!(wsc->status & WS_SENDING) &&
                                 !(wsc->status & WS_CLOSE)) {
-                            FD_CLR (fd, &the_server.wfdset);
+                            FD_CLR(fd, &the_server.wfdset);
                         }
                     }
                 }
@@ -645,8 +645,10 @@ again:
         }
     }
 
+    return 0;
+
 error:
-    return;
+    return -1;
 }
 
 #endif /* HAVE(SYS_SELECT_H) */
@@ -654,8 +656,8 @@ error:
 static int
 comp_living_time (const void *k1, const void *k2, void *ptr)
 {
-    const PurCMCEndpoint *e1 = k1;
-    const PurCMCEndpoint *e2 = k2;
+    const purcmc_endpoint *e1 = k1;
+    const purcmc_endpoint *e2 = k2;
 
     (void)ptr;
     return e1->t_living - e2->t_living;
@@ -673,15 +675,18 @@ intcmp(const void *sortv1, const void *sortv2)
 #endif
 
 static int
-init_server (void)
+init_server(void)
 {
     int ret;
 
-    ret = purc_init_ex (PURC_MODULE_EJSON,
-            "cn.fmsoft.hvml.purcmc", "renderer", NULL);
+    ret = purc_init_ex(PURC_MODULE_EJSON,
+            the_srvcfg->app_name ? the_srvcfg->app_name : SERVER_APP_NAME,
+            the_srvcfg->runner_name ? the_srvcfg->runner_name : SERVER_RUNNER_NAME,
+            NULL);
+
     if (ret != PURC_ERROR_OK) {
-        purc_log_error ("Failed to initialize the PurC modules: %s\n",
-                purc_get_error_message (ret));
+        purc_log_error("Failed to initialize the PurC modules: %s\n",
+                purc_get_error_message(ret));
         return -1;
     }
 
@@ -722,114 +727,117 @@ init_server (void)
     the_server.running = true;
 
     /* TODO for host name */
-    the_server.server_name = strdup (PCRDR_LOCALHOST);
-    kvlist_init (&the_server.endpoint_list, NULL);
-    avl_init (&the_server.living_avl, comp_living_time, true, NULL);
+    the_server.server_name = strdup(PCRDR_LOCALHOST);
+    kvlist_init(&the_server.endpoint_list, NULL);
+    avl_init(&the_server.living_avl, comp_living_time, true, NULL);
 
     return 0;
 }
 
 static void
-deinit_server (void)
+deinit_server(void)
 {
     const char* name;
     void *next, *data;
-    PurCMCEndpoint *endpoint, *tmp;
+    purcmc_endpoint *endpoint, *tmp;
 
 #if !HAVE(SYS_EPOLL_H) && HAVE(SYS_SELECT_H)
     sorted_array_destroy(the_server.fd2clients);
 #endif
 
-    avl_remove_all_elements (&the_server.living_avl, endpoint, avl, tmp) {
+    avl_remove_all_elements(&the_server.living_avl, endpoint, avl, tmp) {
         if (endpoint->type == ET_UNIX_SOCKET) {
-            us_close_client (the_server.us_srv, (USClient *)endpoint->entity.client);
+            us_close_client(the_server.us_srv, (USClient *)endpoint->entity.client);
         }
         else if (endpoint->type == ET_WEB_SOCKET) {
-            ws_close_client (the_server.ws_srv, (WSClient *)endpoint->entity.client);
+            ws_close_client(the_server.ws_srv, (WSClient *)endpoint->entity.client);
         }
     }
 
-    kvlist_for_each_safe (&the_server.endpoint_list, name, next, data) {
-        //memcpy (&endpoint, data, sizeof (PurCMCEndpoint*));
-        endpoint = *(PurCMCEndpoint **)data;
+    kvlist_for_each_safe(&the_server.endpoint_list, name, next, data) {
+        //memcpy (&endpoint, data, sizeof (purcmc_endpoint*));
+        endpoint = *(purcmc_endpoint **)data;
 
         if (endpoint->type != ET_BUILTIN) {
-            purc_log_info ("Deleting endpoint: %s (%p) in deinit_server\n", name, endpoint);
+            purc_log_info("Deleting endpoint: %s (%p) in deinit_server\n",
+                    name, endpoint);
 
             if (endpoint->type == ET_UNIX_SOCKET && endpoint->entity.client) {
                 // avoid a duplicated call of del_endpoint
                 endpoint->entity.client->entity = NULL;
-                us_cleanup_client (the_server.us_srv, (USClient *)endpoint->entity.client);
+                us_cleanup_client(the_server.us_srv,
+                        (USClient *)endpoint->entity.client);
             }
             else if (endpoint->type == ET_WEB_SOCKET && endpoint->entity.client) {
                 // avoid a duplicated call of del_endpoint
                 endpoint->entity.client->entity = NULL;
-                ws_cleanup_client (the_server.ws_srv, (WSClient *)endpoint->entity.client);
+                ws_cleanup_client(the_server.ws_srv,
+                        (WSClient *)endpoint->entity.client);
             }
 
-            del_endpoint (&the_server, endpoint, CDE_EXITING);
-            kvlist_delete (&the_server.endpoint_list, name);
+            del_endpoint(&the_server, endpoint, CDE_EXITING);
+            kvlist_delete(&the_server.endpoint_list, name);
             the_server.nr_endpoints--;
         }
     }
 
-    kvlist_free (&the_server.endpoint_list);
+    kvlist_free(&the_server.endpoint_list);
 
     if (the_server.dangling_endpoints) {
         gs_list* node = the_server.dangling_endpoints;
 
         while (node) {
-            endpoint = (PurCMCEndpoint *)node->data;
-            purc_log_warn ("Removing dangling endpoint: %p, type (%d), status (%d)\n",
+            endpoint = (purcmc_endpoint *)node->data;
+            purc_log_warn("Removing dangling endpoint: %p, type (%d), status (%d)\n",
                     endpoint, endpoint->type, endpoint->status);
 
             if (endpoint->type == ET_UNIX_SOCKET) {
                 USClient* usc = (USClient *)endpoint->entity.client;
-                us_remove_dangling_client (the_server.us_srv, usc);
+                us_remove_dangling_client(the_server.us_srv, usc);
             }
             else if (endpoint->type == ET_WEB_SOCKET) {
                 WSClient* wsc = (WSClient *)endpoint->entity.client;
-                ws_remove_dangling_client (the_server.ws_srv, wsc);
+                ws_remove_dangling_client(the_server.ws_srv, wsc);
             }
             else {
-                purc_log_warn ("Bad type of dangling endpoint\n");
+                purc_log_warn("Bad type of dangling endpoint\n");
             }
 
-            del_endpoint (&the_server, endpoint, CDE_EXITING);
+            del_endpoint(&the_server, endpoint, CDE_EXITING);
 
             node = node->next;
         }
 
-        gslist_remove_nodes (the_server.dangling_endpoints);
+        gslist_remove_nodes(the_server.dangling_endpoints);
     }
 
-    us_stop (the_server.us_srv);
+    us_stop(the_server.us_srv);
     if (the_server.ws_srv)
-        ws_stop (the_server.ws_srv);
+        ws_stop(the_server.ws_srv);
 
-    free (the_server.server_name);
+    free(the_server.server_name);
 
-    purc_log_info ("the_server.nr_endpoints: %d\n", the_server.nr_endpoints);
+    purc_log_info("the_server.nr_endpoints: %d\n", the_server.nr_endpoints);
     assert (the_server.nr_endpoints == 0);
 
     if (the_srvcfg->unixsocket) {
-        g_free (the_srvcfg->unixsocket);
+        free(the_srvcfg->unixsocket);
         the_srvcfg->unixsocket = NULL;
     }
 
     if (the_srvcfg->addr) {
-        g_free (the_srvcfg->addr);
+        free(the_srvcfg->addr);
         the_srvcfg->addr = NULL;
     }
 
     if (the_srvcfg->port) {
-        g_free (the_srvcfg->port);
+        free(the_srvcfg->port);
         the_srvcfg->port = NULL;
     }
 }
 
-int
-purcmc_rdr_server_init(PurCMCServerConfig* srvcfg)
+purcmc_server *
+purcmc_rdrsrv_init(purcmc_server_config* srvcfg)
 {
     int retval;
 
@@ -841,45 +849,40 @@ purcmc_rdr_server_init(PurCMCServerConfig* srvcfg)
 
     if ((retval = init_server())) {
         purc_log_error ("Error during init_server: %s\n",
-                pcrdr_get_ret_message (retval));
+                pcrdr_get_ret_message(retval));
         goto error;
     }
 
-    if ((the_server.us_srv = us_init((PurCMCServerConfig *)the_srvcfg)) == NULL) {
+    if ((the_server.us_srv = us_init((purcmc_server_config *)the_srvcfg)) == NULL) {
         purc_log_error ("Error during us_init\n");
         goto error;
     }
 
     if (!the_srvcfg->nowebsocket) {
-        if ((the_server.ws_srv = ws_init((PurCMCServerConfig *)the_srvcfg)) == NULL) {
+        if ((the_server.ws_srv = ws_init((purcmc_server_config *)the_srvcfg)) == NULL) {
             purc_log_error ("Error during ws_init\n");
             goto error;
         }
     }
     else {
         the_server.ws_srv = NULL;
-        purc_log_info ("Skip web socket");
+        purc_log_info("Skip web socket");
     }
 
-    setup_signal_pipe ();
-    prepare_server ();
+    setup_signal_pipe();
+    prepare_server();
 
-    /* TODO
-    extern hook_t *idle_hook;
-    add_hook (&idle_hook, check_server_on_idle, &the_server);
-    */
-
-    return 0;
+    return &the_server;
 
 error:
-    return 255;
+    return NULL;
 }
 
 int
-purcmc_rdr_server_deinit(void)
+purcmc_rdrsrv_deinit(purcmc_server *srv)
 {
-    deinit_server ();
-    purc_cleanup ();
+    deinit_server();
+    purc_cleanup();
     return 0;
 }
 

@@ -31,6 +31,7 @@
 #include "unixsocket.h"
 #include "websocket.h"
 
+#if 0
 typedef struct PlainWindow {
     purc_variant_t      id;
     purc_variant_t      title;
@@ -39,17 +40,60 @@ typedef struct PlainWindow {
     pchtml_html_parser_t *parser;
 } PlainWindow;
 
-struct PurCMCSessionInfo {
+struct purcmc_session {
     struct kvlist       wins;
     unsigned int        nr_wins;
 };
 
-PurCMCEndpoint* new_endpoint(PurCMCServer* srv, int type, void* client)
+static void remove_window(purcmc_endpoint *endpoint, PlainWindow *win)
+{
+    if (win->dom_doc) {
+        char endpoint_name[PURC_LEN_ENDPOINT_NAME + 1];
+
+        assemble_endpoint_name(endpoint, endpoint_name);
+        domview_detach_window_dom(endpoint_name,
+            purc_variant_get_string_const(win->id));
+        dom_cleanup_user_data(win->dom_doc);
+        pcdom_document_destroy(win->dom_doc);
+    }
+
+    if (win->parser) {
+        pchtml_html_parser_destroy(win->parser);
+    }
+
+    if (win->id)
+        purc_variant_unref(win->id);
+    if (win->title)
+        purc_variant_unref(win->title);
+    free(win);
+}
+
+static void remove_session(purcmc_server* srv, purcmc_endpoint* endpoint)
+{
+    const char *name;
+    void *next, *data;
+    PlainWindow *win;
+
+    if (endpoint->session) {
+        kvlist_for_each_safe(&endpoint->session->wins, name, next, data) {
+            win = *(PlainWindow **)data;
+
+            kvlist_delete(&endpoint->session->wins, name);
+            remove_window(endpoint, win);
+        }
+        kvlist_free(&endpoint->session->wins);
+        free(endpoint->session);
+        endpoint->session = NULL;
+    }
+}
+#endif
+
+purcmc_endpoint* new_endpoint(purcmc_server* srv, int type, void* client)
 {
     struct timespec ts;
-    PurCMCEndpoint* endpoint = NULL;
+    purcmc_endpoint* endpoint = NULL;
 
-    endpoint = (PurCMCEndpoint *)calloc (sizeof (PurCMCEndpoint), 1);
+    endpoint = (purcmc_endpoint *)calloc (sizeof (purcmc_endpoint), 1);
     if (endpoint == NULL)
         return NULL;
 
@@ -93,58 +137,14 @@ PurCMCEndpoint* new_endpoint(PurCMCServer* srv, int type, void* client)
     return endpoint;
 }
 
-static void remove_window(PurCMCEndpoint *endpoint, PlainWindow *win)
-{
-    if (win->dom_doc) {
-        char endpoint_name[PURC_LEN_ENDPOINT_NAME + 1];
-
-        assemble_endpoint_name(endpoint, endpoint_name);
-        /* TODO
-        domview_detach_window_dom(endpoint_name,
-            purc_variant_get_string_const(win->id));
-        dom_cleanup_user_data(win->dom_doc);
-        pcdom_document_destroy(win->dom_doc);
-        */
-    }
-
-    /* TODO
-    if (win->parser) {
-        pchtml_html_parser_destroy(win->parser);
-    }
-    */
-
-    if (win->id)
-        purc_variant_unref(win->id);
-    if (win->title)
-        purc_variant_unref(win->title);
-    free(win);
-}
-
-static void remove_session(PurCMCEndpoint* endpoint)
-{
-    const char *name;
-    void *next, *data;
-    PlainWindow *win;
-
-    if (endpoint->session_info) {
-        kvlist_for_each_safe(&endpoint->session_info->wins, name, next, data) {
-            win = *(PlainWindow **)data;
-
-            kvlist_delete(&endpoint->session_info->wins, name);
-            remove_window(endpoint, win);
-        }
-        kvlist_free(&endpoint->session_info->wins);
-        free(endpoint->session_info);
-        endpoint->session_info = NULL;
-    }
-}
-
-int del_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint, int cause)
+int del_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint, int cause)
 {
     char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
 
-    remove_session(endpoint);
-    if (assemble_endpoint_name (endpoint, endpoint_name) > 0) {
+    srv->cbs.remove_session(srv, endpoint->session);
+    endpoint->session = NULL;
+
+    if (assemble_endpoint_name(endpoint, endpoint_name) > 0) {
         if (endpoint->avl.key)
             avl_delete (&srv->living_avl, &endpoint->avl);
     }
@@ -157,11 +157,11 @@ int del_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint, int cause)
     if (endpoint->runner_name) free (endpoint->runner_name);
 
     free (endpoint);
-    purc_log_warn ("PurCMCEndpoint (%s) removed\n", endpoint_name);
+    purc_log_warn ("purcmc_endpoint (%s) removed\n", endpoint_name);
     return 0;
 }
 
-bool store_dangling_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint)
+bool store_dangling_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint)
 {
     if (srv->dangling_endpoints == NULL)
         srv->dangling_endpoints = gslist_create (endpoint);
@@ -175,7 +175,7 @@ bool store_dangling_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint)
     return false;
 }
 
-bool remove_dangling_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint)
+bool remove_dangling_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint)
 {
     gs_list* node = srv->dangling_endpoints;
 
@@ -191,8 +191,8 @@ bool remove_dangling_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint)
     return false;
 }
 
-bool make_endpoint_ready (PurCMCServer* srv,
-        const char* endpoint_name, PurCMCEndpoint* endpoint)
+bool make_endpoint_ready (purcmc_server* srv,
+        const char* endpoint_name, purcmc_endpoint* endpoint)
 {
     if (remove_dangling_endpoint (srv, endpoint)) {
         if (!kvlist_set (&srv->endpoint_list, endpoint_name, &endpoint)) {
@@ -217,7 +217,7 @@ bool make_endpoint_ready (PurCMCServer* srv,
     return true;
 }
 
-static void cleanup_endpoint_client (PurCMCServer *srv, PurCMCEndpoint* endpoint)
+static void cleanup_endpoint_client (purcmc_server *srv, purcmc_endpoint* endpoint)
 {
     if (endpoint->type == ET_UNIX_SOCKET) {
         endpoint->entity.client->entity = NULL;
@@ -232,11 +232,11 @@ static void cleanup_endpoint_client (PurCMCServer *srv, PurCMCEndpoint* endpoint
             endpoint->host_name, endpoint->app_name, endpoint->runner_name);
 }
 
-int check_no_responding_endpoints (PurCMCServer *srv)
+int check_no_responding_endpoints (purcmc_server *srv)
 {
     int n = 0;
     time_t t_curr = purc_get_monotoic_time ();
-    PurCMCEndpoint *endpoint, *tmp;
+    purcmc_endpoint *endpoint, *tmp;
 
     purc_log_info ("Checking no responding endpoints...\n");
 
@@ -277,7 +277,7 @@ int check_no_responding_endpoints (PurCMCServer *srv)
     return n;
 }
 
-int check_dangling_endpoints (PurCMCServer *srv)
+int check_dangling_endpoints (purcmc_server *srv)
 {
     int n = 0;
     time_t t_curr = purc_get_monotoic_time ();
@@ -285,7 +285,7 @@ int check_dangling_endpoints (PurCMCServer *srv)
 
     while (node) {
         gs_list *next = node->next;
-        PurCMCEndpoint* endpoint = (PurCMCEndpoint *)node->data;
+        purcmc_endpoint* endpoint = (purcmc_endpoint *)node->data;
 
         if (t_curr > endpoint->t_created + PCRDR_MAX_NO_RESPONDING_TIME) {
             gslist_remove_node (&srv->dangling_endpoints, node);
@@ -300,8 +300,8 @@ int check_dangling_endpoints (PurCMCServer *srv)
     return n;
 }
 
-int send_packet_to_endpoint (PurCMCServer* srv,
-        PurCMCEndpoint* endpoint, const char* body, int len_body)
+int send_packet_to_endpoint (purcmc_server* srv,
+        purcmc_endpoint* endpoint, const char* body, int len_body)
 {
     if (endpoint->type == ET_UNIX_SOCKET) {
         return us_send_packet (srv->us_srv, (USClient *)endpoint->entity.client,
@@ -315,7 +315,7 @@ int send_packet_to_endpoint (PurCMCServer* srv,
     return -1;
 }
 
-static int send_simple_response(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int send_simple_response(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
@@ -335,7 +335,7 @@ static int send_simple_response(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     return retv;
 }
 
-int send_initial_response (PurCMCServer* srv, PurCMCEndpoint* endpoint)
+int send_initial_response (purcmc_server* srv, purcmc_endpoint* endpoint)
 {
     int retv = PCRDR_SC_OK;
     pcrdr_msg *msg = NULL;
@@ -357,10 +357,10 @@ failed:
     return retv;
 }
 
-typedef int (*request_handler)(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+typedef int (*request_handler)(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg);
 
-static int authenticate_endpoint(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
         purc_variant_t data)
 {
     const char* prot_name = NULL;
@@ -454,23 +454,22 @@ static int authenticate_endpoint(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     return PCRDR_SC_OK;
 }
 
-static int on_start_session(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_start_session(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
-    PurCMCSessionInfo *info = NULL;
+    purcmc_session *info = NULL;
 
     int retv = authenticate_endpoint(srv, endpoint, msg->data);
 
-    endpoint->session_info = NULL;
+    endpoint->session = NULL;
     if (retv == PCRDR_SC_OK) {
-        info = calloc(1, sizeof(PurCMCSessionInfo));
+        info = srv->cbs.create_session(srv, endpoint);
         if (info == NULL) {
             retv = PCRDR_SC_INSUFFICIENT_STORAGE;
         }
         else {
-            kvlist_init(&info->wins, NULL);
-            endpoint->session_info = info;
+            endpoint->session = info;
         }
     }
 
@@ -483,12 +482,15 @@ static int on_start_session(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_end_session(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_end_session(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
 
-    remove_session(endpoint);
+    if (endpoint->session) {
+        srv->cbs.remove_session(srv, endpoint->session);
+        endpoint->session = NULL;
+    }
 
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = msg->requestId;
@@ -499,20 +501,20 @@ static int on_end_session(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_create_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    PlainWindow *win;
     pcrdr_msg response;
 
-    const char* str = NULL;
-    purc_variant_t tmp;
+    purcmc_plainwin* win = NULL;
 
-    if ((win = calloc(1, sizeof(*win))) == NULL) {
-        retv = PCRDR_SC_INSUFFICIENT_STORAGE;
-        goto failed;
-    }
+    const char* gid = NULL;
+    const char* name = NULL;
+    const char* title = NULL;
+    const char* style = NULL;
+
+    purc_variant_t tmp;
 
     if (msg->dataType != PCRDR_MSG_DATA_TYPE_EJSON ||
             !purc_variant_is_object(msg->data)) {
@@ -520,20 +522,47 @@ static int on_create_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         goto failed;
     }
 
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "id"))) {
-        str = purc_variant_get_string_const(tmp);
-        if (!purc_is_valid_identifier(str)) {
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "gid"))) {
+        gid = purc_variant_get_string_const(tmp);
+
+        if (gid != NULL && !purc_is_valid_identifier(gid)) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
         }
+    }
 
-        if (kvlist_get(&endpoint->session_info->wins, str)) {
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "name"))) {
+        name = purc_variant_get_string_const(tmp);
+
+        if (name == NULL || !purc_is_valid_identifier(name)) {
+            retv = PCRDR_SC_BAD_REQUEST;
+            goto failed;
+        }
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {
+        title = purc_variant_get_string_const(tmp);
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "style"))) {
+        style = purc_variant_get_string_const(tmp);
+    }
+
+#if 0
+    PlainWindow *win;
+    if ((win = calloc(1, sizeof(*win))) == NULL) {
+        retv = PCRDR_SC_INSUFFICIENT_STORAGE;
+        goto failed;
+    }
+
+    if () {
+        if (kvlist_get(&endpoint->session->wins, str)) {
             purc_log_warn("Duplicated plain window: %s\n", str);
             retv = PCRDR_SC_CONFLICT;
             goto failed;
         }
 
-        if (!kvlist_set(&endpoint->session_info->wins, str, &win)) {
+        if (!kvlist_set(&endpoint->session->wins, str, &win)) {
             retv = PCRDR_SC_INSUFFICIENT_STORAGE;
             goto failed;
         }
@@ -545,12 +574,19 @@ static int on_create_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         win->title = purc_variant_ref(tmp);
     }
 
-failed:
     if (retv != PCRDR_SC_OK && win) {
         remove_window(endpoint, win);
         win = NULL;
     }
+#endif
 
+    win = srv->cbs.create_plainwin(srv, endpoint->session, gid, name,
+            title, style);
+    if (win == NULL) {
+        retv = PCRDR_SC_INSUFFICIENT_STORAGE;
+    }
+
+failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = msg->requestId;
     response.retCode = retv;
@@ -560,14 +596,12 @@ failed:
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_update_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    const char *key;
-    void *data;
     const char *element;
-    PlainWindow *win;
+    purcmc_plainwin *win;
     pcrdr_msg response;
 
     element = purc_variant_get_string_const(msg->element);
@@ -577,23 +611,41 @@ static int on_update_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     }
 
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
-        unsigned long long int p;
+        if (srv->cbs.get_plainwin_by_handle == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
 
-        p = strtoull(element, NULL, 16);
-        kvlist_for_each(&endpoint->session_info->wins, key, data) {
+        unsigned long long int handle;
+        handle = strtoull(element, NULL, 16);
+        win = srv->cbs.get_plainwin_by_handle(srv, endpoint->session, handle);
+#if 0
+        const char *key;
+        void *data;
+        kvlist_for_each(&endpoint->session->wins, key, data) {
             PlainWindow *tmp = *(PlainWindow **)data;
             if ((uint64_t)p == (uint64_t)tmp) {
                 win = tmp;
                 break;
             }
         }
+#endif
+
     }
     else if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_ID) {
-        void *data = kvlist_get(&endpoint->session_info->wins, element);
+        if (srv->cbs.get_plainwin_by_id == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
+
+        win = srv->cbs.get_plainwin_by_id(srv, endpoint->session, element);
+#if 0
+        void *data = kvlist_get(&endpoint->session->wins, element);
 
         if (data) {
             win = *(PlainWindow **)data;
         }
+#endif
     }
 
     if (win == NULL) {
@@ -604,18 +656,20 @@ static int on_update_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
 
     const char *property;
     property = purc_variant_get_string_const(msg->property);
-    if (property == NULL || strcmp(property, "title") ||
-            msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
+    if (property == NULL || msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
 
+    retv = srv->cbs.update_plainwin(srv, win, property,
+            purc_variant_get_string_const(msg->data));
+
+#if 0
     if (win->title)
         purc_variant_unref(win->title);
     win->title = purc_variant_ref(msg->data);
-    /* TODO
     dom_set_title(win->dom_doc, purc_variant_get_string_const(win->title));
-    */
+#endif
 
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
@@ -627,14 +681,12 @@ failed:
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_destroy_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_destroy_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    const char *key;
-    void *data;
     const char *element;
-    PlainWindow *win;
+    purcmc_plainwin *win;
     pcrdr_msg response;
 
     element = purc_variant_get_string_const(msg->element);
@@ -644,23 +696,41 @@ static int on_destroy_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     }
 
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
-        unsigned long long int p;
+        if (srv->cbs.get_plainwin_by_handle == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
 
-        p = strtoull(element, NULL, 16);
-        kvlist_for_each(&endpoint->session_info->wins, key, data) {
+        unsigned long long int handle;
+        handle = strtoull(element, NULL, 16);
+        win = srv->cbs.get_plainwin_by_handle(srv, endpoint->session, handle);
+
+#if 0
+        const char *key;
+        void *data;
+        kvlist_for_each(&endpoint->session->wins, key, data) {
             PlainWindow *tmp = *(PlainWindow **)data;
             if ((uint64_t)p == (uint64_t)tmp) {
                 win = tmp;
                 break;
             }
         }
+#endif
     }
     else if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_ID) {
-        void *data = kvlist_get(&endpoint->session_info->wins, element);
+        if (srv->cbs.get_plainwin_by_id == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
 
+        win = srv->cbs.get_plainwin_by_id(srv, endpoint->session, element);
+
+#if 0
+        void *data = kvlist_get(&endpoint->session->wins, element);
         if (data) {
             win = *(PlainWindow **)data;
         }
+#endif
     }
 
     if (win == NULL) {
@@ -669,9 +739,13 @@ static int on_destroy_plain_window(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         goto failed;
     }
 
-    kvlist_delete(&endpoint->session_info->wins,
+#if 0
+    retv = srv->remove_plainwin(srv, win);
+
+    kvlist_delete(&endpoint->session->wins,
             purc_variant_get_string_const(win->id));
     remove_window(endpoint, win);
+#endif
 
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
@@ -683,17 +757,15 @@ failed:
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_load(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
     int retv = PCRDR_SC_OK;
     const char *doc_text;
     size_t doc_len;
-    PlainWindow *win = NULL;
-
-    pchtml_html_parser_t *parser = NULL;
-    pchtml_html_document_t *html_doc = NULL;
+    purcmc_plainwin *win = NULL;
+    purcmc_dom *dom = NULL;
 
     if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
             msg->data == PURC_VARIANT_INVALID) {
@@ -708,16 +780,23 @@ static int on_load(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     }
 
     if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW) {
-        const char *key;
-        void *data;
+        if (srv->cbs.get_plainwin_by_handle == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
 
-        kvlist_for_each(&endpoint->session_info->wins, key, data) {
+        win = srv->cbs.get_plainwin_by_handle(srv, endpoint->session,
+                msg->targetValue);
+
+#if 0
+        kvlist_for_each(&endpoint->session->wins, key, data) {
             PlainWindow *tmp = *(PlainWindow **)data;
             if (msg->targetValue == (uint64_t)tmp) {
                 win = tmp;
                 break;
             }
         }
+#endif
     }
     else {
         retv = PCRDR_SC_BAD_REQUEST;
@@ -728,6 +807,17 @@ static int on_load(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         retv = PCRDR_SC_NOT_FOUND;
         goto failed;
     }
+
+    purcmc_page *page = srv->cbs.get_plainwin_page(srv, win);
+    dom = srv->cbs.load(srv, page, doc_text, doc_len);
+    if (dom == NULL) {
+        retv = PCRDR_SC_UNPROCESSABLE_PACKET;
+        goto failed;
+    }
+
+#if 0
+    pchtml_html_parser_t *parser = NULL;
+    pchtml_html_document_t *html_doc = NULL;
 
     parser = pchtml_html_parser_create();
     if (parser == NULL) {
@@ -748,7 +838,6 @@ static int on_load(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     char endpoint_name[PURC_LEN_ENDPOINT_NAME + 1];
     assemble_endpoint_name(endpoint, endpoint_name);
 
-    /* TODO
     if (win->dom_doc) {
         domview_detach_window_dom(endpoint_name,
             purc_variant_get_string_const(win->id));
@@ -761,29 +850,27 @@ static int on_load(PurCMCServer* srv, PurCMCEndpoint* endpoint,
             purc_variant_get_string_const(win->id),
             purc_variant_get_string_const(win->title),
             win->dom_doc);
-    */
+#endif
 
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = msg->requestId;
     response.retCode = retv;
-    response.resultValue = (uint64_t)html_doc;
+    response.resultValue = (uint64_t)dom;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_write_begin(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_write_begin(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
     int retv = PCRDR_SC_OK;
     const char *doc_text;
     size_t doc_len;
-    PlainWindow *win = NULL;
-
-    pchtml_html_parser_t *parser = NULL;
-    pchtml_html_document_t *html_doc = NULL;
+    purcmc_plainwin *win = NULL;
+    purcmc_dom *dom = NULL;
 
     if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
             msg->data == PURC_VARIANT_INVALID) {
@@ -798,16 +885,25 @@ static int on_write_begin(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     }
 
     if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW) {
+        if (srv->cbs.get_plainwin_by_handle == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
+
+        win = srv->cbs.get_plainwin_by_handle(srv, endpoint->session,
+                msg->targetValue);
+#if 0
         const char *key;
         void *data;
 
-        kvlist_for_each(&endpoint->session_info->wins, key, data) {
+        kvlist_for_each(&endpoint->session->wins, key, data) {
             PlainWindow *tmp = *(PlainWindow **)data;
             if (msg->targetValue == (uint64_t)tmp) {
                 win = tmp;
                 break;
             }
         }
+#endif
     }
     else {
         retv = PCRDR_SC_BAD_REQUEST;
@@ -818,6 +914,17 @@ static int on_write_begin(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         retv = PCRDR_SC_NOT_FOUND;
         goto failed;
     }
+
+    purcmc_page *page = srv->cbs.get_plainwin_page(srv, win);
+    dom = srv->cbs.write_begin(srv, page, doc_text, doc_len);
+    if (dom == NULL) {
+        retv = PCRDR_SC_UNPROCESSABLE_PACKET;
+        goto failed;
+    }
+
+#if 0
+    pchtml_html_parser_t *parser = NULL;
+    pchtml_html_document_t *html_doc = NULL;
 
     if (win->parser) {
         retv = PCRDR_SC_EXPECTATION_FAILED;
@@ -841,7 +948,6 @@ static int on_write_begin(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         goto failed;
     }
 
-    /* TODO
     if (win->dom_doc) {
         char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
 
@@ -852,33 +958,35 @@ static int on_write_begin(PurCMCServer* srv, PurCMCEndpoint* endpoint,
         pcdom_document_destroy(win->dom_doc);
     }
     win->dom_doc = pcdom_interface_document(html_doc);
-    */
 
-failed:
     if (retv != PCRDR_SC_OK) {
         if (parser) {
             pchtml_html_parser_destroy(parser);
             win->parser = NULL;
         }
     }
+#endif
+
+failed:
 
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = msg->requestId;
     response.retCode = retv;
-    response.resultValue = (uint64_t)html_doc;
+    response.resultValue = (uint64_t)dom;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_write_more(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_write_more(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
     int retv = PCRDR_SC_OK;
     const char *doc_text;
     size_t doc_len;
-    PlainWindow *win = NULL;
+    purcmc_page *page = NULL;
+    purcmc_dom *dom = NULL;
 
     if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
             msg->data == PURC_VARIANT_INVALID) {
@@ -893,56 +1001,76 @@ static int on_write_more(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     }
 
     if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW) {
+        purcmc_plainwin *win = NULL;
+
+        if (srv->cbs.get_plainwin_by_handle == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
+
+        win = srv->cbs.get_plainwin_by_handle(srv, endpoint->session,
+                msg->targetValue);
+        if (win) {
+            page = srv->cbs.get_plainwin_page(srv, win);
+        }
+#if 0
         const char *key;
         void *data;
 
-        kvlist_for_each(&endpoint->session_info->wins, key, data) {
+        kvlist_for_each(&endpoint->session->wins, key, data) {
             PlainWindow *tmp = *(PlainWindow **)data;
             if (msg->targetValue == (uint64_t)tmp) {
                 win = tmp;
                 break;
             }
         }
+#endif
     }
     else {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
 
-    if (win == NULL) {
+    if (page == NULL) {
         retv = PCRDR_SC_NOT_FOUND;
         goto failed;
     }
 
+    dom = srv->cbs.write_more(srv, page, doc_text, doc_len);
+    if (dom == NULL) {
+        retv = PCRDR_SC_UNPROCESSABLE_PACKET;
+        goto failed;
+    }
+
+#if 0
     if (win->parser == NULL || win->dom_doc == NULL) {
         retv = PCRDR_SC_PRECONDITION_FAILED;
         goto failed;
     }
 
-
-    /* TODO
     pchtml_html_parse_chunk_process(win->parser,
                 (const unsigned char *)doc_text, doc_len);
-    */
+#endif
 
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = msg->requestId;
     response.retCode = retv;
-    response.resultValue = (uint64_t)(win ? win->dom_doc : 0);
+    response.resultValue = (uint64_t)dom;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_write_end(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_write_end(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
     int retv = PCRDR_SC_OK;
     const char *doc_text;
     size_t doc_len;
-    PlainWindow *win = NULL;
+    purcmc_page *page = NULL;
+    purcmc_dom *dom = NULL;
 
     if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
             msg->data == PURC_VARIANT_INVALID) {
@@ -957,27 +1085,48 @@ static int on_write_end(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     }
 
     if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW) {
+        purcmc_plainwin *win = NULL;
+
+        if (srv->cbs.get_plainwin_by_handle == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
+
+        win = srv->cbs.get_plainwin_by_handle(srv, endpoint->session,
+                msg->targetValue);
+        if (win) {
+            page = srv->cbs.get_plainwin_page(srv, win);
+        }
+#if 0
         const char *key;
         void *data;
 
-        kvlist_for_each(&endpoint->session_info->wins, key, data) {
+        kvlist_for_each(&endpoint->session->wins, key, data) {
             PlainWindow *tmp = *(PlainWindow **)data;
             if (msg->targetValue == (uint64_t)tmp) {
                 win = tmp;
                 break;
             }
         }
+#endif
     }
     else {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
 
-    if (win == NULL) {
+    if (page == NULL) {
         retv = PCRDR_SC_NOT_FOUND;
         goto failed;
     }
 
+    dom = srv->cbs.write_end(srv, page, doc_text, doc_len);
+    if (dom == NULL) {
+        retv = PCRDR_SC_UNPROCESSABLE_PACKET;
+        goto failed;
+    }
+
+#if 0
     if (win->parser == NULL || win->dom_doc == NULL) {
         retv = PCRDR_SC_PRECONDITION_FAILED;
         goto failed;
@@ -990,35 +1139,56 @@ static int on_write_end(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     pchtml_html_parser_destroy(win->parser);
     win->parser = NULL;
 
-    /* TODO
     dom_prepare_user_data(win->dom_doc, true);
-    */
+
 
     char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
     assemble_endpoint_name (endpoint, endpoint_name);
-    /* TODO
     domview_attach_window_dom(endpoint_name,
             purc_variant_get_string_const(win->id),
             purc_variant_get_string_const(win->title),
             win->dom_doc);
-    */
+#endif
 
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = msg->requestId;
     response.retCode = retv;
-    response.resultValue = (uint64_t)(win ? win->dom_doc : 0);
+    response.resultValue = (uint64_t)dom;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int operate_dom_element(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int operate_dom_element(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg, int op, pcrdr_msg *response)
 {
-    int retv = 200;
+    int retv;
+    purcmc_dom *dom = NULL;
 
-    /* TODO */
+    if (msg->target == PCRDR_MSG_TARGET_DOM) {
+
+        if (srv->cbs.get_dom_by_handle == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
+
+        dom = srv->cbs.get_dom_by_handle(srv, endpoint->session,
+                msg->targetValue);
+    }
+    else {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    if (dom == NULL) {
+        retv = PCRDR_SC_NOT_FOUND;
+        goto failed;
+    }
+
+    retv = srv->cbs.operate_dom_element(srv, dom, op, msg);
+
+failed:
     response->type = PCRDR_MSG_TYPE_RESPONSE;
     response->requestId = msg->requestId;
     response->retCode = retv;
@@ -1028,7 +1198,7 @@ static int operate_dom_element(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     return retv;
 }
 
-static int on_append(PurCMCServer* srv, PurCMCEndpoint* endpoint, const pcrdr_msg *msg)
+static int on_append(purcmc_server* srv, purcmc_endpoint* endpoint, const pcrdr_msg *msg)
 {
     pcrdr_msg response;
 
@@ -1047,7 +1217,7 @@ static int on_append(PurCMCServer* srv, PurCMCEndpoint* endpoint, const pcrdr_ms
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_prepend(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_prepend(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1067,7 +1237,7 @@ static int on_prepend(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_insert_after(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_insert_after(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1087,7 +1257,7 @@ static int on_insert_after(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_insert_before(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_insert_before(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1107,7 +1277,7 @@ static int on_insert_before(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_displace(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_displace(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1127,7 +1297,7 @@ static int on_displace(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_clear(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_clear(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1136,7 +1306,7 @@ static int on_clear(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_erase(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_erase(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1145,7 +1315,7 @@ static int on_erase(PurCMCServer* srv, PurCMCEndpoint* endpoint,
     return send_simple_response(srv, endpoint, &response);
 }
 
-static int on_update(PurCMCServer* srv, PurCMCEndpoint* endpoint,
+static int on_update(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
@@ -1224,7 +1394,7 @@ found:
     return handlers[mid].handler;
 }
 
-int on_got_message(PurCMCServer* srv, PurCMCEndpoint* endpoint, const pcrdr_msg *msg)
+int on_got_message(purcmc_server* srv, purcmc_endpoint* endpoint, const pcrdr_msg *msg)
 {
     if (msg->type == PCRDR_MSG_TYPE_REQUEST) {
         request_handler handler = find_request_handler(

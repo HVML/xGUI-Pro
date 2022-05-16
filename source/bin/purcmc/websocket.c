@@ -2362,7 +2362,7 @@ error:
 
 /* Create a new websocket server context. */
 WSServer *
-ws_init (PurCMCServerConfig *config)
+ws_init (purcmc_server_config *config)
 {
   WSServer *server = calloc (1, sizeof (WSServer));
 

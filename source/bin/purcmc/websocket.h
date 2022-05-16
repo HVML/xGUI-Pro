@@ -262,7 +262,7 @@ typedef struct WSServer_
   SSL_CTX *ctx;
 #endif
 
-  PurCMCServerConfig* config;
+  purcmc_server_config* config;
 } WSServer;
 
 size_t pack_uint32 (void *buf, uint32_t val, int convert);
@@ -276,7 +276,7 @@ int ws_send_packet_safe (WSServer * server, WSClient * client,
         WSOpcode op, const char *data, int sz);
 int ws_validate_string (const char *str, int len);
 
-WSServer *ws_init (PurCMCServerConfig * config);
+WSServer *ws_init (purcmc_server_config * config);
 int ws_initialize_ssl_ctx (WSServer * server);
 int ws_listen (WSServer *server);
 void ws_stop (WSServer *server);

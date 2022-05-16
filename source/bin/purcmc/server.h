@@ -44,6 +44,10 @@
 
 #include "purcmc.h"
 
+#define SERVER_APP_NAME     "cn.fmsoft.hvml.purcmc"
+#define SERVER_RUNNER_NAME  "renderer"
+
+
 #define SERVER_FEATURES \
     PCRDR_PURCMC_PROTOCOL_NAME ":" PCRDR_PURCMC_PROTOCOL_VERSION_STRING "\n" \
     "HTML:5.3\n" \
@@ -56,14 +60,14 @@
 /* 1 MiB throttle threshold per client */
 #define SOCK_THROTTLE_THLD  (1024 * 1024)
 
-/* PurCMCEndpoint types */
+/* purcmc_endpoint types */
 enum {
     ET_BUILTIN = 0,
     ET_UNIX_SOCKET,
     ET_WEB_SOCKET,
 };
 
-/* PurCMCEndpoint status */
+/* purcmc_endpoint status */
 enum {
     ES_AUTHING = 0,     // authenticating
     ES_CLOSING,         // force to close the endpoint due to the failed authentication,
@@ -111,8 +115,8 @@ typedef struct SockClient_ {
     struct UpperEntity_    *entity;
 } SockClient;
 
-/* A PurcMC PurCMCEndpoint */
-struct PurCMCEndpoint
+/* A PurcMC purcmc_endpoint */
+struct purcmc_endpoint
 {
     int             type;
     unsigned int    status;
@@ -125,7 +129,7 @@ struct PurCMCEndpoint
     char*   app_name;
     char*   runner_name;
 
-    PurCMCSessionInfo *session_info;
+    purcmc_session *session;
 
     /* AVL node for the AVL tree sorted by living time */
     struct avl_node avl;
@@ -134,8 +138,8 @@ struct PurCMCEndpoint
 struct WSServer_;
 struct USServer_;
 
-/* The PurcMC PurCMCServer */
-struct PurCMCServer
+/* The PurcMC purcmc_server */
+struct purcmc_server
 {
     int us_listener;
     int ws_listener;
@@ -159,7 +163,7 @@ struct PurCMCServer
     struct WSServer_ *ws_srv;
     struct USServer_ *us_srv;
 
-    /* The KV list using endpoint name as the key, and PurCMCEndpoint* as the value */
+    /* The KV list using endpoint name as the key, and purcmc_endpoint* as the value */
     struct kvlist endpoint_list;
 
     /* The accepted endpoints but waiting for authentification */
@@ -167,7 +171,10 @@ struct PurCMCServer
 
     /* the AVL tree of endpoints sorted by living time */
     struct avl_tree living_avl;
+
+    /* the callbacks */
+    purcmc_server_callbacks cbs;
 };
 
-#endif /* !XGUIPRO_PURCMC_SERVER_H*/
+#endif /* !XGUIPRO_PURCMC_SERVER_H */
 

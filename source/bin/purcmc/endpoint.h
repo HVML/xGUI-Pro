@@ -32,7 +32,7 @@
 
 #include "server.h"
 
-PurCMCEndpoint* new_endpoint (PurCMCServer* srv, int type, void* client);
+purcmc_endpoint* new_endpoint (purcmc_server* srv, int type, void* client);
 
 /* causes to delete endpoint */
 enum {
@@ -43,23 +43,23 @@ enum {
     CDE_NO_RESPONDING,
 };
 
-int del_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint, int cause);
+int del_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint, int cause);
 
-bool store_dangling_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint);
-bool remove_dangling_endpoint (PurCMCServer* srv, PurCMCEndpoint* endpoint);
-bool make_endpoint_ready (PurCMCServer* srv,
-        const char* endpoint_name, PurCMCEndpoint* endpoint);
+bool store_dangling_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint);
+bool remove_dangling_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint);
+bool make_endpoint_ready (purcmc_server* srv,
+        const char* endpoint_name, purcmc_endpoint* endpoint);
 
-int check_no_responding_endpoints (PurCMCServer *srv);
-int check_dangling_endpoints (PurCMCServer *srv);
+int check_no_responding_endpoints (purcmc_server *srv);
+int check_dangling_endpoints (purcmc_server *srv);
 
-int send_packet_to_endpoint (PurCMCServer* srv,
-        PurCMCEndpoint* endpoint, const char* body, int len_body);
-int send_initial_response (PurCMCServer* srv, PurCMCEndpoint* endpoint);
-int on_got_message(PurCMCServer* srv, PurCMCEndpoint* endpoint, const pcrdr_msg *msg);
+int send_packet_to_endpoint (purcmc_server* srv,
+        purcmc_endpoint* endpoint, const char* body, int len_body);
+int send_initial_response (purcmc_server* srv, purcmc_endpoint* endpoint);
+int on_got_message(purcmc_server* srv, purcmc_endpoint* endpoint, const pcrdr_msg *msg);
 
 static inline int
-assemble_endpoint_name (PurCMCEndpoint *endpoint, char *buff)
+assemble_endpoint_name (purcmc_endpoint *endpoint, char *buff)
 {
     if (endpoint->host_name && endpoint->app_name && endpoint->runner_name) {
         return purc_assemble_endpoint_name (endpoint->host_name,

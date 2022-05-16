@@ -95,10 +95,10 @@ typedef struct USServer_
     int (*on_close) (void *server, struct SockClient_ *client);
     void (*on_error) (void *server, struct SockClient_ *client, int err_code);
 
-    const PurCMCServerConfig* config;
+    const purcmc_server_config* config;
 } USServer;
 
-USServer *us_init (const PurCMCServerConfig* config);
+USServer *us_init (const purcmc_server_config* config);
 int us_listen (USServer* server);
 void us_stop (USServer *server);
 

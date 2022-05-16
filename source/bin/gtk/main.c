@@ -39,7 +39,7 @@
 
 #define XGUI_PRO_ERROR (xGUIProErrorQuark())
 
-static PurCMCServerConfig pcmcSrvCfg;
+static purcmc_server_config pcmcSrvCfg;
 
 static const gchar **uriArguments = NULL;
 static const gchar **ignoreHosts = NULL;
