@@ -837,7 +837,8 @@ deinit_server(void)
 }
 
 purcmc_server *
-purcmc_rdrsrv_init(purcmc_server_config* srvcfg)
+purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
+        const purcmc_server_callbacks *cbs)
 {
     int retval;
 
@@ -872,6 +873,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg)
     setup_signal_pipe();
     prepare_server();
 
+    the_server.cbs = *cbs;
     return &the_server;
 
 error:

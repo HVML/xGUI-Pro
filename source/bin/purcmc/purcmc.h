@@ -137,7 +137,8 @@ extern "C" {
 #endif
 
 /* Initialize the PurCMC renderer server */
-purcmc_server *purcmc_rdrsrv_init(purcmc_server_config* srvcfg);
+purcmc_server *purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
+        const purcmc_server_callbacks *cbs);
 
 /* Check and dispatch messages from clients */
 int purcmc_rdrsrv_check(purcmc_server *srv);

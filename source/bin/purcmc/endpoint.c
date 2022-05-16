@@ -104,13 +104,13 @@ int del_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint, int cause)
     return 0;
 }
 
-bool store_dangling_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint)
+bool store_dangling_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint)
 {
     if (srv->dangling_endpoints == NULL)
-        srv->dangling_endpoints = gslist_create (endpoint);
+        srv->dangling_endpoints = gslist_create(endpoint);
     else
         srv->dangling_endpoints =
-            gslist_insert_append (srv->dangling_endpoints, endpoint);
+            gslist_insert_append(srv->dangling_endpoints, endpoint);
 
     if (srv->dangling_endpoints)
         return true;
@@ -118,13 +118,13 @@ bool store_dangling_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint)
     return false;
 }
 
-bool remove_dangling_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint)
+bool remove_dangling_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint)
 {
     gs_list* node = srv->dangling_endpoints;
 
     while (node) {
         if (node->data == endpoint) {
-            gslist_remove_node (&srv->dangling_endpoints, node);
+            gslist_remove_node(&srv->dangling_endpoints, node);
             return true;
         }
 
@@ -134,96 +134,96 @@ bool remove_dangling_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint)
     return false;
 }
 
-bool make_endpoint_ready (purcmc_server* srv,
+bool make_endpoint_ready(purcmc_server* srv,
         const char* endpoint_name, purcmc_endpoint* endpoint)
 {
-    if (remove_dangling_endpoint (srv, endpoint)) {
-        if (!kvlist_set (&srv->endpoint_list, endpoint_name, &endpoint)) {
+    if (remove_dangling_endpoint(srv, endpoint)) {
+        if (!kvlist_set(&srv->endpoint_list, endpoint_name, &endpoint)) {
             purc_log_error ("Failed to store the endpoint: %s\n", endpoint_name);
             return false;
         }
 
-        endpoint->t_living = purc_get_monotoic_time ();
+        endpoint->t_living = purc_get_monotoic_time();
         endpoint->avl.key = endpoint;
-        if (avl_insert (&srv->living_avl, &endpoint->avl)) {
-            purc_log_error ("Failed to insert to the living AVL tree: %s\n", endpoint_name);
-            assert (0);
+        if (avl_insert(&srv->living_avl, &endpoint->avl)) {
+            purc_log_error("Failed to insert to the living AVL tree: %s\n", endpoint_name);
+            assert(0);
             return false;
         }
         srv->nr_endpoints++;
     }
     else {
-        purc_log_error ("Not found endpoint in dangling list: %s\n", endpoint_name);
+        purc_log_error("Not found endpoint in dangling list: %s\n", endpoint_name);
         return false;
     }
 
     return true;
 }
 
-static void cleanup_endpoint_client (purcmc_server *srv, purcmc_endpoint* endpoint)
+static void cleanup_endpoint_client(purcmc_server *srv, purcmc_endpoint* endpoint)
 {
     if (endpoint->type == ET_UNIX_SOCKET) {
         endpoint->entity.client->entity = NULL;
-        us_cleanup_client (srv->us_srv, (USClient*)endpoint->entity.client);
+        us_cleanup_client(srv->us_srv, (USClient*)endpoint->entity.client);
     }
     else if (endpoint->type == ET_WEB_SOCKET) {
         endpoint->entity.client->entity = NULL;
-        ws_cleanup_client (srv->ws_srv, (WSClient*)endpoint->entity.client);
+        ws_cleanup_client(srv->ws_srv, (WSClient*)endpoint->entity.client);
     }
 
-    purc_log_warn ("The endpoint (@%s/%s/%s) client cleaned up\n",
+    purc_log_warn("The endpoint (@%s/%s/%s) client cleaned up\n",
             endpoint->host_name, endpoint->app_name, endpoint->runner_name);
 }
 
-int check_no_responding_endpoints (purcmc_server *srv)
+int check_no_responding_endpoints(purcmc_server *srv)
 {
     int n = 0;
-    time_t t_curr = purc_get_monotoic_time ();
+    time_t t_curr = purc_get_monotoic_time();
     purcmc_endpoint *endpoint, *tmp;
 
-    purc_log_info ("Checking no responding endpoints...\n");
+    purc_log_info("Checking no responding endpoints...\n");
 
-    avl_for_each_element_safe (&srv->living_avl, endpoint, avl, tmp) {
+    avl_for_each_element_safe(&srv->living_avl, endpoint, avl, tmp) {
         char name [PURC_LEN_ENDPOINT_NAME + 1];
 
         assert (endpoint->type != ET_BUILTIN);
 
-        assemble_endpoint_name (endpoint, name);
+        assemble_endpoint_name(endpoint, name);
         if (t_curr > endpoint->t_living + PCRDR_MAX_NO_RESPONDING_TIME) {
 
-            kvlist_delete (&srv->endpoint_list, name);
-            cleanup_endpoint_client (srv, endpoint);
-            del_endpoint (srv, endpoint, CDE_NO_RESPONDING);
+            kvlist_delete(&srv->endpoint_list, name);
+            cleanup_endpoint_client(srv, endpoint);
+            del_endpoint(srv, endpoint, CDE_NO_RESPONDING);
             srv->nr_endpoints--;
             n++;
 
-            purc_log_info ("A no-responding client: %s\n", name);
+            purc_log_info("A no-responding client: %s\n", name);
         }
         else if (t_curr > endpoint->t_living + PCRDR_MAX_PING_TIME) {
             if (endpoint->type == ET_UNIX_SOCKET) {
-                us_ping_client (srv->us_srv, (USClient *)endpoint->entity.client);
+                us_ping_client(srv->us_srv, (USClient *)endpoint->entity.client);
             }
             else if (endpoint->type == ET_WEB_SOCKET) {
-                ws_ping_client (srv->ws_srv, (WSClient *)endpoint->entity.client);
+                ws_ping_client(srv->ws_srv, (WSClient *)endpoint->entity.client);
             }
 
-            purc_log_info ("Ping client: %s\n", name);
+            purc_log_info("Ping client: %s\n", name);
         }
         else {
-            purc_log_info ("Skip left endpoints since (%s): %ld\n",
+            purc_log_info("Skip left endpoints since (%s): %ld\n",
                     name, endpoint->t_living);
             break;
         }
     }
 
-    purc_log_info ("Total endpoints removed: %d\n", n);
+    purc_log_info("Total endpoints removed: %d\n", n);
     return n;
 }
 
-int check_dangling_endpoints (purcmc_server *srv)
+int check_dangling_endpoints(purcmc_server *srv)
 {
     int n = 0;
-    time_t t_curr = purc_get_monotoic_time ();
+    time_t t_curr = purc_get_monotoic_time();
     gs_list* node = srv->dangling_endpoints;
 
     while (node) {
@@ -231,9 +231,9 @@ int check_dangling_endpoints (purcmc_server *srv)
         purcmc_endpoint* endpoint = (purcmc_endpoint *)node->data;
 
         if (t_curr > endpoint->t_created + PCRDR_MAX_NO_RESPONDING_TIME) {
-            gslist_remove_node (&srv->dangling_endpoints, node);
-            cleanup_endpoint_client (srv, endpoint);
-            del_endpoint (srv, endpoint, CDE_NO_RESPONDING);
+            gslist_remove_node(&srv->dangling_endpoints, node);
+            cleanup_endpoint_client(srv, endpoint);
+            del_endpoint(srv, endpoint, CDE_NO_RESPONDING);
             n++;
         }
 
@@ -243,15 +243,15 @@ int check_dangling_endpoints (purcmc_server *srv)
     return n;
 }
 
-int send_packet_to_endpoint (purcmc_server* srv,
+int send_packet_to_endpoint(purcmc_server* srv,
         purcmc_endpoint* endpoint, const char* body, int len_body)
 {
     if (endpoint->type == ET_UNIX_SOCKET) {
-        return us_send_packet (srv->us_srv, (USClient *)endpoint->entity.client,
+        return us_send_packet(srv->us_srv, (USClient *)endpoint->entity.client,
                 US_OPCODE_TEXT, body, len_body);
     }
     else if (endpoint->type == ET_WEB_SOCKET) {
-        return ws_send_packet (srv->ws_srv, (WSClient *)endpoint->entity.client,
+        return ws_send_packet(srv->ws_srv, (WSClient *)endpoint->entity.client,
                 WS_OPCODE_TEXT, body, len_body);
     }
 
@@ -262,23 +262,30 @@ static int send_simple_response(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    size_t n;
-    char buff [PCRDR_DEF_PACKET_BUFF_SIZE];
 
-    n = pcrdr_serialize_message_to_buffer (msg, buff, sizeof(buff));
-    if (n > sizeof(buff)) {
-        purc_log_error ("The size of buffer for simple response packet is too small.\n");
-        retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
+    if (msg->requestId) {
+        size_t n;
+        char buff[PCRDR_DEF_PACKET_BUFF_SIZE];
+
+        n = pcrdr_serialize_message_to_buffer(msg, buff, sizeof(buff));
+        if (n > sizeof(buff)) {
+            purc_log_error("The size of buffer for simple response packet is too small.\n");
+            retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
+        }
+        else if (send_packet_to_endpoint(srv, endpoint, buff, n)) {
+            endpoint->status = ES_CLOSING;
+            retv = PCRDR_SC_IOERR;
+        }
     }
-    else if (send_packet_to_endpoint (srv, endpoint, buff, n)) {
-        endpoint->status = ES_CLOSING;
-        retv = PCRDR_SC_IOERR;
+
+    if (msg->dataType == PCRDR_MSG_DATA_TYPE_EJSON) {
+        purc_variant_unref(msg->data);
     }
 
     return retv;
 }
 
-int send_initial_response (purcmc_server* srv, purcmc_endpoint* endpoint)
+int send_initial_response(purcmc_server* srv, purcmc_endpoint* endpoint)
 {
     int retv = PCRDR_SC_OK;
     pcrdr_msg *msg = NULL;
@@ -293,8 +300,7 @@ int send_initial_response (purcmc_server* srv, purcmc_endpoint* endpoint)
     }
 
     retv = send_simple_response(srv, endpoint, msg);
-
-    pcrdr_release_message (msg);
+    pcrdr_release_message(msg);
 
 failed:
     return retv;
