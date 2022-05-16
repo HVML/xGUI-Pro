@@ -666,7 +666,7 @@ static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
         purcmc_plainwin *win = (void *)(uintptr_t)msg->targetValue;
         page = srv->cbs.get_plainwin_page(srv, win);
     }
-    else if (msg->target == PCRDR_MSG_TARGET_TABPAGE) {
+    else if (msg->target == PCRDR_MSG_TARGET_PAGE) {
         page = (void *)(uintptr_t)msg->targetValue;
     }
 
@@ -713,7 +713,7 @@ static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
         purcmc_plainwin *win = (void *)(uintptr_t)msg->targetValue;
         page = srv->cbs.get_plainwin_page(srv, win);
     }
-    else if (msg->target == PCRDR_MSG_TARGET_TABPAGE) {
+    else if (msg->target == PCRDR_MSG_TARGET_PAGE) {
         page = (void *)(uintptr_t)msg->targetValue;
     }
 
@@ -858,15 +858,15 @@ static struct request_handler {
     const char *operation;
     request_handler handler;
 } handlers[] = {
+    { PCRDR_OPERATION_ADDPAGEGROUPS, NULL },
     { PCRDR_OPERATION_APPEND, on_append },
+    { PCRDR_OPERATION_CALLMETHOD, NULL },
     { PCRDR_OPERATION_CLEAR, on_clear },
     { PCRDR_OPERATION_CREATEPLAINWINDOW, on_create_plain_window },
-    { PCRDR_OPERATION_CREATETABBEDWINDOW, NULL },
-    { PCRDR_OPERATION_CREATETABPAGE, NULL },
+    { PCRDR_OPERATION_CREATEPAGE, NULL },
     { PCRDR_OPERATION_CREATEWORKSPACE, NULL },
     { PCRDR_OPERATION_DESTROYPLAINWINDOW, on_destroy_plain_window },
-    { PCRDR_OPERATION_DESTROYTABBEDWINDOW, NULL },
-    { PCRDR_OPERATION_DESTROYTABPAGE, NULL },
+    { PCRDR_OPERATION_DESTROYPAGE, NULL },
     { PCRDR_OPERATION_DESTROYWORKSPACE, NULL },
     { PCRDR_OPERATION_DISPLACE, on_displace },
     { PCRDR_OPERATION_ENDSESSION, on_end_session },
@@ -875,11 +875,12 @@ static struct request_handler {
     { PCRDR_OPERATION_INSERTBEFORE, on_insert_before },
     { PCRDR_OPERATION_LOAD, on_load },
     { PCRDR_OPERATION_PREPEND, on_prepend },
+    { PCRDR_OPERATION_REMOVEPAGEGROUP, NULL },
+    { PCRDR_OPERATION_RESETPAGEGROUPS, NULL },
     { PCRDR_OPERATION_STARTSESSION, on_start_session },
     { PCRDR_OPERATION_UPDATE, on_update },
     { PCRDR_OPERATION_UPDATEPLAINWINDOW, on_update_plain_window },
-    { PCRDR_OPERATION_UPDATETABBEDWINDOW, NULL },
-    { PCRDR_OPERATION_UPDATETABPAGE, NULL },
+    { PCRDR_OPERATION_UPDATEPAGE, NULL },
     { PCRDR_OPERATION_UPDATEWORKSPACE, NULL },
     { PCRDR_OPERATION_WRITEBEGIN, on_write_begin },
     { PCRDR_OPERATION_WRITEEND, on_write_end },

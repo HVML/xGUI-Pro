@@ -122,8 +122,6 @@ typedef struct purcmc_server_callbacks {
 
     purc_variant_t (*call_method)(purcmc_server *, purcmc_dom *,
             const pcrdr_msg *msg, int* retv);
-    int (*call_method_noreturn)(purcmc_server *, purcmc_dom *,
-            const pcrdr_msg *msg);
 
 } purcmc_server_callbacks;
 
