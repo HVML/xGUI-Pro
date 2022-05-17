@@ -641,6 +641,15 @@ static void filterSavedCallback(WebKitUserContentFilterStore *store, GAsyncResul
     g_main_loop_quit(data->mainLoop);
 }
 
+static void initialize_web_extensions(WebKitWebContext *context, gpointer user_data)
+{
+    /* Web Extensions get a different ID for each Web Process */
+    static guint32 unique_id = 0;
+
+    webkit_web_context_set_web_extensions_directory(context, WEB_EXTENSIONS_DIR);
+    webkit_web_context_set_web_extensions_initialization_user_data(context, g_variant_new_uint32 (unique_id++));
+}
+
 static void startup(GApplication *application)
 {
     const char *actionAccels[] = {
@@ -728,6 +737,8 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
 #endif
         NULL);
     g_object_unref(manager);
+
+    g_signal_connect(webContext, "initialize-web-extensions", G_CALLBACK(initialize_web_extensions), NULL);
 
     if (enableSandbox)
         webkit_web_context_set_sandbox_enabled(webContext, TRUE);
