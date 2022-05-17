@@ -31,15 +31,20 @@
 #include "BrowserWindow.h"
 #include "BuildRevision.h"
 #include "purcmc/purcmc.h"
+#include "PurcmcCallbacks.h"
 
 #include <errno.h>
 #include <gtk/gtk.h>
 #include <string.h>
 #include <webkit2/webkit2.h>
 
+#define APP_NAME        "cn.fmsoft.hvml.xGUIPro"
+#define RUNNER_NAME     "purcmc"
+
 #define XGUI_PRO_ERROR (xGUIProErrorQuark())
 
-static purcmc_server_config pcmcSrvCfg;
+static purcmc_server_config pcmc_srvcfg;
+static purcmc_server *pcmc_srv;
 
 static const gchar **uriArguments = NULL;
 static const gchar **ignoreHosts = NULL;
@@ -136,18 +141,18 @@ static gboolean parseBackgroundColor(const char *optionName, const char *value, 
 
 static const GOptionEntry commandLineOptions[] =
 {
-    { "pcmc-nowebsocket", 0, 0, G_OPTION_ARG_NONE, &pcmcSrvCfg.nowebsocket, "Without support for WebSocket", NULL },
-    { "pcmc-accesslog", 0, 0, G_OPTION_ARG_NONE, &pcmcSrvCfg.accesslog, "Logging the verbose socket access information", NULL },
-    { "pcmc-unixsocket", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.unixsocket, "The path of the Unix-domain socket to listen on", "PATH" },
-    { "pcmc-addr", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.addr, "The IPv4 address to bind to for WebSocket", NULL },
-    { "pcmc-port", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.port, "The port to bind to for WebSocket", NULL },
-    { "pcmc-origin", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.origin, "The origin to ensure clients send the specified origin header upon the WebSocket handshake", "FQDN" },
+    { "pcmc-nowebsocket", 0, 0, G_OPTION_ARG_NONE, &pcmc_srvcfg.nowebsocket, "Without support for WebSocket", NULL },
+    { "pcmc-accesslog", 0, 0, G_OPTION_ARG_NONE, &pcmc_srvcfg.accesslog, "Logging the verbose socket access information", NULL },
+    { "pcmc-unixsocket", 0, 0, G_OPTION_ARG_STRING, &pcmc_srvcfg.unixsocket, "The path of the Unix-domain socket to listen on", "PATH" },
+    { "pcmc-addr", 0, 0, G_OPTION_ARG_STRING, &pcmc_srvcfg.addr, "The IPv4 address to bind to for WebSocket", NULL },
+    { "pcmc-port", 0, 0, G_OPTION_ARG_STRING, &pcmc_srvcfg.port, "The port to bind to for WebSocket", NULL },
+    { "pcmc-origin", 0, 0, G_OPTION_ARG_STRING, &pcmc_srvcfg.origin, "The origin to ensure clients send the specified origin header upon the WebSocket handshake", "FQDN" },
 #if HAVE(LIBSSL)
-    { "pcmc-sslcert", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.sslcert, "The path to SSL certificate", "FILE" },
-    { "pcmc-sslkey", 0, 0, G_OPTION_ARG_STRING, &pcmcSrvCfg.sslkey, "The path to SSL private key", "FILE" },
+    { "pcmc-sslcert", 0, 0, G_OPTION_ARG_STRING, &pcmc_srvcfg.sslcert, "The path to SSL certificate", "FILE" },
+    { "pcmc-sslkey", 0, 0, G_OPTION_ARG_STRING, &pcmc_srvcfg.sslkey, "The path to SSL private key", "FILE" },
 #endif
-    { "pcmc-maxfrmsize", 0, 0, G_OPTION_ARG_INT, &pcmcSrvCfg.max_frm_size, "The maximum size of a socket frame", "BYTES" },
-    { "pcmc-backlog", 0, 0, G_OPTION_ARG_INT, &pcmcSrvCfg.backlog, "The maximum length to which the queue of pending connections.", "NUMBER" },
+    { "pcmc-maxfrmsize", 0, 0, G_OPTION_ARG_INT, &pcmc_srvcfg.max_frm_size, "The maximum size of a socket frame", "BYTES" },
+    { "pcmc-backlog", 0, 0, G_OPTION_ARG_INT, &pcmc_srvcfg.backlog, "The maximum length to which the queue of pending connections.", "NUMBER" },
 
     { "autoplay-policy", 0, 0, G_OPTION_ARG_CALLBACK, parseAutoplayPolicy, "Autoplay policy. Valid options are: allow, allow-without-sound, and deny", NULL },
     { "bg-color", 0, 0, G_OPTION_ARG_CALLBACK, parseBackgroundColor, "Background color", NULL },
@@ -662,6 +667,35 @@ static void startup(GApplication *application)
 
     for (const gchar **it = actionAccels; it[0]; it += g_strv_length((gchar **)it) + 1)
         gtk_application_set_accels_for_action(GTK_APPLICATION(application), it[0], &it[1]);
+
+    purcmc_server_callbacks cbs = {
+        .create_session = gtk_create_session,
+        .remove_session = gtk_remove_session,
+    };
+
+    pcmc_srvcfg.app_name = APP_NAME;
+    pcmc_srvcfg.runner_name = RUNNER_NAME;
+
+    pcmc_srv = purcmc_rdrsrv_init(&pcmc_srvcfg, &cbs);
+    if (pcmc_srv == NULL) {
+        fprintf(stderr, "Failed call to purcmc_rdrsrv_init()\n");
+        exit(EXIT_FAILURE);
+    }
+
+    GMainContext *context = g_main_context_default();
+
+    GSource *source;
+    source = g_timeout_source_new(10);
+    g_source_set_callback(source,
+            G_SOURCE_FUNC(purcmc_rdrsrv_check), pcmc_srv, NULL);
+    g_source_attach(source, context);
+    g_source_unref(source);
+}
+
+static void shutdown(GApplication *application)
+{
+    g_source_remove_by_user_data(pcmc_srv);
+    purcmc_rdrsrv_deinit(pcmc_srv);
 }
 
 static void activate(GApplication *application, WebKitSettings *webkitSettings)
@@ -851,8 +885,9 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    GtkApplication *application = gtk_application_new("cn.fmsoft.HVML.xGUIPro", G_APPLICATION_NON_UNIQUE);
+    GtkApplication *application = gtk_application_new(APP_NAME, G_APPLICATION_NON_UNIQUE);
     g_signal_connect(application, "startup", G_CALLBACK(startup), NULL);
+    g_signal_connect(application, "shutdown", G_CALLBACK(shutdown), NULL);
     g_signal_connect(application, "activate", G_CALLBACK(activate), webkitSettings);
     g_application_run(G_APPLICATION(application), 0, NULL);
     g_object_unref(application);

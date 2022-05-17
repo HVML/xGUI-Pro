@@ -20,6 +20,8 @@ list(APPEND xguipro_SOURCES
     gtk/BrowserTab.h
     gtk/BrowserWindow.c
     gtk/BrowserWindow.h
+    gtk/PurcmcCallbacks.c
+    gtk/PurcmcCallbacks.h
     gtk/main.c
 )
 

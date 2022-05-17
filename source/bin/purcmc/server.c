@@ -282,23 +282,23 @@ setup_signal_pipe (void)
 /* max events for epoll */
 #define MAX_EVENTS          10
 
-static void
-prepare_server (void)
+static int
+prepare_server(void)
 {
 #if HAVE(SYS_EPOLL_H)
     struct epoll_event ev;
 #endif
     the_server.us_listener = the_server.ws_listener = -1;
-    the_server.t_start = purc_get_monotoic_time ();
+    the_server.t_start = purc_get_monotoic_time();
     the_server.t_elapsed = the_server.t_elapsed_last = 0;
 
     // create unix socket
-    if ((the_server.us_listener = us_listen (the_server.us_srv)) < 0) {
-        purc_log_error ("Unable to listen on Unix socket (%s)\n",
+    if ((the_server.us_listener = us_listen(the_server.us_srv)) < 0) {
+        purc_log_error("Unable to listen on Unix socket (%s)\n",
                 the_srvcfg->unixsocket);
         goto error;
     }
-    purc_log_info ("Listening on Unix Socket (%s)...\n", the_srvcfg->unixsocket);
+    purc_log_info("Listening on Unix Socket (%s)...\n", the_srvcfg->unixsocket);
 
     the_server.us_srv->on_accepted = on_accepted;
     the_server.us_srv->on_packet = on_packet;
@@ -310,10 +310,10 @@ prepare_server (void)
     if (the_server.ws_srv) {
 #if HAVE(LIBSSL)
         if (the_srvcfg->sslcert && the_srvcfg->sslkey) {
-            purc_log_info ("==Using TLS/SSL==\n");
+            purc_log_info("==Using TLS/SSL==\n");
             the_srvcfg->use_ssl = 1;
-            if (ws_initialize_ssl_ctx (the_server.ws_srv)) {
-                purc_log_error ("Unable to initialize_ssl_ctx\n");
+            if (ws_initialize_ssl_ctx(the_server.ws_srv)) {
+                purc_log_error("Unable to initialize_ssl_ctx\n");
                 goto error;
             }
         }
@@ -321,8 +321,8 @@ prepare_server (void)
         the_srvcfg->sslcert = the_srvcfg->sslkey = NULL;
 #endif
 
-        if ((the_server.ws_listener = ws_listen (the_server.ws_srv)) < 0) {
-            purc_log_error ("Unable to listen on Web socket (%s, %s)\n",
+        if ((the_server.ws_listener = ws_listen(the_server.ws_srv)) < 0) {
+            purc_log_error("Unable to listen on Web socket (%s, %s)\n",
                     the_srvcfg->addr, the_srvcfg->port);
             goto error;
         }
@@ -332,12 +332,14 @@ prepare_server (void)
         the_server.ws_srv->on_pending = on_pending;
         the_server.ws_srv->on_close = on_close;
         the_server.ws_srv->on_error = on_error;
+
+        purc_log_info("Listening on Web Socket (%s, %s) %s SSL...\n",
+                the_srvcfg->addr, the_srvcfg->port,
+                the_srvcfg->sslcert ? "with" : "without");
     }
-    purc_log_info ("Listening on Web Socket (%s, %s) %s SSL...\n",
-            the_srvcfg->addr, the_srvcfg->port, the_srvcfg->sslcert ? "with" : "without");
 
 #if HAVE(SYS_EPOLL_H)
-    the_server.epollfd = epoll_create1 (EPOLL_CLOEXEC);
+    the_server.epollfd = epoll_create1(EPOLL_CLOEXEC);
     if (the_server.epollfd == -1) {
         purc_log_error ("Failed to call epoll_create1: %s\n", strerror(errno));
         goto error;
@@ -345,7 +347,7 @@ prepare_server (void)
 
     ev.events = EPOLLIN;
     ev.data.ptr = PTR_FOR_US_LISTENER;
-    if (epoll_ctl (the_server.epollfd, EPOLL_CTL_ADD, the_server.us_listener, &ev) == -1) {
+    if (epoll_ctl(the_server.epollfd, EPOLL_CTL_ADD, the_server.us_listener, &ev) == -1) {
         purc_log_error ("Failed to call epoll_ctl with us_listener (%d): %s\n",
                 the_server.us_listener, strerror(errno));
         goto error;
@@ -354,25 +356,27 @@ prepare_server (void)
     if (the_server.ws_listener >= 0) {
         ev.events = EPOLLIN;
         ev.data.ptr = PTR_FOR_WS_LISTENER;
-        if (epoll_ctl (the_server.epollfd, EPOLL_CTL_ADD, the_server.ws_listener, &ev) == -1) {
+        if (epoll_ctl(the_server.epollfd, EPOLL_CTL_ADD, the_server.ws_listener, &ev) == -1) {
             purc_log_error ("Failed to call epoll_ctl with ws_listener (%d): %s\n",
                     the_server.ws_listener, strerror(errno));
             goto error;
         }
     }
 #elif HAVE(SYS_SELECT_H)
-    listen_new_client (the_server.us_listener, PTR_FOR_US_LISTENER, FALSE);
+    listen_new_client(the_server.us_listener, PTR_FOR_US_LISTENER, FALSE);
     if (the_server.ws_listener >= 0) {
         listen_new_client (the_server.ws_listener, PTR_FOR_WS_LISTENER, FALSE);
     }
 #endif
 
+    return 0;
+
 error:
-    return;
+    return -1;
 }
 
 #if HAVE(SYS_EPOLL_H)
-int purcmc_rdrsrv_check(purcmc_server *srv)
+bool purcmc_rdrsrv_check(purcmc_server *srv)
 {
     int nfds, n;
     struct epoll_event ev, events[MAX_EVENTS];
@@ -503,15 +507,15 @@ again:
         }
     }
 
-    return 0;
+    return true;
 
 error:
-    return -1;
+    return false;
 }
 
 #elif HAVE(SYS_SELECT_H)
 
-int purcmc_rdrsrv_check(purcmc_server *srv)
+bool purcmc_rdrsrv_check(purcmc_server *srv)
 {
     int retval;
     fd_set rset, wset;
@@ -645,10 +649,10 @@ again:
         }
     }
 
-    return 0;
+    return true;
 
 error:
-    return -1;
+    return false;
 }
 
 #endif /* HAVE(SYS_SELECT_H) */
@@ -690,7 +694,7 @@ init_server(void)
         return -1;
     }
 
-    purc_enable_log(true, true);
+    purc_enable_log(true, false);
 
 #if !HAVE(SYS_EPOLL_H) && HAVE(SYS_SELECT_H)
     the_server.maxfd = -1;
@@ -867,11 +871,13 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
     }
     else {
         the_server.ws_srv = NULL;
-        purc_log_info("Skip web socket");
+        purc_log_info("Skip web socket\n");
     }
 
     setup_signal_pipe();
-    prepare_server();
+    if (prepare_server()) {
+        goto error;
+    }
 
     the_server.cbs = *cbs;
     return &the_server;

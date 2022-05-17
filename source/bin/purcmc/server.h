@@ -44,8 +44,8 @@
 
 #include "purcmc.h"
 
-#define SERVER_APP_NAME     "cn.fmsoft.hvml.purcmc"
-#define SERVER_RUNNER_NAME  "renderer"
+#define SERVER_APP_NAME     "cn.fmsoft.hvml.renderer"
+#define SERVER_RUNNER_NAME  "purcmc"
 
 
 #define SERVER_FEATURES \

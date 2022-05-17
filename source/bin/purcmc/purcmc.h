@@ -141,7 +141,7 @@ purcmc_server *purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
         const purcmc_server_callbacks *cbs);
 
 /* Check and dispatch messages from clients */
-int purcmc_rdrsrv_check(purcmc_server *srv);
+bool purcmc_rdrsrv_check(purcmc_server *srv);
 
 /* Deinitialize the PurCMC renderer server */
 int purcmc_rdrsrv_deinit(purcmc_server *srv);
