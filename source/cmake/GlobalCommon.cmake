@@ -7,6 +7,13 @@ if (NOT HAS_RUN_XGUIPRO_COMMON)
     set(HAS_RUN_XGUIPRO_COMMON TRUE)
 
     # -----------------------------------------------------------------------------
+    # Default output directories, which can be overwritten by ports
+    #------------------------------------------------------------------------------
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+    # -----------------------------------------------------------------------------
     # Find common packages (used by all ports)
     # -----------------------------------------------------------------------------
     if (WIN32)

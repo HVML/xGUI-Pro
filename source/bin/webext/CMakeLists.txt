@@ -1,0 +1,50 @@
+set(WEBKIT_WEB_EXTENSIONS_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xguipro")
+
+set(WebKitWebExtension_INCLUDE_DIRECTORIES
+)
+
+set(WebKitWebExtension_SYSTEM_INCLUDE_DIRECTORIES
+    ${GLIB_INCLUDE_DIRS}
+    ${GTK_INCLUDE_DIRS}
+    ${LIBSOUP_INCLUDE_DIRS}
+    ${WebKit_INCLUDE_DIRS}
+)
+
+set(WebKitWebExtension_DEFINITIONS
+    WEBKIT_WEB_EXTENSIONS_DIR="${WEBKIT_WEB_EXTENSIONS_DIR}"
+    WEBKIT_INJECTED_BUNDLE_PATH="${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
+)
+
+set(WebKitWebExtension_LIBRARIES
+    ${GLIB_GOBJECT_LIBRARIES}
+    ${GLIB_LIBRARIES}
+    WebKit::JSC
+    WebKit::WebKit
+)
+
+set(WebExtensionHVML_SOURCES
+    WebExtensionHVML.c
+)
+
+macro(ADD_WK2_WEB_EXTENSION extension_name)
+    add_library(${extension_name} SHARED ${ARGN})
+    add_dependencies(${extension_name} xguipro)
+    set_property(
+        TARGET ${extension_name}
+        APPEND
+        PROPERTY COMPILE_DEFINITIONS WEBEXT_COMPILATION
+    )
+    set_target_properties(${extension_name} PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${WEBKIT_WEB_EXTENSIONS_DIR}
+    )
+    target_compile_definitions(${extension_name} PUBLIC ${WebKitWebExtension_DEFINITIONS})
+    target_include_directories(${extension_name} PUBLIC ${WebKitWebExtension_INCLUDE_DIRECTORIES})
+    target_include_directories(${extension_name} SYSTEM PUBLIC ${WebKitWebExtension_SYSTEM_INCLUDE_DIRECTORIES})
+    target_link_libraries(${extension_name} ${WebKitWebExtension_LIBRARIES})
+endmacro()
+
+XGUIPRO_INCLUDE_CONFIG_FILES_IF_EXISTS()
+
+ADD_WK2_WEB_EXTENSION(WebExtensionHVML ${WebExtensionHVML_SOURCES})
+
+install(TARGETS WebExtensionHVML DESTINATION "${WEBKIT_WEB_EXTENSIONS_DIR}/")

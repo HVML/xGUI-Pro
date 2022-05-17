@@ -4,6 +4,8 @@ include(GlobalCommon)
 include(target/xGUIPro)
 include(MyMacros.cmake)
 
+add_subdirectory(webext)
+
 XGUIPRO_EXECUTABLE_DECLARE(xguipro)
 
 list(APPEND xguipro_PRIVATE_INCLUDE_DIRECTORIES
