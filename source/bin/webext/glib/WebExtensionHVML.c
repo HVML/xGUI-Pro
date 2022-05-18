@@ -21,6 +21,7 @@
 */
 
 #include <webkit2/webkit-web-extension.h>
+#include <syslog.h>
 
 struct HVMLInfo {
     char *protocol;
@@ -93,7 +94,7 @@ static void
 web_page_created_callback(WebKitWebExtension *extension,
         WebKitWebPage *web_page, gpointer user_data)
 {
-    g_print("Page %llu created for %s\n",
+    syslog(LOG_INFO, "Page %llu created for %s\n",
             (unsigned long long)webkit_web_page_get_id(web_page),
             webkit_web_page_get_uri(web_page));
 
@@ -115,13 +116,27 @@ web_page_created_callback(WebKitWebExtension *extension,
 }
 
 G_MODULE_EXPORT void
-webkit_web_extension_initialize_user_data(WebKitWebExtension *extension,
-        const GVariant *user_data)
+webkit_web_extension_initialize_with_user_data(WebKitWebExtension *extension,
+        GVariant *user_data)
 {
-    (void)user_data;
+    openlog("WebExtensionHVML", LOG_NDELAY | LOG_PID, LOG_USER);
+
+    if (user_data == NULL) {
+        syslog(LOG_INFO, "%s: no user data\n", __func__);
+    }
+    else {
+        const char* type = g_variant_get_type_string(user_data);
+        if (strcmp(type, "u") == 0) {
+            syslog(LOG_INFO, "%s: got desired user data: %u\n",
+                    __func__, g_variant_get_uint32(user_data));
+        }
+        else {
+            syslog(LOG_INFO, "%s: not desired user data type: %s\n", __func__, type);
+        }
+    }
 
     g_signal_connect(extension, "page-created",
-            G_CALLBACK (web_page_created_callback),
-            (gpointer)user_data);
+            G_CALLBACK(web_page_created_callback),
+            user_data);
 }
 

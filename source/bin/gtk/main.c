@@ -641,13 +641,21 @@ static void filterSavedCallback(WebKitUserContentFilterStore *store, GAsyncResul
     g_main_loop_quit(data->mainLoop);
 }
 
-static void initialize_web_extensions(WebKitWebContext *context, gpointer user_data)
+static void
+initialize_web_extensions(WebKitWebContext *context, gpointer user_data)
 {
     /* Web Extensions get a different ID for each Web Process */
     static guint32 unique_id = 0;
+    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
+    if (webext_dir == NULL) {
+        webext_dir = WEBKIT_WEBEXT_DIR;
+    }
 
-    webkit_web_context_set_web_extensions_directory(context, WEB_EXTENSIONS_DIR);
-    webkit_web_context_set_web_extensions_initialization_user_data(context, g_variant_new_uint32 (unique_id++));
+    g_print("%s: webext in %s\n", __func__, webext_dir);
+
+    webkit_web_context_set_web_extensions_directory(context, webext_dir);
+    webkit_web_context_set_web_extensions_initialization_user_data(context,
+            g_variant_new_uint32(unique_id++));
 }
 
 static void startup(GApplication *application)
