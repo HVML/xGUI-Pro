@@ -15,6 +15,7 @@ set(WebKitWebExtension_DEFINITIONS
 set(WebKitWebExtension_LIBRARIES
     ${GLIB_GOBJECT_LIBRARIES}
     ${GLIB_LIBRARIES}
+    PurC::PurC
     WebKit::JSC
     WebKit::WebKit
 )

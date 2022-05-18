@@ -22,6 +22,7 @@
 
 #include <webkit2/webkit-web-extension.h>
 
+#include <purc/purc-helpers.h>
 #include <syslog.h>
 
 struct HVMLInfo {
@@ -106,8 +107,12 @@ static void destroyed_notify(gpointer instance)
     free(hvmlInfo);
 }
 
-static void create_hvml_instance(JSCContext *context, const char *uri)
+static void create_hvml_instance(JSCContext *context,
+        gchar *hostName, gchar *appName, gchar* runnerName)
 {
+    syslog(LOG_INFO, "%s: hostName (%s), appname (%s), runnerName (%s)\n",
+            __func__, hostName, appName, runnerName);
+
     JSCClass* hvmlClass = jsc_context_register_class(context,
             "HVML", NULL, &hvmlVTable, destroyed_notify);
 
@@ -115,9 +120,9 @@ static void create_hvml_instance(JSCContext *context, const char *uri)
 
     /* TODO: get data from user_data */
     hvmlInfo->protocol = strdup("PURCMC:100");
-    hvmlInfo->hostName = strdup("localhost");
-    hvmlInfo->appName = strdup("cn.fmsoft.hvml.test");
-    hvmlInfo->runnerName = strdup("test");
+    hvmlInfo->hostName = hostName;
+    hvmlInfo->appName = appName;
+    hvmlInfo->runnerName = runnerName;
 
     JSCValue *HVML = jsc_value_new_object(context, hvmlInfo, hvmlClass);
     jsc_context_set_value(context, "HVML", HVML);
@@ -126,20 +131,86 @@ static void create_hvml_instance(JSCContext *context, const char *uri)
 }
 
 static void
+document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
+{
+    syslog(LOG_INFO, "%s: user_data (%p)\n", __func__, user_data);
+
+    static const gchar *code = ""
+    "var elem = document.getElementByHVMLHandle('77');"
+    "elem.textContent = '@' + HVML.hostName + '/' + HVML.appName + '/' + HVML.runnerName;";
+
+    WebKitFrame *frame;
+    frame = webkit_web_page_get_main_frame(web_page);
+
+    JSCContext *context;
+    context = webkit_frame_get_js_context_for_script_world(frame,
+            webkit_script_world_get_default());
+
+    JSCValue *result;
+    result = jsc_context_evaluate_with_source_uri(context, code, -1,
+            webkit_web_page_get_uri(web_page), 1);
+    char *result_in_json = jsc_value_to_json(result, 0);
+
+    syslog(LOG_INFO, "%s: result (%s)\n", __func__, result_in_json);
+    free(result_in_json);
+}
+
+static bool get_endpoint_info(const gchar *uri,
+        gchar **hostName, gchar **appName, gchar **runnerName)
+{
+    gchar *schema, *host, *path;
+
+    g_uri_split(uri, G_URI_FLAGS_NONE,
+            &schema, NULL, &host, NULL, &path, NULL, NULL, NULL);
+
+    gchar *basename = g_path_get_basename(path);
+    gchar *dirname = g_path_get_dirname(path);
+
+    const gchar *runner = basename;
+    const gchar *app = dirname + 1;
+
+    if (strcasecmp(schema, "hvml") ||
+            !purc_is_valid_host_name(host) ||
+            !purc_is_valid_app_name(app) ||
+            !purc_is_valid_runner_name(runner)) {
+        free(basename);
+        free(dirname);
+        free(schema);
+        free(host);
+        free(path);
+        return false;
+    }
+
+    *hostName = host;
+    *appName = strdup(app);
+    *runnerName = strdup(runner);
+
+    free(basename);
+    free(dirname);
+    free(schema);
+    free(path);
+    return true;
+}
+
+static void
 window_object_cleared_callback(WebKitScriptWorld* world,
         WebKitWebPage* webPage, WebKitFrame* frame,
         WebKitWebExtension* extension)
 {
-    const char *uri = webkit_web_page_get_uri(webPage);
+    gchar *hostName, *appName, *runnerName;
+    const gchar *uri = webkit_web_page_get_uri(webPage);
 
     syslog(LOG_INFO, "%s: uri (%s)\n", __func__, uri);
-    if (strncmp(uri, "xguipro:", 8))
-        return;
+    if (get_endpoint_info(uri, &hostName, &appName, &runnerName)) {
+        JSCContext *context;
+        context = webkit_frame_get_js_context_for_script_world(frame, world);
 
-    JSCContext *context;
-    context = webkit_frame_get_js_context_for_script_world(frame, world);
+        create_hvml_instance(context, hostName, appName, runnerName);
 
-    create_hvml_instance(context, uri);
+        g_signal_connect(webPage, "document-loaded",
+                G_CALLBACK(document_loaded_callback),
+                NULL);
+    }
 }
 
 static void

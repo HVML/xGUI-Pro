@@ -7,6 +7,7 @@
 
 #include "main.h"
 #include "HVMLURISchema.h"
+#include "BuildRevision.h"
 
 #include <webkit2/webkit2.h>
 #include <purc/purc-helpers.h>
@@ -35,7 +36,7 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
                 "Invalid HVML uri: hvml://%s%s", host, path);
         webkit_uri_scheme_request_finish_error(request, error);
         g_error_free(error);
-        return;
+        goto error;
     }
 
     const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
@@ -47,20 +48,15 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
     contents = g_strdup_printf(
             "<!DOCTYPE html>"
             "<html>"
-            "<head>"
-            "<script src=\"file://%s/hvml.js\"></script>"
-            "</head>"
             "<body>"
-            "<h1>xGUI Pro for <span id=\"endpoint\"></span></h1>"
-            "<p>This content will be replaced by the HVML runner (@%s/%s/%s)</p>"
+            "<h1>xGUI Pro</h1>"
+            "<p>This content will be replaced by the HVML runner <span hvml:handle=\"77\"></span>.</p>"
+            "<p><small>WebKit2GTK API Version %s, WebKit Version %d.%d.%d, Build %s</small></p>"
             "</body>"
             "</html>",
-        webext_dir, host, app, runner);
-
-    g_free(basename);
-    g_free(dirname);
-    g_free(path);
-    g_free(host);
+            WEBKITGTK_API_VERSION_STRING,
+            WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, WEBKIT_MICRO_VERSION,
+            BUILD_REVISION);
 
     GInputStream *stream;
     gsize streamLength;
@@ -69,5 +65,11 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
 
     webkit_uri_scheme_request_finish(request, stream, streamLength, "text/html");
     g_object_unref(stream);
+
+error:
+    g_free(basename);
+    g_free(dirname);
+    g_free(path);
+    g_free(host);
 }
 
