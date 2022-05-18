@@ -28,7 +28,7 @@ endif (OpenSSL_FOUND)
 # and the option is not relevant to any other xGUIPro ports.
 
 XGUIPRO_OPTION_DEFINE(USE_GTK4 "Whether to enable usage of GTK4 instead of GTK3." PUBLIC OFF)
-XGUIPRO_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC OFF)
+XGUIPRO_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC ON)
 #XGUIPRO_OPTION_DEFINE(USE_SYSTEMD "Whether to enable journald logging" PUBLIC ON)
 
 XGUIPRO_OPTION_CONFLICT(USE_GTK4 USE_SOUP2)

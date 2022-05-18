@@ -55,12 +55,12 @@ This will define the following variables in your project:
 find_package(PkgConfig QUIET)
 
 pkg_check_modules(PC_WEBKIT2GTK QUIET ${WEBKIT2GTK_PC_NAME})
-set(WebKit2Gtk_COMPILE_OPTIONS ${PC_WEBKIT2GTK_CFLAGS_OTHER})
+set(WebKi_COMPILE_OPTIONS ${PC_WEBKIT2GTK_CFLAGS_OTHER})
 set(WebKit2Gtk_VERSION ${PC_WEBKIT2GTK_VERSION})
 
 find_path(WebKit2Gtk_INCLUDE_DIR
     NAMES webkit2/webkit2.h
-    HINTS ${PC_WEBKIT2GTK_INCLUDEDIR}/${WEBKIT2GTK_PC_NAME} ${PC_WEBKIT2GTK_INCLUDE_DIR}/${WEBKIT2GTK_PC_NAME}
+    HINTS ${PC_WEBKIT2GTK_INCLUDE_DIRS}
 )
 
 find_library(WebKit2Gtk_LIBRARY
@@ -86,22 +86,23 @@ if (WebKit2Gtk_FOUND AND NOT TARGET WebKit::WebKit)
     add_library(WebKit::WebKit UNKNOWN IMPORTED GLOBAL)
     set_target_properties(WebKit::WebKit PROPERTIES
         IMPORTED_LOCATION "${WebKit2Gtk_LIBRARY}"
-        INTERFACE_COMPILE_OPTIONS "${WebKit2Gtk_COMPILE_OPTIONS}"
+        INTERFACE_COMPILE_OPTIONS "${WebKit_COMPILE_OPTIONS}"
         INTERFACE_INCLUDE_DIRECTORIES "${WebKit2Gtk_INCLUDE_DIR}"
     )
 
     add_library(WebKit::JSC UNKNOWN IMPORTED GLOBAL)
     set_target_properties(WebKit::JSC PROPERTIES
         IMPORTED_LOCATION "${JavaScriptCoreGtk_LIBRARY}"
-        INTERFACE_COMPILE_OPTIONS "${WebKit2Gtk_COMPILE_OPTIONS}"
+        INTERFACE_COMPILE_OPTIONS "${WebKit_COMPILE_OPTIONS}"
         INTERFACE_INCLUDE_DIRECTORIES "${WebKit2Gtk_INCLUDE_DIR}"
     )
 endif ()
 
 if (WebKit2Gtk_FOUND)
+    set(WebKit_FOUND TRUE)
+    set(WebKit_VERSION ${WebKit2Gtk_VERSION})
     set(WebKit_LIBRARIES ${WebKit2Gtk_LIBRARY} ${JavaScriptCoreGtk_LIBRARY})
     set(WebKit_INCLUDE_DIRS ${WebKit2Gtk_INCLUDE_DIR})
-    mark_as_advanced(WebKit_INCLUDE_DIRS WebKit_LIBRARIES)
+    mark_as_advanced(WebKit_FOUND WebKit_VERSION WebKit_INCLUDE_DIRS WebKit_LIBRARIES)
 endif ()
-
 

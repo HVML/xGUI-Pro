@@ -4,8 +4,6 @@ include(GlobalCommon)
 include(target/xGUIPro)
 include(MyMacros.cmake)
 
-set(XGUIPRO_WEB_EXTENSIONS_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/webext")
-
 add_subdirectory(webext)
 
 XGUIPRO_EXECUTABLE_DECLARE(xguipro)
