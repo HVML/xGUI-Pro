@@ -28,10 +28,12 @@
 
 #include "config.h"
 
+#include "main.h"
 #include "BrowserWindow.h"
 #include "BuildRevision.h"
 #include "purcmc/purcmc.h"
 #include "PurcmcCallbacks.h"
+#include "HVMLURISchema.h"
 
 #include <errno.h>
 #include <gtk/gtk.h>
@@ -40,8 +42,6 @@
 
 #define APP_NAME        "cn.fmsoft.hvml.xGUIPro"
 #define RUNNER_NAME     "purcmc"
-
-#define XGUI_PRO_ERROR (xGUIProErrorQuark())
 
 static purcmc_server_config pcmc_srvcfg;
 static purcmc_server *pcmc_srv;
@@ -67,15 +67,6 @@ static gboolean enableSandbox;
 static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
-
-typedef enum {
-    XGUI_PRO_ERROR_INVALID_ABOUT_PATH
-} xGUIProError;
-
-static GQuark xGUIProErrorQuark()
-{
-    return g_quark_from_string("xguipro-quark");
-}
 
 static gchar *argumentToURL(const char *filename)
 {
@@ -557,8 +548,9 @@ static void aboutURISchemeRequestCallback(WebKitURISchemeRequest *request, WebKi
     GError *error;
 
     path = webkit_uri_scheme_request_get_path(request);
+
     if (!g_strcmp0(path, "xguipro")) {
-        contents = g_strdup_printf("<html><body><h1>WebKitGTK xGUIPro</h1><p>The test browser of WebKitGTK</p><p>WebKit version: %d.%d.%d</p></body></html>",
+        contents = g_strdup_printf("<html><body><h1>xGUI Pro</h1><p>An advanced HVML renderer based on tailored WebKit</p><p>WebKit2Gtk version: %d.%d.%d</p></body></html>",
             webkit_get_major_version(),
             webkit_get_minor_version(),
             webkit_get_micro_version());
@@ -778,6 +770,9 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     WebKitWebsitePolicies *defaultWebsitePolicies = webkit_website_policies_new_with_policies(
         "autoplay", autoplayPolicy,
         NULL);
+
+    // hvml schema
+    webkit_web_context_register_uri_scheme(webContext, BROWSER_HVML_SCHEME, (WebKitURISchemeRequestCallback)hvmlURISchemeRequestCallback, webContext, NULL);
 
     if (contentFilter) {
         GFile *contentFilterFile = g_file_new_for_commandline_arg(contentFilter);

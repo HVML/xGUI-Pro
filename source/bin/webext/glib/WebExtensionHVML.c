@@ -21,14 +21,15 @@
 */
 
 #include <webkit2/webkit-web-extension.h>
+
 #include <syslog.h>
 
 struct HVMLInfo {
     char *protocol;
+    char *hostName;
     char *appName;
     char *runnerName;
     JSCValue *onmessage;
-    bool wasDeleted;
 };
 
 static JSCValue * hvml_get_property(JSCClass *jsc_class,
@@ -38,6 +39,9 @@ static JSCValue * hvml_get_property(JSCClass *jsc_class,
 
     if (g_strcmp0(name, "protocol") == 0) {
         return jsc_value_new_string(context, hvmlInfo->protocol);
+    }
+    else if (g_strcmp0(name, "hostName") == 0) {
+        return jsc_value_new_string(context, hvmlInfo->hostName);
     }
     else if (g_strcmp0(name, "appName") == 0) {
         return jsc_value_new_string(context, hvmlInfo->appName);
@@ -71,12 +75,6 @@ static gboolean hvml_set_property(JSCClass *jsc_class,
     return FALSE;
 }
 
-static void destroyed_notify(gpointer instance)
-{
-    struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)instance;
-    hvmlInfo->wasDeleted = true;
-}
-
 static JSCClassVTable hvmlVTable = {
     // get_property
     hvml_get_property,
@@ -90,6 +88,60 @@ static JSCClassVTable hvmlVTable = {
     NULL,
 };
 
+static void destroyed_notify(gpointer instance)
+{
+    struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)instance;
+
+    syslog(LOG_INFO, "%s called\n", __func__);
+
+    if (hvmlInfo->protocol)
+        free(hvmlInfo->protocol);
+    if (hvmlInfo->hostName)
+        free(hvmlInfo->hostName);
+    if (hvmlInfo->appName)
+        free(hvmlInfo->appName);
+    if (hvmlInfo->runnerName)
+        free(hvmlInfo->runnerName);
+
+    free(hvmlInfo);
+}
+
+static void create_hvml_instance(JSCContext *context, const char *uri)
+{
+    JSCClass* hvmlClass = jsc_context_register_class(context,
+            "HVML", NULL, &hvmlVTable, destroyed_notify);
+
+    struct HVMLInfo *hvmlInfo = calloc(1, sizeof(struct HVMLInfo));
+
+    /* TODO: get data from user_data */
+    hvmlInfo->protocol = strdup("PURCMC:100");
+    hvmlInfo->hostName = strdup("localhost");
+    hvmlInfo->appName = strdup("cn.fmsoft.hvml.test");
+    hvmlInfo->runnerName = strdup("test");
+
+    JSCValue *HVML = jsc_value_new_object(context, hvmlInfo, hvmlClass);
+    jsc_context_set_value(context, "HVML", HVML);
+
+    syslog(LOG_INFO, "%s: HVML object set\n", __func__);
+}
+
+static void
+window_object_cleared_callback(WebKitScriptWorld* world,
+        WebKitWebPage* webPage, WebKitFrame* frame,
+        WebKitWebExtension* extension)
+{
+    const char *uri = webkit_web_page_get_uri(webPage);
+
+    syslog(LOG_INFO, "%s: uri (%s)\n", __func__, uri);
+    if (strncmp(uri, "xguipro:", 8))
+        return;
+
+    JSCContext *context;
+    context = webkit_frame_get_js_context_for_script_world(frame, world);
+
+    create_hvml_instance(context, uri);
+}
+
 static void
 web_page_created_callback(WebKitWebExtension *extension,
         WebKitWebPage *web_page, gpointer user_data)
@@ -98,21 +150,12 @@ web_page_created_callback(WebKitWebExtension *extension,
             (unsigned long long)webkit_web_page_get_id(web_page),
             webkit_web_page_get_uri(web_page));
 
+#if 0
     WebKitFrame *frame = webkit_web_page_get_main_frame(web_page);
     JSCContext *context = webkit_frame_get_js_context(frame);
 
-    JSCClass* hvmlClass = jsc_context_register_class(context,
-            "HVML", NULL, &hvmlVTable, destroyed_notify);
-
-    struct HVMLInfo *hvmlInfo = calloc(1, sizeof(struct HVMLInfo));
-
-    /* TODO: get data from user_data */
-    hvmlInfo->protocol = strdup("PURCMC:100");
-    hvmlInfo->appName = strdup("cn.fmsoft.hvml.test");
-    hvmlInfo->runnerName = strdup("test");
-
-    JSCValue *HVML = jsc_value_new_object(context, hvmlInfo, hvmlClass);
-    jsc_context_set_value(context, "HVML", HVML);
+    create_hvml_instance(context, webkit_web_page_get_uri(web_page));
+#endif
 }
 
 G_MODULE_EXPORT void
@@ -138,5 +181,9 @@ webkit_web_extension_initialize_with_user_data(WebKitWebExtension *extension,
     g_signal_connect(extension, "page-created",
             G_CALLBACK(web_page_created_callback),
             user_data);
+    g_signal_connect(webkit_script_world_get_default(),
+            "window-object-cleared",
+            G_CALLBACK(window_object_cleared_callback),
+            extension);
 }
 

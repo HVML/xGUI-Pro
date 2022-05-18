@@ -38,7 +38,8 @@ G_BEGIN_DECLS
 #define BROWSER_IS_WINDOW_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),  BROWSER_TYPE_WINDOW))
 #define BROWSER_WINDOW_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),  BROWSER_TYPE_WINDOW, BrowserWindowClass))
 #define BROWSER_DEFAULT_URL            "https://hvml.fmsoft.cn/"
-#define BROWSER_ABOUT_SCHEME           "xguipro-about"
+#define BROWSER_ABOUT_SCHEME           "xguipro"
+#define BROWSER_HVML_SCHEME            "hvml"
 
 typedef struct _BrowserWindow        BrowserWindow;
 typedef struct _BrowserWindowClass   BrowserWindowClass;
