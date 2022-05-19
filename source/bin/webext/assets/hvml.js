@@ -1,11 +1,16 @@
 function checkHVML() {
+    console.log(typeof(document.getElementByHVMLHandle));
+    console.log(typeof(HVML));
+    console.log(HVML.version);
+
     if (typeof(document.getElementByHVMLHandle) == "function") {
-        if (typeof(HVML) == "object" && HVML.verCode >= 100) {
+        if (typeof(HVML) == "object" && HVML.version >= 10) {
             var elemStatus = document.getElementByHVMLHandle('731128');
             var elemRunner = document.getElementByHVMLHandle('790715');
             if (elemStatus && elemRunner) {
                 elemStatus.textContent = 'Ready';
                 elemRunner.textContent = '@' + HVML.hostName + '/' + HVML.appName + '/' + HVML.runnerName;
+                return true;
             }
             else {
                 console.log("Make sure to use the correct version of xGUI Pro");
@@ -22,7 +27,7 @@ function checkHVML() {
     return false;
 }
 
-if (check_hvml()) {
+if (checkHVML()) {
     HVML.onmessage = function (msg) {
         console.log("HVML.onmessage called");
     }

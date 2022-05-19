@@ -14,6 +14,7 @@ set(assets_FILES
 add_custom_command(
     OUTPUT ${assets_FILES}
     DEPENDS ${assets_SOURCES}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy ${assets_SOURCES} ${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}
     COMMENT "Copy assets..."
     VERBATIM)

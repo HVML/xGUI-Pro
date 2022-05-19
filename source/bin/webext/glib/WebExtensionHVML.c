@@ -25,6 +25,7 @@
 #include <syslog.h>
 
 #include "xguipro-version.h"
+#include "xguipro-features.h"
 
 struct HVMLInfo {
     int   version;
@@ -135,29 +136,88 @@ static void create_hvml_instance(JSCContext *context,
     syslog(LOG_INFO, "%s: HVML object set\n", __func__);
 }
 
+static char *load_asset_content(const char *file)
+{
+    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
+    char *buf = NULL;
+
+    if (webext_dir == NULL) {
+        webext_dir = WEBKIT_WEBEXT_DIR;
+    }
+
+    gchar *path = g_strdup_printf("%s/assets/%s", webext_dir, file);
+    if (path) {
+        syslog(LOG_INFO, "%s: path: %s\n", __func__, path);
+
+        FILE *f = fopen(path, "r");
+        free(path);
+
+        if (f) {
+            if (fseek(f, 0, SEEK_END))
+                goto failed;
+
+            long len = ftell(f);
+            if (len < 0)
+                goto failed;
+
+            buf = malloc(len + 1);
+            if (buf == NULL)
+                goto failed;
+
+            fseek(f, 0, SEEK_SET);
+            if (fread(buf, 1, len, f) < (size_t)len) {
+                free(buf);
+                buf = NULL;
+            }
+            buf[len] = '\0';
+
+failed:
+            fclose(f);
+        }
+        else {
+            syslog(LOG_ERR, "%s: failed to load asset %s\n", __func__, file);
+        }
+    }
+
+    return buf;
+}
+
+static void
+console_message_sent_callback(WebKitWebPage *web_page,
+        WebKitConsoleMessage *console_message, gpointer user_data)
+{
+    syslog(LOG_INFO, "%s: %s (line: %u): %s\n",
+            __func__,
+            webkit_console_message_get_source_id(console_message),
+            webkit_console_message_get_line(console_message),
+            webkit_console_message_get_text(console_message));
+}
+
 static void
 document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
 {
     syslog(LOG_INFO, "%s: user_data (%p)\n", __func__, user_data);
 
-    static const gchar *code = ""
-    "var elem = document.getElementByHVMLHandle('77');"
-    "elem.textContent = '@' + HVML.hostName + '/' + HVML.appName + '/' + HVML.runnerName;";
+    /* inject hvml.js */
+    gchar *code = load_asset_content("hvml.js");
+    if (code) {
+        WebKitFrame *frame;
+        frame = webkit_web_page_get_main_frame(web_page);
 
-    WebKitFrame *frame;
-    frame = webkit_web_page_get_main_frame(web_page);
+        JSCContext *context;
+        context = webkit_frame_get_js_context_for_script_world(frame,
+                webkit_script_world_get_default());
 
-    JSCContext *context;
-    context = webkit_frame_get_js_context_for_script_world(frame,
-            webkit_script_world_get_default());
+        JSCValue *result;
+        result = jsc_context_evaluate_with_source_uri(context, code, -1,
+                webkit_web_page_get_uri(web_page), 1);
 
-    JSCValue *result;
-    result = jsc_context_evaluate_with_source_uri(context, code, -1,
-            webkit_web_page_get_uri(web_page), 1);
-    char *result_in_json = jsc_value_to_json(result, 0);
+        free(code);
+        char *result_in_json = jsc_value_to_json(result, 0);
 
-    syslog(LOG_INFO, "%s: result (%s)\n", __func__, result_in_json);
-    free(result_in_json);
+        syslog(LOG_INFO, "%s: result (%s)\n", __func__, result_in_json);
+        free(result_in_json);
+    }
 }
 
 static bool get_runner_info(const gchar *uri,
@@ -211,6 +271,9 @@ window_object_cleared_callback(WebKitScriptWorld* world,
 
         g_signal_connect(webPage, "document-loaded",
                 G_CALLBACK(document_loaded_callback),
+                NULL);
+        g_signal_connect(webPage, "console-message-sent",
+                G_CALLBACK(console_message_sent_callback),
                 NULL);
     }
 }
