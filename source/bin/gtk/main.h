@@ -25,6 +25,9 @@
 
 #include <glib.h>
 
+#include "xguipro-version.h"
+#include "xguipro-features.h"
+
 typedef enum {
     XGUI_PRO_ERROR_INVALID_ABOUT_PATH,
     XGUI_PRO_ERROR_INVALID_HVML_URI

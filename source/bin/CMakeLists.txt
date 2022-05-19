@@ -7,6 +7,9 @@ include(MyMacros.cmake)
 set(XGUIPRO_WEB_EXTENSIONS_OUTPUT_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/webext")
 set(XGUIPRO_WEB_EXTENSIONS_INSTALL_DIR "${LIB_INSTALL_DIR}/xguipro")
 
+configure_file(xguipro-version.h.in ${xGUIPro_DERIVED_SOURCES_DIR}/xguipro-version.h)
+configure_file(xguipro-features.h.in ${xGUIPro_DERIVED_SOURCES_DIR}/xguipro-features.h)
+
 add_subdirectory(webext)
 
 XGUIPRO_EXECUTABLE_DECLARE(xguipro)
@@ -24,7 +27,6 @@ list(APPEND xguipro_SYSTEM_INCLUDE_DIRECTORIES
 )
 
 set(xguipro_DEFINITIONS
-    WEBKIT_WEBEXT_DIR="${XGUIPRO_WEB_EXTENSIONS_INSTALL_DIR}"
 )
 
 XGUIPRO_EXECUTABLE(xguipro)

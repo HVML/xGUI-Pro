@@ -3,9 +3,6 @@ set_property(DIRECTORY . PROPERTY FOLDER "lib")
 include(GlobalCommon)
 include(MyMacros.cmake)
 
-configure_file(xguipro_version.h.in ${xGUIPro_DERIVED_SOURCES_DIR}/xguipro_version.h)
-configure_file(xguipro_features.h.in ${xGUIPro_DERIVED_SOURCES_DIR}/xguipro_features.h)
-
 set(xGUIPro_SYSTEM_INCLUDE_DIRECTORIES
     ${GLIB_INCLUDE_DIRS}
 )

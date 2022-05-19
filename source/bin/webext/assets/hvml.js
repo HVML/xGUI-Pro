@@ -1,8 +1,32 @@
-window.onload = function() {
-    alert("Loaded - hvml.js");
-    var elem = document.getElementById('endpoint');
-    elem.textContent = '@' + HVML.hostName + '/' + HVML.appName + '/' + HVML.runnerName;
-};
+function checkHVML() {
+    if (typeof(document.getElementByHVMLHandle) == "function") {
+        if (typeof(HVML) == "object" && HVML.verCode >= 100) {
+            var elemStatus = document.getElementByHVMLHandle('731128');
+            var elemRunner = document.getElementByHVMLHandle('790715');
+            if (elemStatus && elemRunner) {
+                elemStatus.textContent = 'Ready';
+                elemRunner.textContent = '@' + HVML.hostName + '/' + HVML.appName + '/' + HVML.runnerName;
+            }
+            else {
+                console.log("Make sure to use the correct version of xGUI Pro");
+            }
+        }
+        else {
+            console.log("Make sure to use the correct version of xGUI Pro");
+        }
+    }
+    else {
+        console.log("Make sure to use the tailored WebKit by HVML community and the configuration option `ENABLE_HVML_ATTRS` is ON.");
+    }
+
+    return false;
+}
+
+if (check_hvml()) {
+    HVML.onmessage = function (msg) {
+        console.log("HVML.onmessage called");
+    }
+}
 
 /*
 function onChangePage(msg)
@@ -45,6 +69,7 @@ function onChangeDocument(msg)
 }
 
 HVML.onmessage = function (msg) {
+    log.console();
     if (msg.type === 'request' && msg.target !== 'dom') {
         return onChangePage(msg);
     }
@@ -57,6 +82,5 @@ HVML.onmessage = function (msg) {
             return onCallMethod(msg);
         }
     }
-
 }
 */

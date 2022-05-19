@@ -133,6 +133,7 @@ include(GlobalCommon)
 
 SET_PROJECT_VERSION(0 0 1)
 set(XGUIPRO_API_VERSION 0.0)
+set(HVMLJS_VERSION 10)
 
 set(PACKAGE xguipro)
 set(PACKAGE_NAME "xGUIPro")

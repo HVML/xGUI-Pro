@@ -22,10 +22,12 @@
 
 #include <webkit2/webkit-web-extension.h>
 
-#include <purc/purc-helpers.h>
 #include <syslog.h>
 
+#include "xguipro-version.h"
+
 struct HVMLInfo {
+    int   version;
     char *protocol;
     char *hostName;
     char *appName;
@@ -38,6 +40,9 @@ static JSCValue * hvml_get_property(JSCClass *jsc_class,
 {
     struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)instance;
 
+    if (g_strcmp0(name, "version") == 0) {
+        return jsc_value_new_number(context, (double)hvmlInfo->version);
+    }
     if (g_strcmp0(name, "protocol") == 0) {
         return jsc_value_new_string(context, hvmlInfo->protocol);
     }
@@ -118,7 +123,7 @@ static void create_hvml_instance(JSCContext *context,
 
     struct HVMLInfo *hvmlInfo = calloc(1, sizeof(struct HVMLInfo));
 
-    /* TODO: get data from user_data */
+    hvmlInfo->version = HVMLJS_VERSION_CODE;
     hvmlInfo->protocol = strdup("PURCMC:100");
     hvmlInfo->hostName = hostName;
     hvmlInfo->appName = appName;
@@ -155,7 +160,7 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
     free(result_in_json);
 }
 
-static bool get_endpoint_info(const gchar *uri,
+static bool get_runner_info(const gchar *uri,
         gchar **hostName, gchar **appName, gchar **runnerName)
 {
     gchar *schema, *host, *path;
@@ -169,10 +174,7 @@ static bool get_endpoint_info(const gchar *uri,
     const gchar *runner = basename;
     const gchar *app = dirname + 1;
 
-    if (strcasecmp(schema, "hvml") ||
-            !purc_is_valid_host_name(host) ||
-            !purc_is_valid_app_name(app) ||
-            !purc_is_valid_runner_name(runner)) {
+    if (strcasecmp(schema, "hvml")) {
         free(basename);
         free(dirname);
         free(schema);
@@ -201,7 +203,7 @@ window_object_cleared_callback(WebKitScriptWorld* world,
     const gchar *uri = webkit_web_page_get_uri(webPage);
 
     syslog(LOG_INFO, "%s: uri (%s)\n", __func__, uri);
-    if (get_endpoint_info(uri, &hostName, &appName, &runnerName)) {
+    if (get_runner_info(uri, &hostName, &appName, &runnerName)) {
         JSCContext *context;
         context = webkit_frame_get_js_context_for_script_world(frame, world);
 

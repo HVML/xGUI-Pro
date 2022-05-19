@@ -1,4 +1,5 @@
 set(WebKitWebExtension_INCLUDE_DIRECTORIES
+    "${xGUIPro_DERIVED_SOURCES_DIR}"
 )
 
 set(WebKitWebExtension_SYSTEM_INCLUDE_DIRECTORIES
@@ -9,13 +10,11 @@ set(WebKitWebExtension_SYSTEM_INCLUDE_DIRECTORIES
 )
 
 set(WebKitWebExtension_DEFINITIONS
-    WEB_EXTENSIONS_DIR="${XGUIPRO_WEB_EXTENSIONS_INSTALL_DIR}"
 )
 
 set(WebKitWebExtension_LIBRARIES
     ${GLIB_GOBJECT_LIBRARIES}
     ${GLIB_LIBRARIES}
-    PurC::PurC
     WebKit::JSC
     WebKit::WebKit
 )

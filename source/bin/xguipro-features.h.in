@@ -10,3 +10,5 @@
 #define DATADIR         "@DATADIR@"
 #define EXTHELPERSDIR   "@EXTHELPERSDIR@"
 #define SAVERDIR        "@LIBEXECDIR@"
+
+#define WEBKIT_WEBEXT_DIR   "@LIB_INSTALL_DIR@/xguipro"
