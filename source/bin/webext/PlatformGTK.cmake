@@ -1,5 +1,8 @@
 set(WebKitWebExtension_INCLUDE_DIRECTORIES
+    "${CMAKE_BINARY_DIR}"
     "${xGUIPro_DERIVED_SOURCES_DIR}"
+    "${XGUIPRO_LIB_DIR}"
+    "${XGUIPRO_BIN_DIR}"
 )
 
 set(WebKitWebExtension_SYSTEM_INCLUDE_DIRECTORIES
@@ -20,6 +23,7 @@ set(WebKitWebExtension_LIBRARIES
 )
 
 set(WebExtensionHVML_SOURCES
+    log.c
     glib/WebExtensionHVML.c
 )
 

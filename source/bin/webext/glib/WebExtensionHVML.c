@@ -22,10 +22,10 @@
 
 #include <webkit2/webkit-web-extension.h>
 
-#include <syslog.h>
-
 #include "xguipro-version.h"
 #include "xguipro-features.h"
+
+#include "../log.h"
 
 struct HVMLInfo {
     int   version;
@@ -99,8 +99,6 @@ static void destroyed_notify(gpointer instance)
 {
     struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)instance;
 
-    syslog(LOG_INFO, "%s called\n", __func__);
-
     if (hvmlInfo->protocol)
         free(hvmlInfo->protocol);
     if (hvmlInfo->hostName)
@@ -116,8 +114,8 @@ static void destroyed_notify(gpointer instance)
 static void create_hvml_instance(JSCContext *context,
         gchar *hostName, gchar *appName, gchar* runnerName)
 {
-    syslog(LOG_INFO, "%s: hostName (%s), appname (%s), runnerName (%s)\n",
-            __func__, hostName, appName, runnerName);
+    LOG_DEBUG("hostName (%s), appname (%s), runnerName (%s)\n",
+             hostName, appName, runnerName);
 
     JSCClass* hvmlClass = jsc_context_register_class(context,
             "HVML", NULL, &hvmlVTable, destroyed_notify);
@@ -133,7 +131,7 @@ static void create_hvml_instance(JSCContext *context,
     JSCValue *HVML = jsc_value_new_object(context, hvmlInfo, hvmlClass);
     jsc_context_set_value(context, "HVML", HVML);
 
-    syslog(LOG_INFO, "%s: HVML object set\n", __func__);
+    LOG_DEBUG("HVML object set\n");
 }
 
 static char *load_asset_content(const char *file)
@@ -147,7 +145,7 @@ static char *load_asset_content(const char *file)
 
     gchar *path = g_strdup_printf("%s/assets/%s", webext_dir, file);
     if (path) {
-        syslog(LOG_INFO, "%s: path: %s\n", __func__, path);
+        LOG_DEBUG("path: %s\n", path);
 
         FILE *f = fopen(path, "r");
         free(path);
@@ -175,7 +173,7 @@ failed:
             fclose(f);
         }
         else {
-            syslog(LOG_ERR, "%s: failed to load asset %s\n", __func__, file);
+            LOG_ERROR("failed to load asset %s\n", file);
         }
     }
 
@@ -186,8 +184,7 @@ static void
 console_message_sent_callback(WebKitWebPage *web_page,
         WebKitConsoleMessage *console_message, gpointer user_data)
 {
-    syslog(LOG_INFO, "%s: %s (line: %u): %s\n",
-            __func__,
+    LOG_INFO("%s (line: %u): %s\n",
             webkit_console_message_get_source_id(console_message),
             webkit_console_message_get_line(console_message),
             webkit_console_message_get_text(console_message));
@@ -196,7 +193,7 @@ console_message_sent_callback(WebKitWebPage *web_page,
 static void
 document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
 {
-    syslog(LOG_INFO, "%s: user_data (%p)\n", __func__, user_data);
+    LOG_DEBUG("user_data (%p)\n", user_data);
 
     /* inject hvml.js */
     gchar *code = load_asset_content("hvml.js");
@@ -215,7 +212,7 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
         free(code);
         char *result_in_json = jsc_value_to_json(result, 0);
 
-        syslog(LOG_INFO, "%s: result (%s)\n", __func__, result_in_json);
+        LOG_INFO("result of injected script: (%s)\n", result_in_json);
         free(result_in_json);
     }
 }
@@ -262,7 +259,7 @@ window_object_cleared_callback(WebKitScriptWorld* world,
     gchar *hostName, *appName, *runnerName;
     const gchar *uri = webkit_web_page_get_uri(webPage);
 
-    syslog(LOG_INFO, "%s: uri (%s)\n", __func__, uri);
+    LOG_DEBUG("uri (%s)\n", uri);
     if (get_runner_info(uri, &hostName, &appName, &runnerName)) {
         JSCContext *context;
         context = webkit_frame_get_js_context_for_script_world(frame, world);
@@ -282,7 +279,7 @@ static void
 web_page_created_callback(WebKitWebExtension *extension,
         WebKitWebPage *web_page, gpointer user_data)
 {
-    syslog(LOG_INFO, "Page %llu created for %s\n",
+    LOG_DEBUG("Page %llu created for %s\n",
             (unsigned long long)webkit_web_page_get_id(web_page),
             webkit_web_page_get_uri(web_page));
 
@@ -298,19 +295,19 @@ G_MODULE_EXPORT void
 webkit_web_extension_initialize_with_user_data(WebKitWebExtension *extension,
         GVariant *user_data)
 {
-    openlog("WebExtensionHVML", LOG_NDELAY | LOG_PID, LOG_USER);
+    my_log_enable(true, "WebExtensionHVML");
 
     if (user_data == NULL) {
-        syslog(LOG_INFO, "%s: no user data\n", __func__);
+        LOG_INFO("no user data\n");
     }
     else {
         const char* type = g_variant_get_type_string(user_data);
         if (strcmp(type, "u") == 0) {
-            syslog(LOG_INFO, "%s: got desired user data: %u\n",
-                    __func__, g_variant_get_uint32(user_data));
+            LOG_INFO("got desired user data: %u\n",
+                    g_variant_get_uint32(user_data));
         }
         else {
-            syslog(LOG_INFO, "%s: not desired user data type: %s\n", __func__, type);
+            LOG_INFO("not desired user data type: %s\n", type);
         }
     }
 
