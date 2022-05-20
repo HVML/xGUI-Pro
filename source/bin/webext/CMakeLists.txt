@@ -1,10 +1,12 @@
 XGUIPRO_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
+configure_file(assets/hvml.js.in ${xGUIPro_DERIVED_SOURCES_DIR}/webext/hvml.js @ONLY)
+
 set(XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR "${XGUIPRO_WEB_EXTENSIONS_OUTPUT_DIR}/assets")
 set(XGUIPRO_WEBEXT_ASSETS_INSTALL_DIR "${XGUIPRO_WEB_EXTENSIONS_INSTALL_DIR}/assets")
 
 set(assets_SOURCES
-    "${XGUIPRO_BIN_DIR}/webext/assets/hvml.js"
+    "${xGUIPro_DERIVED_SOURCES_DIR}/webext/hvml.js"
 )
 
 set(assets_FILES

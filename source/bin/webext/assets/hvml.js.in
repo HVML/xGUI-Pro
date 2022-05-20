@@ -4,7 +4,7 @@ function checkHVML() {
     console.log(HVML.version);
 
     if (typeof(document.getElementByHVMLHandle) == "function") {
-        if (typeof(HVML) == "object" && HVML.version >= 10) {
+        if (typeof(HVML) == "object" && HVML.version >= @HVMLJS_VERSION@) {
             var elemStatus = document.getElementByHVMLHandle('731128');
             var elemRunner = document.getElementByHVMLHandle('790715');
             if (elemStatus && elemRunner) {

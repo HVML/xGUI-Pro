@@ -28,6 +28,7 @@
 #include "../log.h"
 
 struct HVMLInfo {
+    const char* vendor;
     int   version;
     char *protocol;
     char *hostName;
@@ -41,10 +42,13 @@ static JSCValue * hvml_get_property(JSCClass *jsc_class,
 {
     struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)instance;
 
+    if (g_strcmp0(name, "vendor") == 0) {
+        return jsc_value_new_string(context, hvmlInfo->vendor);
+    }
     if (g_strcmp0(name, "version") == 0) {
         return jsc_value_new_number(context, (double)hvmlInfo->version);
     }
-    if (g_strcmp0(name, "protocol") == 0) {
+    else if (g_strcmp0(name, "protocol") == 0) {
         return jsc_value_new_string(context, hvmlInfo->protocol);
     }
     else if (g_strcmp0(name, "hostName") == 0) {
@@ -122,6 +126,7 @@ static void create_hvml_instance(JSCContext *context,
 
     struct HVMLInfo *hvmlInfo = calloc(1, sizeof(struct HVMLInfo));
 
+    hvmlInfo->vendor = HVMLJS_VENDOR_STRING;
     hvmlInfo->version = HVMLJS_VERSION_CODE;
     hvmlInfo->protocol = strdup("PURCMC:100");
     hvmlInfo->hostName = hostName;
