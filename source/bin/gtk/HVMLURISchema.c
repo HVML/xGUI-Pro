@@ -29,6 +29,23 @@
 #include <webkit2/webkit2.h>
 #include <purc/purc-helpers.h>
 
+void initializeWebExtensionsCallback(WebKitWebContext *context,
+        gpointer user_data)
+{
+    /* Web Extensions get a different ID for each Web Process */
+    static guint32 unique_id = 0;
+    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
+    if (webext_dir == NULL) {
+        webext_dir = WEBKIT_WEBEXT_DIR;
+    }
+
+    g_print("%s: webext in %s\n", __func__, webext_dir);
+
+    webkit_web_context_set_web_extensions_directory(context, webext_dir);
+    webkit_web_context_set_web_extensions_initialization_user_data(context,
+            g_variant_new_uint32(unique_id++));
+}
+
 void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext)
 {

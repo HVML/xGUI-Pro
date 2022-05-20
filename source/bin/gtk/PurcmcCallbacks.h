@@ -29,7 +29,7 @@
 extern "C" {
 #endif
 
-purcmc_session *gtk_create_session(purcmc_endpoint *);
+purcmc_session *gtk_create_session(void *context, purcmc_endpoint *);
 int gtk_remove_session(purcmc_session *);
 
 purcmc_plainwin *gtk_create_plainwin(purcmc_session *, purcmc_workspace *,

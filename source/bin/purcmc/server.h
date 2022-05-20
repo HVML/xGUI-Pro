@@ -47,11 +47,10 @@
 #define SERVER_APP_NAME     "cn.fmsoft.hvml.renderer"
 #define SERVER_RUNNER_NAME  "purcmc"
 
-
-#define SERVER_FEATURES \
+#define SERVER_FEATURES_FORMAT \
     PCRDR_PURCMC_PROTOCOL_NAME ":" PCRDR_PURCMC_PROTOCOL_VERSION_STRING "\n" \
-    "HTML:5.3\n" \
-    "workspace:0/tabbedWindow:0/tabbedPage:0/plainWindow:-1/windowLevel:2\n" \
+    "%s\n" \
+    "workspace:%d/tabbedWindow:%d/tabbedPage:%d/plainWindow:%d/windowLevel:2\n" \
     "windowLevels:normal,topmost"
 
 /* max clients for each web socket and unix socket */
@@ -141,6 +140,7 @@ struct USServer_;
 /* The PurcMC purcmc_server */
 struct purcmc_server
 {
+    char *features;
     int us_listener;
     int ws_listener;
 #if HAVE(SYS_EPOLL_H)
@@ -171,6 +171,9 @@ struct purcmc_server
 
     /* the AVL tree of endpoints sorted by living time */
     struct avl_tree living_avl;
+
+    /* the context of upper module */
+    void *context;
 
     /* the callbacks */
     purcmc_server_callbacks cbs;

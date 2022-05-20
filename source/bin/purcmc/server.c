@@ -20,6 +20,7 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -218,7 +219,7 @@ on_error(void* sock_srv, SockClient* client, int err_code)
             " \n"
             "%s\n",
             err_code,
-            (int)sizeof(SERVER_FEATURES) - 1, SERVER_FEATURES);
+            (int)strlen(the_server.features), the_server.features);
 
     if (n < 0 || (size_t)n >= sizeof(buff)) {
         // should never reach here
@@ -821,6 +822,11 @@ deinit_server(void)
 
     free(the_server.server_name);
 
+    if (the_server.features) {
+        free(the_server.features);
+        the_server.features = NULL;
+    }
+
     purc_log_info("the_server.nr_endpoints: %d\n", the_server.nr_endpoints);
     assert(the_server.nr_endpoints == 0);
 
@@ -838,11 +844,15 @@ deinit_server(void)
         free(the_srvcfg->port);
         the_srvcfg->port = NULL;
     }
+
 }
 
 purcmc_server *
 purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
-        const purcmc_server_callbacks *cbs)
+        void *context, const purcmc_server_callbacks *cbs,
+        const char *markup_langs,
+        int nr_workspaces, int nr_plainwindows,
+        int nr_tabbedwindows, int nr_tabbedpages)
 {
     int retval;
 
@@ -851,6 +861,13 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
     assert(srvcfg != NULL);
 
     the_srvcfg = srvcfg;
+    if (asprintf(&the_server.features, SERVER_FEATURES_FORMAT,
+                markup_langs, nr_workspaces,
+                nr_tabbedwindows, nr_tabbedpages, nr_plainwindows) < 0) {
+        purc_log_error("Error during asprintf: %s\n",
+                strerror(errno));
+        goto error;
+    }
 
     if ((retval = init_server())) {
         purc_log_error("Error during init_server: %s\n",
@@ -879,6 +896,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
         goto error;
     }
 
+    the_server.context = context;
     the_server.cbs = *cbs;
     return &the_server;
 

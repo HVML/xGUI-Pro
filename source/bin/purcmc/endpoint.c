@@ -290,10 +290,10 @@ int send_initial_response(purcmc_server* srv, purcmc_endpoint* endpoint)
     int retv = PCRDR_SC_OK;
     pcrdr_msg *msg = NULL;
 
-    msg = pcrdr_make_response_message ("0",
+    msg = pcrdr_make_response_message("0",
             PCRDR_SC_OK, 0,
-            PCRDR_MSG_DATA_TYPE_TEXT, SERVER_FEATURES,
-            sizeof (SERVER_FEATURES) - 1);
+            PCRDR_MSG_DATA_TYPE_TEXT, srv->features,
+            strlen(srv->features));
     if (msg == NULL) {
         retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
         goto failed;
@@ -413,7 +413,7 @@ static int on_start_session(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     endpoint->session = NULL;
     if (retv == PCRDR_SC_OK) {
-        info = srv->cbs.create_session(endpoint);
+        info = srv->cbs.create_session(srv->context, endpoint);
         if (info == NULL) {
             retv = PCRDR_SC_INSUFFICIENT_STORAGE;
         }

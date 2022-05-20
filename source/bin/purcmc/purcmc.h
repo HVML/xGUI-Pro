@@ -72,7 +72,7 @@ typedef struct purcmc_server_config {
 } purcmc_server_config;
 
 typedef struct purcmc_server_callbacks {
-    purcmc_session *(*create_session)(purcmc_endpoint *);
+    purcmc_session *(*create_session)(void *context, purcmc_endpoint *);
     int (*remove_session)(purcmc_session *);
 
     /* nullable */
@@ -138,7 +138,10 @@ extern "C" {
 
 /* Initialize the PurCMC renderer server */
 purcmc_server *purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
-        const purcmc_server_callbacks *cbs);
+        void *context, const purcmc_server_callbacks *cbs,
+        const char *markup_langs,
+        int nr_workspaces, int nr_plainwindows,
+        int nr_tabbedwindows, int nr_tabbedpages);
 
 /* Check and dispatch messages from clients */
 bool purcmc_rdrsrv_check(purcmc_server *srv);

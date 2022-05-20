@@ -2,7 +2,7 @@
  * Copyright (C) 2006, 2007 Apple Inc.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2011 Igalia S.L.
- * Copyright (C) 2022 HVML Community <https://github.com/HVML>
+ * Copyright (C) 2022 FMSoft <https://www.fmsoft.cn>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,9 +31,10 @@
 #include "main.h"
 #include "BrowserWindow.h"
 #include "BuildRevision.h"
-#include "purcmc/purcmc.h"
 #include "PurcmcCallbacks.h"
 #include "HVMLURISchema.h"
+
+#include "purcmc/purcmc.h"
 
 #include <errno.h>
 #include <gtk/gtk.h>
@@ -633,24 +634,53 @@ static void filterSavedCallback(WebKitUserContentFilterStore *store, GAsyncResul
     g_main_loop_quit(data->mainLoop);
 }
 
-static void
-initialize_web_extensions(WebKitWebContext *context, gpointer user_data)
+static void setDefaultWebsiteDataManager(WebKitSettings *webkitSettings)
 {
-    /* Web Extensions get a different ID for each Web Process */
-    static guint32 unique_id = 0;
-    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
-    if (webext_dir == NULL) {
-        webext_dir = WEBKIT_WEBEXT_DIR;
+    WebKitWebsiteDataManager *manager;
+
+    char *dataDirectory = g_build_filename(g_get_user_data_dir(),
+            "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "-xguipro", NULL);
+    char *cacheDirectory = g_build_filename(g_get_user_cache_dir(),
+            "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "-xguipro", NULL);
+    manager = webkit_website_data_manager_new(
+            "base-data-directory", dataDirectory,
+            "base-cache-directory", cacheDirectory,
+            NULL);
+    g_free(dataDirectory);
+    g_free(cacheDirectory);
+
+    webkit_website_data_manager_set_itp_enabled(manager, enableITP);
+    if (proxy) {
+        WebKitNetworkProxySettings *webkitProxySettings
+            = webkit_network_proxy_settings_new(proxy, ignoreHosts);
+        webkit_website_data_manager_set_network_proxy_settings(manager,
+                WEBKIT_NETWORK_PROXY_MODE_CUSTOM, webkitProxySettings);
+        webkit_network_proxy_settings_free(webkitProxySettings);
     }
 
-    g_print("%s: webext in %s\n", __func__, webext_dir);
+    if (ignoreTLSErrors)
+        webkit_website_data_manager_set_tls_errors_policy(manager,
+                WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 
-    webkit_web_context_set_web_extensions_directory(context, webext_dir);
-    webkit_web_context_set_web_extensions_initialization_user_data(context,
-            g_variant_new_uint32(unique_id++));
+    g_object_set_data(G_OBJECT(webkitSettings),
+            "default-website-data-manager", manager);
+    g_object_ref(manager);
+
 }
 
-static void startup(GApplication *application)
+static void setDefaultWebsitePolicies(WebKitSettings *webkitSettings)
+{
+    WebKitWebsitePolicies *policies
+        = webkit_website_policies_new_with_policies(
+                "autoplay", autoplayPolicy,
+                NULL);
+
+    g_object_set_data(G_OBJECT(webkitSettings),
+            "default-website-policies", policies);
+    g_object_ref(policies);
+}
+
+static void startup(GApplication *application, WebKitSettings *webkitSettings)
 {
     const char *actionAccels[] = {
         "win.reload", "F5", "<Ctrl>R", NULL,
@@ -677,6 +707,9 @@ static void startup(GApplication *application)
     for (const gchar **it = actionAccels; it[0]; it += g_strv_length((gchar **)it) + 1)
         gtk_application_set_accels_for_action(GTK_APPLICATION(application), it[0], &it[1]);
 
+    setDefaultWebsiteDataManager(webkitSettings);
+    setDefaultWebsitePolicies(webkitSettings);
+
     purcmc_server_callbacks cbs = {
         .create_session = gtk_create_session,
         .remove_session = gtk_remove_session,
@@ -685,7 +718,8 @@ static void startup(GApplication *application)
     pcmc_srvcfg.app_name = APP_NAME;
     pcmc_srvcfg.runner_name = RUNNER_NAME;
 
-    pcmc_srv = purcmc_rdrsrv_init(&pcmc_srvcfg, &cbs);
+    pcmc_srv = purcmc_rdrsrv_init(&pcmc_srvcfg, webkitSettings,
+            &cbs, "HTML:5.3", 0, -1, -1, -1);
     if (pcmc_srv == NULL) {
         fprintf(stderr, "Failed call to purcmc_rdrsrv_init()\n");
         exit(EXIT_FAILURE);
@@ -701,10 +735,22 @@ static void startup(GApplication *application)
     g_source_unref(source);
 }
 
-static void shutdown(GApplication *application)
+static void shutdown(GApplication *application, WebKitSettings *webkitSettings)
 {
     g_source_remove_by_user_data(pcmc_srv);
     purcmc_rdrsrv_deinit(pcmc_srv);
+
+    WebKitWebsiteDataManager *manager;
+    manager = g_object_get_data(G_OBJECT(webkitSettings),
+            "default-website-data-manager");
+    g_object_unref(manager);
+
+    WebKitWebsitePolicies *policies;
+    policies = g_object_get_data(G_OBJECT(webkitSettings),
+            "default-website-policies");
+    g_object_unref(policies);
+
+    g_object_unref(webkitSettings);
 }
 
 static void activate(GApplication *application, WebKitSettings *webkitSettings)
@@ -712,33 +758,21 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     WebKitWebsiteDataManager *manager;
     if (privateMode || automationMode)
         manager = webkit_website_data_manager_new_ephemeral();
-    else {
-        char *dataDirectory = g_build_filename(g_get_user_data_dir(), "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "xGUIPro", NULL);
-        char *cacheDirectory = g_build_filename(g_get_user_cache_dir(), "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "xGUIPro", NULL);
-        manager = webkit_website_data_manager_new("base-data-directory", dataDirectory, "base-cache-directory", cacheDirectory, NULL);
-        g_free(dataDirectory);
-        g_free(cacheDirectory);
-    }
+    else
+        manager = g_object_get_data(G_OBJECT(webkitSettings),
+                "default-website-data-manager");
 
-    webkit_website_data_manager_set_itp_enabled(manager, enableITP);
-
-    if (proxy) {
-        WebKitNetworkProxySettings *webkitProxySettings = webkit_network_proxy_settings_new(proxy, ignoreHosts);
-        webkit_website_data_manager_set_network_proxy_settings(manager, WEBKIT_NETWORK_PROXY_MODE_CUSTOM, webkitProxySettings);
-        webkit_network_proxy_settings_free(webkitProxySettings);
-    }
-
-    if (ignoreTLSErrors)
-        webkit_website_data_manager_set_tls_errors_policy(manager, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
-
-    WebKitWebContext *webContext = g_object_new(WEBKIT_TYPE_WEB_CONTEXT, "website-data-manager", manager, "process-swap-on-cross-site-navigation-enabled", TRUE,
+    WebKitWebContext *webContext = g_object_new(WEBKIT_TYPE_WEB_CONTEXT,
+            "website-data-manager", manager,
+            "process-swap-on-cross-site-navigation-enabled", TRUE,
 #if !GTK_CHECK_VERSION(3, 98, 0)
-        "use-system-appearance-for-scrollbars", FALSE,
+            "use-system-appearance-for-scrollbars", FALSE,
 #endif
-        NULL);
+            NULL);
     g_object_unref(manager);
 
-    g_signal_connect(webContext, "initialize-web-extensions", G_CALLBACK(initialize_web_extensions), NULL);
+    g_signal_connect(webContext, "initialize-web-extensions",
+            G_CALLBACK(initializeWebExtensionsCallback), NULL);
 
     if (enableSandbox)
         webkit_web_context_set_sandbox_enabled(webContext, TRUE);
@@ -767,9 +801,8 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     webkit_user_content_manager_register_script_message_handler(userContentManager, "aboutData");
     g_signal_connect(userContentManager, "script-message-received::aboutData", G_CALLBACK(aboutDataScriptMessageReceivedCallback), webContext);
 
-    WebKitWebsitePolicies *defaultWebsitePolicies = webkit_website_policies_new_with_policies(
-        "autoplay", autoplayPolicy,
-        NULL);
+    WebKitWebsitePolicies *defaultWebsitePolicies = g_object_get_data(G_OBJECT(webkitSettings),
+                "default-website-policies");
 
     // hvml schema
     webkit_web_context_register_uri_scheme(webContext, BROWSER_HVML_SCHEME, (WebKitURISchemeRequestCallback)hvmlURISchemeRequestCallback, webContext, NULL);
@@ -841,10 +874,8 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
         }
     }
 
-    g_clear_object(&webkitSettings);
     g_object_unref(webContext);
     g_object_unref(userContentManager);
-    g_object_unref(defaultWebsitePolicies);
 
     gtk_widget_grab_focus(firstTab);
     gtk_widget_show(GTK_WIDGET(mainWindow));
@@ -872,8 +903,10 @@ int main(int argc, char *argv[])
     webkit_settings_set_enable_developer_extras(webkitSettings, TRUE);
     webkit_settings_set_enable_webgl(webkitSettings, TRUE);
     webkit_settings_set_enable_media_stream(webkitSettings, TRUE);
-    if (!addSettingsGroupToContext(context, webkitSettings))
+    if (!addSettingsGroupToContext(context, webkitSettings)) {
         g_clear_object(&webkitSettings);
+        return 1;
+    }
 
     GError *error = 0;
     if (!g_option_context_parse(context, &argc, &argv, &error)) {
@@ -900,8 +933,8 @@ int main(int argc, char *argv[])
     }
 
     GtkApplication *application = gtk_application_new(APP_NAME, G_APPLICATION_NON_UNIQUE);
-    g_signal_connect(application, "startup", G_CALLBACK(startup), NULL);
-    g_signal_connect(application, "shutdown", G_CALLBACK(shutdown), NULL);
+    g_signal_connect(application, "startup", G_CALLBACK(startup), webkitSettings);
+    g_signal_connect(application, "shutdown", G_CALLBACK(shutdown), webkitSettings);
     g_signal_connect(application, "activate", G_CALLBACK(activate), webkitSettings);
     g_application_run(G_APPLICATION(application), 0, NULL);
     g_object_unref(application);

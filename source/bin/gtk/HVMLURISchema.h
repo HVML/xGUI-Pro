@@ -29,6 +29,9 @@
 extern "C" {
 #endif
 
+void initializeWebExtensionsCallback(WebKitWebContext *context,
+        gpointer user_data);
+
 void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext);
 
