@@ -24,12 +24,24 @@
 #include <string.h>
 #include <assert.h>
 
-#include <purc/purc-dom.h>
-#include <purc/purc-html.h>
-
 #include "endpoint.h"
 #include "unixsocket.h"
 #include "websocket.h"
+
+const char *purcmc_endpoint_host_name(purcmc_endpoint *endpoint)
+{
+    return endpoint->host_name;
+}
+
+const char *purcmc_endpoint_app_name(purcmc_endpoint *endpoint)
+{
+    return endpoint->app_name;
+}
+
+const char *purcmc_endpoint_runner_name(purcmc_endpoint *endpoint)
+{
+    return endpoint->runner_name;
+}
 
 purcmc_endpoint* new_endpoint(purcmc_server* srv, int type, void* client)
 {

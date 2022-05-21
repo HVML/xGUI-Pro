@@ -153,13 +153,13 @@ int purcmc_rdrsrv_deinit(purcmc_server *srv);
 int purcmc_post_message(const pcrdr_msg *msg);
 
 /* Return the host name of the specified endpoint */
-const char *purcmc_endpt_host_name(purcmc_endpoint *endpt);
+const char *purcmc_endpoint_host_name(purcmc_endpoint *endpoint);
 
 /* Return the app name of the specified endpoint */
-const char *purcmc_endpt_app_name(purcmc_endpoint *endpt);
+const char *purcmc_endpoint_app_name(purcmc_endpoint *endpoint);
 
 /* Return the runner name of the specified endpoint */
-const char *purcmc_endpt_runner_name(purcmc_endpoint *endpt);
+const char *purcmc_endpoint_runner_name(purcmc_endpoint *endpoint);
 
 #ifdef __cplusplus
 }
