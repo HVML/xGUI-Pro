@@ -1,9 +1,9 @@
 /*
 ** PurcmcCallbacks.c -- The implementation of callbacks for PurCMC.
 **
-** Copyright (C) 2022 FMSoft (http://www.fmsoft.cn)
+** Copyright (C) 2022 FMSoft <http://www.fmsoft.cn>
 **
-** Author: Vincent Wei (https://github.com/VincentWei)
+** Author: Vincent Wei <https://github.com/VincentWei>
 **
 ** This file is part of xGUI Pro, an advanced HVML renderer.
 **
@@ -29,23 +29,53 @@
 
 #include "purcmc/purcmc.h"
 
+#include "utils/kvlist.h"
+
 #include <errno.h>
+#include <assert.h>
 #include <gtk/gtk.h>
 #include <string.h>
 #include <webkit2/webkit2.h>
 
+struct purcmc_plainwin {
+    BrowserWindow *mainWin;
+    WebKitWebView *webView;
+};
+
+struct purcmc_workspace {
+    unsigned int        nr_ug_wins;
+
+    /* ungrouped plain windows */
+    struct kvlist       ug_wins;
+};
+
 struct purcmc_session {
-    WebKitSettings *webSettings;
+    WebKitSettings *webkitSettings;
     WebKitWebContext *webContext;
+
+    /* the only workspace */
+    purcmc_workspace workspace;
+
+    /* the URI prefix: hvml://<hostName>/<appName>/<runnerName>/ */
+    char *uriPrefix;
 };
 
 purcmc_session *gtk_create_session(void *context, purcmc_endpoint *endpt)
 {
     purcmc_session* sess = calloc(1, sizeof(purcmc_session));
+    sess->uriPrefix = purc_assemble_hvml_uri_alloc(
+            purcmc_endpoint_host_name(endpt),
+            purcmc_endpoint_app_name(endpt),
+            purcmc_endpoint_runner_name(endpt),
+            NULL);
+    if (sess->uriPrefix == NULL) {
+        free(sess);
+        return NULL;
+    }
 
-    WebKitSettings *webSettings = context;
+    WebKitSettings *webkitSettings = context;
     WebKitWebsiteDataManager *manager;
-    manager = g_object_get_data(G_OBJECT(webSettings),
+    manager = g_object_get_data(G_OBJECT(webkitSettings),
             "default-website-data-manager");
 
     WebKitWebContext *webContext = g_object_new(WEBKIT_TYPE_WEB_CONTEXT,
@@ -99,29 +129,158 @@ purcmc_session *gtk_create_session(void *context, purcmc_endpoint *endpt)
             (WebKitURISchemeRequestCallback)hvmlURISchemeRequestCallback,
             webContext, NULL);
 
-    sess->webSettings = webSettings;
+    sess->webkitSettings = webkitSettings;
     sess->webContext = webContext;
+
+    sess->workspace.nr_ug_wins = 0;
+    kvlist_init(&sess->workspace.ug_wins, NULL);
     return sess;
 }
 
 int gtk_remove_session(purcmc_session *sess)
 {
+    const char *name;
+    void *next, *data;
+    purcmc_plainwin *plainWin;
+
+    kvlist_for_each_safe(&sess->workspace.ug_wins, name, next, data) {
+        plainWin = *(purcmc_plainwin **)data;
+
+        kvlist_delete(&sess->workspace.ug_wins, name);
+        webkit_web_view_try_close(plainWin->webView);
+    }
+    kvlist_free(&sess->workspace.ug_wins);
+
     g_clear_object(&sess->webContext);
     free(sess);
+
     return PCRDR_SC_OK;
 }
 
-#if 0
-purcmc_plainwin *gtk_create_plainwin(purcmc_session *, purcmc_workspace *,
+purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
+        purcmc_workspace *workspace,
         const char *gid,
         const char *name, const char *title, purc_variant_t properties,
-        int *retv);
-int gtk_update_plainwin(purcmc_session *, purcmc_workspace *,
-        purcmc_plainwin *win, const char *property, const char *value);
-int gtk_destroy_plainwin(purcmc_session *, purcmc_workspace *,
-        purcmc_plainwin *win);
-purcmc_page *gtk_get_plainwin_page(purcmc_session *, purcmc_plainwin *win);
+        int *retv)
+{
+    purcmc_plainwin * plainWin = NULL;
 
+    assert(workspace == NULL);
+
+    if ((plainWin = calloc(1, sizeof(*plainWin))) == NULL) {
+        *retv = PCRDR_SC_INSUFFICIENT_STORAGE;
+        goto failed;
+    }
+
+    if (gid == NULL) {
+        /* create a ungrouped plain window */
+        if (kvlist_get(&sess->workspace.ug_wins, name)) {
+            purc_log_warn("Duplicated ungrouped plain window: %s\n", name);
+            *retv = PCRDR_SC_CONFLICT;
+            goto failed;
+        }
+
+        BrowserWindow *mainWin;
+        mainWin = BROWSER_WINDOW(browser_window_new(NULL, sess->webContext));
+
+        GtkApplication *application;
+        application = g_object_get_data(G_OBJECT(sess->webkitSettings),
+                "gtk-application");
+
+        gtk_application_add_window(GTK_APPLICATION(application),
+                GTK_WINDOW(mainWin));
+
+        purc_variant_t tmp;
+        if ((tmp = purc_variant_object_get_by_ckey(properties, "darkMode")) &&
+                purc_variant_is_true(tmp)) {
+            g_object_set(gtk_widget_get_settings(GTK_WIDGET(mainWin)),
+                    "gtk-application-prefer-dark-theme", TRUE, NULL);
+        }
+
+        if ((tmp = purc_variant_object_get_by_ckey(properties, "fullScreen")) &&
+                purc_variant_is_true(tmp)) {
+            gtk_window_fullscreen(GTK_WINDOW(mainWin));
+        }
+
+        if ((tmp = purc_variant_object_get_by_ckey(properties, "backgroundColor"))) {
+            const char *value = purc_variant_get_string_const(tmp);
+
+            GdkRGBA rgba;
+            if (gdk_rgba_parse(&rgba, value)) {
+                browser_window_set_background_color(mainWin, &rgba);
+            }
+        }
+
+        WebKitWebsitePolicies *websitePolicies;
+        websitePolicies = g_object_get_data(G_OBJECT(sess->webkitSettings),
+                "default-website-policies");
+
+        WebKitUserContentManager *userContentManager;
+        userContentManager = g_object_get_data(G_OBJECT(sess->webkitSettings),
+                "default-user-content-manager");
+
+        WebKitWebView *webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+            "web-context", sess->webContext,
+            "settings", sess->webkitSettings,
+            "user-content-manager", userContentManager,
+            "is-controlled-by-automation", FALSE,
+            "website-policies", websitePolicies,
+            NULL));
+
+#if 0
+        if (editorMode)
+            webkit_web_view_set_editable(webView, TRUE);
+#endif
+
+        browser_window_append_view(mainWin, webView);
+
+        char uri[strlen(sess->uriPrefix) + strlen(name) + 1];
+        strcpy(uri, sess->uriPrefix);
+        strcat(uri, name);
+        webkit_web_view_load_uri(webView, uri);
+
+        g_object_unref(sess->webContext);
+        g_object_unref(userContentManager);
+
+        gtk_widget_grab_focus(GTK_WIDGET(webView));
+        gtk_widget_show(GTK_WIDGET(mainWin));
+
+        plainWin->mainWin = mainWin;
+        plainWin->webView = webView;
+    }
+    else {
+        /* TODO: create a plain window in the specified group */
+        *retv = PCRDR_SC_NOT_IMPLEMENTED;
+    }
+
+failed:
+    return plainWin;
+}
+
+int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
+        purcmc_plainwin *plainWin, const char *property, const char *value)
+{
+    return PCRDR_SC_OK;
+}
+
+int gtk_destroy_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
+        purcmc_plainwin *plainWin)
+{
+    /* TODO validate plainWin here */
+
+    webkit_web_view_try_close(plainWin->webView);
+    return PCRDR_SC_OK;
+}
+
+purcmc_page *gtk_get_plainwin_page(purcmc_session *sess,
+        purcmc_plainwin *plainWin)
+{
+    /* TODO validate plainWin here */
+
+    return (purcmc_page *)plainWin->webView;
+}
+
+#if 0
 purcmc_dom *gtk_load(purcmc_session *, purcmc_page *,
             const char *content, size_t length, int *retv);
 purcmc_dom *gtk_write(purcmc_session *, purcmc_page *,
