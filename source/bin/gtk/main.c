@@ -707,6 +707,8 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
     for (const gchar **it = actionAccels; it[0]; it += g_strv_length((gchar **)it) + 1)
         gtk_application_set_accels_for_action(GTK_APPLICATION(application), it[0], &it[1]);
 
+    /* use webkitSettings to store some global data */
+    g_object_set_data(G_OBJECT(webkitSettings), "gtk-application", application);
     setDefaultWebsiteDataManager(webkitSettings);
     setDefaultWebsitePolicies(webkitSettings);
 
