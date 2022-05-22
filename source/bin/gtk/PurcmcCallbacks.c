@@ -424,10 +424,13 @@ request_ready_callback(GObject* obj, GAsyncResult* result, gpointer userData)
     }
 }
 
-#define MESSAGE_FORMAT  "{\"op\":\"%s\",\"data\":\"%s\"}"
+#define PAGE_MESSAGE_FORMAT  "{"    \
+        "\"operation\":\"%s\","     \
+        "\"requestId\":\"%s\","     \
+        "\"data\":\"%s\"}"
 
 purcmc_dom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
-            int op, const char *op_name,
+            int op, const char *op_name, const char* request_id,
             const char *content, size_t length, int *retv)
 {
     LOG_DEBUG("page: (%p)\n", page);
@@ -437,14 +440,15 @@ purcmc_dom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
         return NULL;
 
     char *escaped = pcutils_escape_string_for_json(content);
-    gchar *json = g_strdup_printf(MESSAGE_FORMAT, op_name, escaped);
+    gchar *json = g_strdup_printf(PAGE_MESSAGE_FORMAT, op_name,
+            request_id, escaped);
 
     WebKitUserMessage * message = webkit_user_message_new(op_name,
             g_variant_new_string(json));
     g_free(json);
     free(escaped);
 
-    LOG_DEBUG("Sending message to page(%p)\n", page);
+    LOG_DEBUG("Sending message to page (%p)\n", page);
     webkit_web_view_send_message_to_page(webView, message, NULL,
             request_ready_callback, webView);
 
@@ -452,10 +456,42 @@ purcmc_dom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
     return (purcmc_dom *)webView;
 }
 
+#define DOM_MESSAGE_FORMAT  "{"     \
+        "\"operation\":\"%s\","     \
+        "\"requestId\":\"%s\","     \
+        "\"elementType\":\"%s\","   \
+        "\"element\":\"%s\","  \
+        "\"property\":\"%s\","  \
+        "\"data\":\"%s\"}"
+
 int gtk_update_dom(purcmc_session *sess, purcmc_dom *dom,
-            int op, const char *op_name,
-            const pcrdr_msg *msg)
+            int op, const char *op_name, const char* request_id,
+            const char* element_type, const char* element_value,
+            const char* property,
+            const char *content, size_t length)
 {
-    return PCRDR_SC_OK;
+    int retv = PCRDR_SC_OK;
+
+    LOG_DEBUG("DOM: (%p)\n", dom);
+
+    WebKitWebView *webView = validate_page(sess, (purcmc_page *)dom, &retv);
+    if (webView == NULL)
+        return retv;
+
+    char *escaped = pcutils_escape_string_for_json(content);
+    gchar *json = g_strdup_printf(DOM_MESSAGE_FORMAT, op_name, request_id,
+            element_type, element_value, property,
+            escaped);
+
+    WebKitUserMessage * message = webkit_user_message_new(op_name,
+            g_variant_new_string(json));
+    g_free(json);
+    free(escaped);
+
+    LOG_DEBUG("Sending message to dom (%p)\n", dom);
+    webkit_web_view_send_message_to_page(webView, message, NULL,
+            request_ready_callback, webView);
+
+    return retv;
 }
 

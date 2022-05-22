@@ -30,25 +30,76 @@ function checkHVML() {
 if (checkHVML()) {
     HVML.onmessage = function (json) {
         msg = JSON.parse(json);
-        console.log("HVML.onmessage called: " + msg.op);
+        console.log("HVML.onmessage called: " + json);
 
-        if (msg.op === 'load') {
+        if (msg.operation === 'load') {
             document.open();
             document.write(msg.data);
             document.close();
+            return { requestId: msg.requestId, result: "Ok" };
         }
-        else if (msg.op === 'writeBegin') {
+        else if (msg.operation === 'writeBegin') {
             document.open();
             document.write(msg.data);
+            return { requestId: msg.requestId, result: "Ok" };
         }
-        else if (msg.op === 'writeMore') {
+        else if (msg.operation === 'writeMore') {
             document.write(msg.data);
+            return { requestId: msg.requestId, result: "Ok" };
         }
-        else if (msg.op === 'writeEnd') {
+        else if (msg.operation === 'writeEnd') {
             document.write(msg.data);
             document.close();
+            return { requestId: msg.requestId, result: "Ok" };
         }
+        else if (msg.operation === 'update') {
+            if (msg.elementType === 'handle') {
+                var elem = document.getElementByHVMLHandle(msg.element);
+                if (elem) {
+                    if (!updateProperty(elem, msg.property, msg.data))
+                        return { requestId: msg.requestId, result: "BadRequest" };
+                }
+                else {
+                    return { requestId: msg.requestId, result: "NotFound" };
+                }
+            }
+            else if (msg.elementType == 'handles') {
+                var handles = msg.element.split(',');
+                var nr_updated = 0;
+                for (var i = 0; i < handles.length; i++) {
+                    var elem = document.getElementByHVMLHandle(handles[i]);
+                    if (elem) {
+                        if (updateProperty(elem, msg.property, msg.data))
+                            nr_updated++;
+                    }
+                }
+
+                if (nr_updated == 0)
+                    return { requestId: msg.requestId, result: "NotFound" };
+                else if (nr_updated == handles.length)
+                    return { requestId: msg.requestId, result: "Ok" };
+                else
+                    return { requestId: msg.requestId, result: "Partial" };
+            }
+        }
+
+        return { requestId: msg.requestId, result: "NotImplemented" };
     }
+}
+
+function updateProperty(elem, property, data)
+{
+    if (property === "textContent") {
+        elem.textContent = data;
+        return true;
+    }
+    else if (property.startsWith("attr.")) {
+        var attr = property.substring(5);
+        elem.setAttribute(attr, data);
+        return true;
+    }
+
+    return false;
 }
 
 /*

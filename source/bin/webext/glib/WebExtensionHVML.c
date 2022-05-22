@@ -239,7 +239,6 @@ user_message_received_callback(WebKitWebPage *webPage,
     LOG_DEBUG("called, userData(%p)\n", userData);
     LOG_DEBUG("hvmlInfo->appName: %s\n", hvmlInfo->appName);
     LOG_DEBUG("hvmlInfo->runnerName: %s\n", hvmlInfo->runnerName);
-
     LOG_DEBUG("HVML.onmessage (%p)\n", hvmlInfo->onmessage);
 
     if (hvmlInfo->onmessage == NULL ||
@@ -264,8 +263,11 @@ user_message_received_callback(WebKitWebPage *webPage,
 
     char *result_in_json = jsc_value_to_json(result, 0);
     LOG_INFO("result of onmessage: (%s)\n", result_in_json);
+    if (result_in_json == NULL)
+        result_in_json = g_strdup("");
+    webkit_user_message_send_reply(message,
+            webkit_user_message_new(name, g_variant_new_string(result_in_json)));
     free(result_in_json);
-
     return TRUE;
 }
 

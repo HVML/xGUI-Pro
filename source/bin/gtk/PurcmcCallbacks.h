@@ -44,10 +44,13 @@ purcmc_page *gtk_get_plainwin_page(purcmc_session *,
         purcmc_plainwin *win, int *retv);
 
 purcmc_dom *gtk_load_or_write(purcmc_session *, purcmc_page *,
-            int op, const char *op_name,
+            int op, const char *op_name, const char *request_id,
             const char *content, size_t length, int *retv);
 int gtk_update_dom(purcmc_session *, purcmc_dom *,
-            int op, const char *op_name, const pcrdr_msg *msg);
+            int op, const char *op_name, const char* request_id,
+            const char* element_type, const char* element_value,
+            const char* property,
+            const char *content, size_t length);
 
 #ifdef __cplusplus
 }

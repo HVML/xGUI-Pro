@@ -120,14 +120,17 @@ typedef struct purcmc_server_callbacks {
             purcmc_page *page);
 
     purcmc_dom *(*load)(purcmc_session *, purcmc_page *,
-            int op, const char *op_name,
+            int op, const char *op_name, const char *request_id,
             const char *content, size_t length, int *retv);
     purcmc_dom *(*write)(purcmc_session *, purcmc_page *,
-            int op, const char *op_name,
+            int op, const char *op_name, const char *request_id,
             const char *content, size_t length, int *retv);
 
     int (*update_dom)(purcmc_session *, purcmc_dom *,
-            int op, const char *op_name, const pcrdr_msg *msg);
+            int op, const char *op_name, const char *request_id,
+            const char* element_type, const char* element_value,
+            const char* property,
+            const char *content, size_t length);
 
     /* nullable */
     purc_variant_t (*call_method)(purcmc_session *, purcmc_dom *,

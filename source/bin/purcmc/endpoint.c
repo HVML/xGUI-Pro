@@ -1130,8 +1130,8 @@ static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     dom = srv->cbs.load(endpoint->session, page,
-            PCRDR_K_OPERATION_LOAD,
-            PCRDR_OPERATION_LOAD,
+            PCRDR_K_OPERATION_LOAD, PCRDR_OPERATION_LOAD,
+            purc_variant_get_string_const(msg->requestId),
             doc_text, doc_len, &retv);
 
 failed:
@@ -1183,6 +1183,7 @@ static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     dom = srv->cbs.write(endpoint->session, page, op, op_name,
+            purc_variant_get_string_const(msg->requestId),
             doc_text, doc_len, &retv);
 
 failed:
@@ -1223,7 +1224,7 @@ static int on_write_end(purcmc_server* srv, purcmc_endpoint* endpoint,
 }
 
 static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
-        const pcrdr_msg *msg,int op, const char *op_name, pcrdr_msg *response)
+        const pcrdr_msg *msg, int op, const char *op_name, pcrdr_msg *response)
 {
     int retv;
     purcmc_dom *dom = NULL;
@@ -1241,8 +1242,52 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
+    const char *content = NULL;
+    size_t content_len;
+    if (op != PCRDR_K_OPERATION_ERASE || op != PCRDR_K_OPERATION_CLEAR) {
+        if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
+                msg->data == PURC_VARIANT_INVALID) {
+            retv = PCRDR_SC_BAD_REQUEST;
+            goto failed;
+        }
+
+        content = purc_variant_get_string_const_ex(msg->data, &content_len);
+        if (content == NULL || content_len == 0) {
+            retv = PCRDR_SC_BAD_REQUEST;
+            goto failed;
+        }
+    }
+
+    const char *element_type = NULL;
+    switch(msg->elementType) {
+        case PCRDR_MSG_ELEMENT_TYPE_HANDLE:
+            element_type = "handle";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_HANDLES:
+            element_type = "handles";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_CSS:
+            element_type = "css";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_XPATH:
+            element_type = "xpath";
+            break;
+        default:
+            element_type = NULL;
+            break;
+    }
+
+    const char *element_value = purc_variant_get_string_const(msg->element);
+    if (element_type == NULL || element_value == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
     retv = srv->cbs.update_dom(endpoint->session, dom,
-            op, op_name, msg);
+            op, op_name, purc_variant_get_string_const(msg->requestId),
+            element_type, element_value,
+            purc_variant_get_string_const(msg->property),
+            content, content_len);
 
 failed:
     response->type = PCRDR_MSG_TYPE_RESPONSE;
