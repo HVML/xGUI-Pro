@@ -1112,18 +1112,24 @@ static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW) {
         purcmc_plainwin *win = (void *)(uintptr_t)msg->targetValue;
-        page = srv->cbs.get_plainwin_page(endpoint->session, win);
+        page = srv->cbs.get_plainwin_page(endpoint->session, win, &retv);
+
+        if (page == NULL) {
+            goto failed;
+        }
     }
     else if (msg->target == PCRDR_MSG_TARGET_PAGE) {
         page = (void *)(uintptr_t)msg->targetValue;
+        if (page == NULL) {
+            retv = PCRDR_SC_BAD_REQUEST;
+            goto failed;
+        }
     }
 
-    if (page == NULL) {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
-    dom = srv->cbs.load(endpoint->session, page, doc_text, doc_len, &retv);
+    dom = srv->cbs.load(endpoint->session, page,
+            PCRDR_K_OPERATION_LOAD,
+            PCRDR_OPERATION_LOAD,
+            doc_text, doc_len, &retv);
 
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
@@ -1136,7 +1142,7 @@ failed:
 }
 
 static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
-        int op, const pcrdr_msg *msg)
+        int op, const char* op_name, const pcrdr_msg *msg)
 {
     pcrdr_msg response;
     int retv = PCRDR_SC_OK;
@@ -1159,18 +1165,22 @@ static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW) {
         purcmc_plainwin *win = (void *)(uintptr_t)msg->targetValue;
-        page = srv->cbs.get_plainwin_page(endpoint->session, win);
+        page = srv->cbs.get_plainwin_page(endpoint->session, win, &retv);
+
+        if (page == NULL) {
+            goto failed;
+        }
     }
     else if (msg->target == PCRDR_MSG_TARGET_PAGE) {
         page = (void *)(uintptr_t)msg->targetValue;
+        if (page == NULL) {
+            retv = PCRDR_SC_BAD_REQUEST;
+            goto failed;
+        }
     }
 
-    if (page == NULL) {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
-    dom = srv->cbs.write(endpoint->session, page, op, doc_text, doc_len, &retv);
+    dom = srv->cbs.write(endpoint->session, page, op, op_name,
+            doc_text, doc_len, &retv);
 
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
@@ -1185,23 +1195,33 @@ failed:
 static int on_write_begin(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
-    return write_xxx(srv, endpoint, PCRDR_K_OPERATION_WRITEBEGIN, msg);
+    return write_xxx(srv, endpoint,
+            PCRDR_K_OPERATION_WRITEBEGIN,
+            PCRDR_OPERATION_WRITEBEGIN,
+            msg);
 }
 
 static int on_write_more(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
-    return write_xxx(srv, endpoint, PCRDR_K_OPERATION_WRITEMORE, msg);
+    return write_xxx(srv, endpoint,
+            PCRDR_K_OPERATION_WRITEMORE,
+            PCRDR_OPERATION_WRITEMORE,
+            msg);
 }
 
 static int on_write_end(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
-    return write_xxx(srv, endpoint, PCRDR_K_OPERATION_WRITEEND, msg);
+    return write_xxx(srv, endpoint,
+            PCRDR_K_OPERATION_WRITEEND,
+            PCRDR_OPERATION_WRITEEND,
+            msg);
 }
 
-static int operate_dom_element(purcmc_server* srv, purcmc_endpoint* endpoint,
-        const pcrdr_msg *msg, int op, pcrdr_msg *response) {
+static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
+        const pcrdr_msg *msg,int op, const char *op_name, pcrdr_msg *response)
+{
     int retv;
     purcmc_dom *dom = NULL;
 
@@ -1218,7 +1238,8 @@ static int operate_dom_element(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    retv = srv->cbs.operate_dom_element(endpoint->session, dom, op, msg);
+    retv = srv->cbs.update_dom(endpoint->session, dom,
+            op, op_name, msg);
 
 failed:
     response->type = PCRDR_MSG_TYPE_RESPONSE;
@@ -1234,8 +1255,10 @@ static int on_append(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
-    operate_dom_element(srv, endpoint, msg,
-            PCRDR_K_OPERATION_APPEND, &response);
+    update_dom(srv, endpoint, msg,
+            PCRDR_K_OPERATION_APPEND,
+            PCRDR_OPERATION_APPEND,
+            &response);
     return send_simple_response(srv, endpoint, &response);
 }
 
@@ -1243,8 +1266,10 @@ static int on_prepend(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
-    operate_dom_element(srv, endpoint, msg,
-            PCRDR_K_OPERATION_PREPEND, &response);
+    update_dom(srv, endpoint, msg,
+            PCRDR_K_OPERATION_PREPEND,
+            PCRDR_OPERATION_PREPEND,
+            &response);
     return send_simple_response(srv, endpoint, &response);
 }
 
@@ -1252,8 +1277,10 @@ static int on_insert_after(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
-    operate_dom_element(srv, endpoint, msg,
-            PCRDR_K_OPERATION_INSERTAFTER, &response);
+    update_dom(srv, endpoint, msg,
+            PCRDR_K_OPERATION_INSERTAFTER,
+            PCRDR_OPERATION_INSERTAFTER,
+            &response);
     return send_simple_response(srv, endpoint, &response);
 }
 
@@ -1261,8 +1288,10 @@ static int on_insert_before(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
-    operate_dom_element(srv, endpoint, msg,
-            PCRDR_K_OPERATION_INSERTBEFORE, &response);
+    update_dom(srv, endpoint, msg,
+            PCRDR_K_OPERATION_INSERTBEFORE,
+            PCRDR_OPERATION_INSERTBEFORE,
+            &response);
     return send_simple_response(srv, endpoint, &response);
 }
 
@@ -1270,8 +1299,10 @@ static int on_displace(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
-    operate_dom_element(srv, endpoint, msg,
-            PCRDR_K_OPERATION_DISPLACE, &response);
+    update_dom(srv, endpoint, msg,
+            PCRDR_K_OPERATION_DISPLACE,
+            PCRDR_OPERATION_DISPLACE,
+            &response);
     return send_simple_response(srv, endpoint, &response);
 }
 
@@ -1279,8 +1310,10 @@ static int on_clear(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
-    operate_dom_element(srv, endpoint, msg,
-            PCRDR_K_OPERATION_CLEAR, &response);
+    update_dom(srv, endpoint, msg,
+            PCRDR_K_OPERATION_CLEAR,
+            PCRDR_OPERATION_CLEAR,
+            &response);
     return send_simple_response(srv, endpoint, &response);
 }
 
@@ -1288,8 +1321,10 @@ static int on_erase(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
-    operate_dom_element(srv, endpoint, msg,
-            PCRDR_K_OPERATION_ERASE, &response);
+    update_dom(srv, endpoint, msg,
+            PCRDR_K_OPERATION_ERASE,
+            PCRDR_OPERATION_ERASE,
+            &response);
     return send_simple_response(srv, endpoint, &response);
 }
 
@@ -1297,8 +1332,10 @@ static int on_update(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response;
-    operate_dom_element(srv, endpoint, msg,
-            PCRDR_K_OPERATION_UPDATE, &response);
+    update_dom(srv, endpoint, msg,
+            PCRDR_K_OPERATION_UPDATE,
+            PCRDR_OPERATION_UPDATE,
+            &response);
     return send_simple_response(srv, endpoint, &response);
 }
 

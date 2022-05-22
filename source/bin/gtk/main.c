@@ -715,6 +715,16 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
     purcmc_server_callbacks cbs = {
         .create_session = gtk_create_session,
         .remove_session = gtk_remove_session,
+
+        .create_plainwin = gtk_create_plainwin,
+        .update_plainwin = gtk_update_plainwin,
+        .destroy_plainwin = gtk_destroy_plainwin,
+        .get_plainwin_page = gtk_get_plainwin_page,
+
+        .load = gtk_load_or_write,
+        .write = gtk_load_or_write,
+
+        .update_dom = gtk_update_dom,
     };
 
     pcmc_srvcfg.app_name = APP_NAME;

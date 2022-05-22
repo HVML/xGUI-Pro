@@ -116,7 +116,7 @@ static void destroyed_notify(gpointer instance)
     free(hvmlInfo);
 }
 
-static void create_hvml_instance(JSCContext *context,
+static struct HVMLInfo *create_hvml_instance(JSCContext *context,
         gchar *hostName, gchar *appName, gchar* runnerName)
 {
     LOG_DEBUG("hostName (%s), appname (%s), runnerName (%s)\n",
@@ -138,6 +138,7 @@ static void create_hvml_instance(JSCContext *context,
     jsc_context_set_value(context, "HVML", HVML);
 
     LOG_DEBUG("HVML object set\n");
+    return hvmlInfo;
 }
 
 static char *load_asset_content(const char *file)
@@ -223,6 +224,39 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
     }
 }
 
+static gboolean
+user_message_received_callback(WebKitWebPage *webPage,
+        WebKitUserMessage *message, gpointer userData)
+{
+    struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)userData;
+
+    if (!jsc_value_is_function(hvmlInfo->onmessage)) {
+        LOG_WARN("HVML.onmessage is not set\n");
+        return FALSE;
+    }
+
+    const char* name = webkit_user_message_get_name(message);
+    LOG_DEBUG("Got a message with name (%s)\n", name);
+
+    GVariant *param = webkit_user_message_get_parameters(message);
+    const char* type = g_variant_get_type_string(param);
+    if (strcmp(type, "s")) {
+        LOG_ERROR("the parameter of the message is not a string (%s)\n", type);
+        return FALSE;
+    }
+
+    JSCValue *result = jsc_value_function_call(hvmlInfo->onmessage,
+            G_TYPE_STRING, g_variant_get_string(param, NULL),
+            G_TYPE_NONE);
+
+    char *result_in_json = jsc_value_to_json(result, 0);
+    LOG_INFO("result of onmessage: (%s)\n", result_in_json);
+    free(result_in_json);
+
+    return TRUE;
+}
+
+
 static void
 window_object_cleared_callback(WebKitScriptWorld* world,
         WebKitWebPage* webPage, WebKitFrame* frame,
@@ -236,7 +270,8 @@ window_object_cleared_callback(WebKitScriptWorld* world,
         JSCContext *context;
         context = webkit_frame_get_js_context_for_script_world(frame, world);
 
-        create_hvml_instance(context, hostName, appName, runnerName);
+        struct HVMLInfo *hvmlInfo;
+        hvmlInfo = create_hvml_instance(context, hostName, appName, runnerName);
 
         g_signal_connect(webPage, "document-loaded",
                 G_CALLBACK(document_loaded_callback),
@@ -244,6 +279,9 @@ window_object_cleared_callback(WebKitScriptWorld* world,
         g_signal_connect(webPage, "console-message-sent",
                 G_CALLBACK(console_message_sent_callback),
                 NULL);
+        g_signal_connect(webPage, "user-message-received",
+                G_CALLBACK(user_message_received_callback),
+                hvmlInfo);
     }
 }
 

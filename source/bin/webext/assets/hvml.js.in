@@ -30,6 +30,23 @@ function checkHVML() {
 if (checkHVML()) {
     HVML.onmessage = function (msg) {
         console.log("HVML.onmessage called");
+
+        if (msg.op === 'load') {
+            document.open();
+            document.write(msg.ctnt);
+            document.close();
+        }
+        else if (msg.op === 'writeBegin') {
+            document.open();
+            document.write(msg.ctnt);
+        }
+        else if (msg.op === 'writeMore') {
+            document.write(msg.ctnt);
+        }
+        else if (msg.op === 'writeEnd') {
+            document.write(msg.ctnt);
+            document.close();
+        }
     }
 }
 

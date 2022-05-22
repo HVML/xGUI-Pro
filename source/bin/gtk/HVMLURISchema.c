@@ -98,6 +98,7 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             }
 
             assert(strcasecmp(good_hvml_uri[i], my_uri) == 0);
+            g_free(my_uri);
 
             free(host);
             free(app);

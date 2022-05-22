@@ -104,7 +104,8 @@ typedef struct purcmc_server_callbacks {
     int (*destroy_plainwin)(purcmc_session *, purcmc_workspace *,
             purcmc_plainwin *win);
 
-    purcmc_page *(*get_plainwin_page)(purcmc_session *, purcmc_plainwin *win);
+    purcmc_page *(*get_plainwin_page)(purcmc_session *,
+            purcmc_plainwin *plainWin, int *retv);
 
     /* nullable */
     purcmc_page *(*create_page)(purcmc_session *, purcmc_workspace *,
@@ -119,12 +120,14 @@ typedef struct purcmc_server_callbacks {
             purcmc_page *page);
 
     purcmc_dom *(*load)(purcmc_session *, purcmc_page *,
+            int op, const char *op_name,
             const char *content, size_t length, int *retv);
     purcmc_dom *(*write)(purcmc_session *, purcmc_page *,
-            int op, const char *content, size_t length, int *retv);
+            int op, const char *op_name,
+            const char *content, size_t length, int *retv);
 
-    int (*operate_dom_element)(purcmc_session *, purcmc_dom *,
-            int op, const pcrdr_msg *msg);
+    int (*update_dom)(purcmc_session *, purcmc_dom *,
+            int op, const char *op_name, const pcrdr_msg *msg);
 
     /* nullable */
     purc_variant_t (*call_method)(purcmc_session *, purcmc_dom *,

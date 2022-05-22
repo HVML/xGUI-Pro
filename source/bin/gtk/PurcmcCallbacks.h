@@ -40,15 +40,14 @@ int gtk_update_plainwin(purcmc_session *, purcmc_workspace *,
         purcmc_plainwin *win, const char *property, const char *value);
 int gtk_destroy_plainwin(purcmc_session *, purcmc_workspace *,
         purcmc_plainwin *win);
-purcmc_page *gtk_get_plainwin_page(purcmc_session *, purcmc_plainwin *win);
+purcmc_page *gtk_get_plainwin_page(purcmc_session *,
+        purcmc_plainwin *win, int *retv);
 
-purcmc_dom *gtk_load(purcmc_session *, purcmc_page *,
+purcmc_dom *gtk_load_or_write(purcmc_session *, purcmc_page *,
+            int op, const char *op_name,
             const char *content, size_t length, int *retv);
-purcmc_dom *gtk_write(purcmc_session *, purcmc_page *,
-            int op, const char *content, size_t length, int *retv);
-
-int gtk_operate_dom_element(purcmc_session *, purcmc_dom *,
-            int op, const pcrdr_msg *msg);
+int gtk_update_dom(purcmc_session *, purcmc_dom *,
+            int op, const char *op_name, const pcrdr_msg *msg);
 
 #ifdef __cplusplus
 }
