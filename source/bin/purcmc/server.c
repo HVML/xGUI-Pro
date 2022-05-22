@@ -272,10 +272,12 @@ setup_signal_pipe(void)
     sa.sa_handler = sig_handler_ignore;
     sigemptyset(&sa.sa_mask);
 
+#if 0
     if (sigaction(SIGPIPE, &sa, &old_pipe_sa) != 0) {
         perror("sigaction()");
         return -1;
     }
+#endif
 
     return 0;
 }

@@ -96,8 +96,10 @@ int del_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint, int cause)
 {
     char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
 
-    srv->cbs.remove_session(endpoint->session);
-    endpoint->session = NULL;
+    if (endpoint->session) {
+        srv->cbs.remove_session(endpoint->session);
+        endpoint->session = NULL;
+    }
 
     if (assemble_endpoint_name(endpoint, endpoint_name) > 0) {
         if (endpoint->avl.key)
@@ -785,10 +787,11 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     if ((tmp = purc_variant_object_get_by_ckey(msg->data, "name"))) {
         name = purc_variant_get_string_const(tmp);
-        if (name == NULL || !purc_is_valid_identifier(name)) {
-            retv = PCRDR_SC_BAD_REQUEST;
-            goto failed;
-        }
+    }
+
+    if (name == NULL || !purc_is_valid_identifier(name)) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
     }
 
     if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {

@@ -78,7 +78,13 @@ static gboolean hvml_set_property(JSCClass *jsc_class,
     struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)instance;
 
     if (g_strcmp0(name, "onmessage") == 0) {
+        LOG_DEBUG("set HVML.onmessage with a value (%p)\n", value);
         if (jsc_value_is_function(value)) {
+            LOG_DEBUG("value (%p) is a function\n", value);
+
+            if (hvmlInfo->onmessage)
+                g_object_unref(hvmlInfo->onmessage);
+            g_object_ref(value);
             hvmlInfo->onmessage = value;
             return TRUE;
         }
@@ -230,7 +236,14 @@ user_message_received_callback(WebKitWebPage *webPage,
 {
     struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)userData;
 
-    if (!jsc_value_is_function(hvmlInfo->onmessage)) {
+    LOG_DEBUG("called, userData(%p)\n", userData);
+    LOG_DEBUG("hvmlInfo->appName: %s\n", hvmlInfo->appName);
+    LOG_DEBUG("hvmlInfo->runnerName: %s\n", hvmlInfo->runnerName);
+
+    LOG_DEBUG("HVML.onmessage (%p)\n", hvmlInfo->onmessage);
+
+    if (hvmlInfo->onmessage == NULL ||
+            !jsc_value_is_function(hvmlInfo->onmessage)) {
         LOG_WARN("HVML.onmessage is not set\n");
         return FALSE;
     }
@@ -272,6 +285,7 @@ window_object_cleared_callback(WebKitScriptWorld* world,
 
         struct HVMLInfo *hvmlInfo;
         hvmlInfo = create_hvml_instance(context, hostName, appName, runnerName);
+        LOG_DEBUG("hvmlInfo (%p)\n", hvmlInfo);
 
         g_signal_connect(webPage, "document-loaded",
                 G_CALLBACK(document_loaded_callback),
@@ -305,7 +319,7 @@ G_MODULE_EXPORT void
 webkit_web_extension_initialize_with_user_data(WebKitWebExtension *extension,
         GVariant *user_data)
 {
-    my_log_enable(true, "WebExtensionHVML");
+    my_log_enable(true, NULL);
 
     if (user_data == NULL) {
         LOG_INFO("no user data\n");

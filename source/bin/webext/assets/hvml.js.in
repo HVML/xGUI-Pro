@@ -28,23 +28,24 @@ function checkHVML() {
 }
 
 if (checkHVML()) {
-    HVML.onmessage = function (msg) {
-        console.log("HVML.onmessage called");
+    HVML.onmessage = function (json) {
+        msg = JSON.parse(json);
+        console.log("HVML.onmessage called: " + msg.op);
 
         if (msg.op === 'load') {
             document.open();
-            document.write(msg.ctnt);
+            document.write(msg.data);
             document.close();
         }
         else if (msg.op === 'writeBegin') {
             document.open();
-            document.write(msg.ctnt);
+            document.write(msg.data);
         }
         else if (msg.op === 'writeMore') {
-            document.write(msg.ctnt);
+            document.write(msg.data);
         }
         else if (msg.op === 'writeEnd') {
-            document.write(msg.ctnt);
+            document.write(msg.data);
             document.close();
         }
     }

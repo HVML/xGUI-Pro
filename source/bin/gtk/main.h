@@ -23,10 +23,12 @@
 #ifndef main_h
 #define main_h
 
-#include <glib.h>
-
 #include "xguipro-version.h"
 #include "xguipro-features.h"
+
+#include <purc/purc-helpers.h>
+
+#include <glib.h>
 
 typedef enum {
     XGUI_PRO_ERROR_INVALID_ABOUT_PATH,
@@ -39,6 +41,22 @@ static inline GQuark xguipro_error_quark()
 }
 
 #define XGUI_PRO_ERROR (xguipro_error_quark())
+
+#ifdef NDEBUG
+#define LOG_DEBUG(x, ...)
+#else
+#define LOG_DEBUG(x, ...)   \
+    purc_log_debug("%s: " x, __func__, ##__VA_ARGS__)
+#endif /* not defined NDEBUG */
+
+#define LOG_ERROR(x, ...)   \
+    purc_log_error("%s: " x, __func__, ##__VA_ARGS__)
+
+#define LOG_WARN(x, ...)    \
+    purc_log_warn("%s: " x, __func__, ##__VA_ARGS__)
+
+#define LOG_INFO(x, ...)    \
+    purc_log_info("%s: " x, __func__, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 extern "C" {
