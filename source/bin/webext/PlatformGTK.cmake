@@ -16,6 +16,7 @@ set(WebKitWebExtension_DEFINITIONS
 )
 
 set(WebKitWebExtension_LIBRARIES
+    xGUIPro::xGUIPro
     ${GLIB_GOBJECT_LIBRARIES}
     ${GLIB_LIBRARIES}
     WebKit::JSC

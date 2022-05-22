@@ -26,8 +26,12 @@
 #include "HVMLURISchema.h"
 #include "BuildRevision.h"
 
+#include "utils/hvml-uri.h"
+
 #include <webkit2/webkit2.h>
 #include <purc/purc-helpers.h>
+
+#include <assert.h>
 
 void initializeWebExtensionsCallback(WebKitWebContext *context,
         gpointer user_data)
@@ -49,25 +53,71 @@ void initializeWebExtensionsCallback(WebKitWebContext *context,
 void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext)
 {
-    gchar *host, *path;
+    const char *uri = webkit_uri_scheme_request_get_uri(request);
+    char *host = NULL, *app = NULL, *runner = NULL;
 
-    g_uri_split(webkit_uri_scheme_request_get_uri(request), G_URI_FLAGS_NONE,
-            NULL, NULL,
-            &host, NULL, &path, NULL, NULL, NULL);
+#ifndef NDEBUG
+    do {
+        const char *bad_hvml_uri[] = {
+            "http://",
+            "hvml://",
+            "hvml://host",
+            "hvml://host/app",
+            "hvml://host/app/runner",
+            "hvml://host/app/runner/group/",
+            "hvml://host/app/runner/group/page/",
+            "hvml://host/app/runner/group/page/trail",
+        };
 
-    gchar *basename = g_path_get_basename(path);
-    gchar *dirname = g_path_get_dirname(path);
+        const char *good_hvml_uri[] = {
+            "hvml://host/app/runner/page",
+            "hvml://host/app/runner/group/page",
+            "HVML://HOST/APP/RUNNER/GROUP/PAGE",
+        };
 
-    const gchar *runner = basename;
-    const gchar *app = dirname + 1;
+        for (size_t i = 0; i < sizeof(bad_hvml_uri)/sizeof(const char*); i++) {
+            bool ret = hvml_uri_split(bad_hvml_uri[i],
+                    NULL, NULL, NULL, NULL, NULL);
+            assert(!ret);
+        }
 
-    g_print("%s: host (%s) and path (%s)\n", __func__, host, path);
-    if (!purc_is_valid_host_name(host) ||
+        for (size_t i = 0; i < sizeof(good_hvml_uri)/sizeof(const char*); i++) {
+            char *host, *app, *runner, *group, *page;
+            bool ret = hvml_uri_split(good_hvml_uri[i],
+                    &host, &app, &runner, &group, &page);
+            assert(ret);
+
+            char *my_uri;
+            if (group == NULL) {
+                my_uri = g_strdup_printf("hvml://%s/%s/%s/%s",
+                        host, app, runner, page);
+            }
+            else {
+                my_uri = g_strdup_printf("hvml://%s/%s/%s/%s/%s",
+                        host, app, runner, group, page);
+            }
+
+            assert(strcasecmp(good_hvml_uri[i], my_uri) == 0);
+
+            free(host);
+            free(app);
+            free(runner);
+            if (group)
+                free(group);
+            free(page);
+        }
+
+    } while(0);
+#endif
+
+    if (!hvml_uri_split(uri,
+            &host, &app, &runner, NULL, NULL) ||
+            !purc_is_valid_host_name(host) ||
             !purc_is_valid_app_name(app) ||
             !purc_is_valid_runner_name(runner)) {
         GError *error = g_error_new(XGUI_PRO_ERROR,
                 XGUI_PRO_ERROR_INVALID_HVML_URI,
-                "Invalid HVML uri: hvml://%s%s", host, path);
+                "Invalid HVML uri: hvml://%s/%s/%s/xxx", host, app, runner);
         webkit_uri_scheme_request_finish_error(request, error);
         g_error_free(error);
         goto error;
@@ -102,9 +152,11 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
     g_object_unref(stream);
 
 error:
-    g_free(basename);
-    g_free(dirname);
-    g_free(path);
-    g_free(host);
+    if (runner)
+        free(runner);
+    if (app)
+        free(app);
+    if (host)
+        free(host);
 }
 

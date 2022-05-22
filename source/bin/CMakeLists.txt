@@ -22,11 +22,9 @@ list(APPEND xguipro_PRIVATE_INCLUDE_DIRECTORIES
 )
 
 list(APPEND xguipro_SYSTEM_INCLUDE_DIRECTORIES
-    ${GLIB_INCLUDE_DIRS}
-    ${LIBSOUP_INCLUDE_DIRS}
 )
 
-set(xguipro_DEFINITIONS
+list(APPEND xguipro_DEFINITIONS
 )
 
 XGUIPRO_EXECUTABLE(xguipro)
@@ -42,7 +40,6 @@ list(APPEND xguipro_SOURCES
 
 set(xguipro_LIBRARIES
     xGUIPro::xGUIPro
-    ${LIBSOUP_LIBRARIES}
     WebKit::JSC
     WebKit::WebKit
     PurC::PurC

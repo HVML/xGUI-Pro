@@ -25,7 +25,8 @@
 #include "xguipro-version.h"
 #include "xguipro-features.h"
 
-#include "../log.h"
+#include "utils/hvml-uri.h"
+#include "webext/log.h"
 
 struct HVMLInfo {
     const char* vendor;
@@ -222,40 +223,6 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
     }
 }
 
-static bool get_runner_info(const gchar *uri,
-        gchar **hostName, gchar **appName, gchar **runnerName)
-{
-    gchar *schema, *host, *path;
-
-    g_uri_split(uri, G_URI_FLAGS_NONE,
-            &schema, NULL, &host, NULL, &path, NULL, NULL, NULL);
-
-    gchar *basename = g_path_get_basename(path);
-    gchar *dirname = g_path_get_dirname(path);
-
-    const gchar *runner = basename;
-    const gchar *app = dirname + 1;
-
-    if (strcasecmp(schema, "hvml")) {
-        free(basename);
-        free(dirname);
-        free(schema);
-        free(host);
-        free(path);
-        return false;
-    }
-
-    *hostName = host;
-    *appName = strdup(app);
-    *runnerName = strdup(runner);
-
-    free(basename);
-    free(dirname);
-    free(schema);
-    free(path);
-    return true;
-}
-
 static void
 window_object_cleared_callback(WebKitScriptWorld* world,
         WebKitWebPage* webPage, WebKitFrame* frame,
@@ -265,7 +232,7 @@ window_object_cleared_callback(WebKitScriptWorld* world,
     const gchar *uri = webkit_web_page_get_uri(webPage);
 
     LOG_DEBUG("uri (%s)\n", uri);
-    if (get_runner_info(uri, &hostName, &appName, &runnerName)) {
+    if (hvml_uri_split(uri, &hostName, &appName, &runnerName, NULL, NULL)) {
         JSCContext *context;
         context = webkit_frame_get_js_context_for_script_world(frame, world);
 

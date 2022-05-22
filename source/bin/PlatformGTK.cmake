@@ -6,6 +6,11 @@ list(APPEND xguipro_PRIVATE_INCLUDE_DIRECTORIES
     "${xGUIPro_DERIVED_SOURCES_DIR}/gtk"
 )
 
+list(APPEND xguipro_SYSTEM_INCLUDE_DIRECTORIES
+    ${GLIB_INCLUDE_DIRS}
+    ${LIBSOUP_INCLUDE_DIRS}
+)
+
 list(APPEND xguipro_SOURCES
     ${xGUIPro_DERIVED_SOURCES_DIR}/gtk/BrowserMarshal.c
     gtk/BrowserCellRendererVariant.c
@@ -27,7 +32,10 @@ list(APPEND xguipro_SOURCES
     gtk/main.c
 )
 
-list(APPEND xguipro_LIBRARIES GTK::GTK)
+list(APPEND xguipro_LIBRARIES
+    ${LIBSOUP_LIBRARIES}
+    GTK::GTK
+)
 
 if (HAVE_LIBSSL)
     list(APPEND xguipro_LIBRARIES ${OPENSSL_LIBRARIES})
