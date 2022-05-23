@@ -697,7 +697,7 @@ init_server(void)
         return -1;
     }
 
-    purc_enable_log(true, false);
+    purc_enable_log(false, false);
 
 #if !HAVE(SYS_EPOLL_H) && HAVE(SYS_SELECT_H)
     the_server.maxfd = -1;

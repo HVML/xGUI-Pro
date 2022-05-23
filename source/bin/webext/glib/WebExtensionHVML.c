@@ -35,7 +35,9 @@ struct HVMLInfo {
     char *hostName;
     char *appName;
     char *runnerName;
-    JSCValue *onmessage;
+    JSCValue *onrequest;
+    JSCValue *onresponse;
+    JSCValue *onevent;
 };
 
 static JSCValue * hvml_get_property(JSCClass *jsc_class,
@@ -61,9 +63,21 @@ static JSCValue * hvml_get_property(JSCClass *jsc_class,
     else if (g_strcmp0(name, "runnerName") == 0) {
         return jsc_value_new_string(context, hvmlInfo->runnerName);
     }
-    else if (g_strcmp0(name, "onmessage") == 0) {
-        if (hvmlInfo->onmessage) {
-            return hvmlInfo->onmessage;
+    else if (g_strcmp0(name, "onrequest") == 0) {
+        if (hvmlInfo->onrequest) {
+            return hvmlInfo->onrequest;
+        }
+        return jsc_value_new_undefined(context);
+    }
+    else if (g_strcmp0(name, "onresponse") == 0) {
+        if (hvmlInfo->onresponse) {
+            return hvmlInfo->onresponse;
+        }
+        return jsc_value_new_undefined(context);
+    }
+    else if (g_strcmp0(name, "onevent") == 0) {
+        if (hvmlInfo->onevent) {
+            return hvmlInfo->onevent;
         }
         return jsc_value_new_undefined(context);
     }
@@ -77,15 +91,33 @@ static gboolean hvml_set_property(JSCClass *jsc_class,
 {
     struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)instance;
 
-    if (g_strcmp0(name, "onmessage") == 0) {
-        LOG_DEBUG("set HVML.onmessage with a value (%p)\n", value);
+    if (g_strcmp0(name, "onrequest") == 0) {
+        LOG_DEBUG("set HVML.onrequest with a value (%p)\n", value);
         if (jsc_value_is_function(value)) {
             LOG_DEBUG("value (%p) is a function\n", value);
 
-            if (hvmlInfo->onmessage)
-                g_object_unref(hvmlInfo->onmessage);
+            if (hvmlInfo->onrequest)
+                g_object_unref(hvmlInfo->onrequest);
             g_object_ref(value);
-            hvmlInfo->onmessage = value;
+            hvmlInfo->onrequest = value;
+            return TRUE;
+        }
+    }
+    else if (g_strcmp0(name, "onresponse") == 0) {
+        if (jsc_value_is_function(value)) {
+            if (hvmlInfo->onresponse)
+                g_object_unref(hvmlInfo->onresponse);
+            g_object_ref(value);
+            hvmlInfo->onresponse = value;
+            return TRUE;
+        }
+    }
+    else if (g_strcmp0(name, "onevent") == 0) {
+        if (jsc_value_is_function(value)) {
+            if (hvmlInfo->onevent)
+                g_object_unref(hvmlInfo->onevent);
+            g_object_ref(value);
+            hvmlInfo->onevent = value;
             return TRUE;
         }
     }
@@ -118,6 +150,12 @@ static void destroyed_notify(gpointer instance)
         free(hvmlInfo->appName);
     if (hvmlInfo->runnerName)
         free(hvmlInfo->runnerName);
+    if (hvmlInfo->onrequest)
+        g_object_unref(hvmlInfo->onrequest);
+    if (hvmlInfo->onresponse)
+        g_object_unref(hvmlInfo->onresponse);
+    if (hvmlInfo->onevent)
+        g_object_unref(hvmlInfo->onevent);
 
     free(hvmlInfo);
 }
@@ -206,7 +244,7 @@ console_message_sent_callback(WebKitWebPage *web_page,
 static void
 document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
 {
-    LOG_DEBUG("user_data (%p)\n", user_data);
+    LOG_DEBUG("inject hvml.js to page (%p)\n", web_page);
 
     /* inject hvml.js */
     gchar *code = load_asset_content("hvml.js");
@@ -221,12 +259,13 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
         JSCValue *result;
         result = jsc_context_evaluate_with_source_uri(context, code, -1,
                 webkit_web_page_get_uri(web_page), 1);
-
         free(code);
+
         char *result_in_json = jsc_value_to_json(result, 0);
 
         LOG_INFO("result of injected script: (%s)\n", result_in_json);
-        free(result_in_json);
+        if (result_in_json)
+            free(result_in_json);
     }
 }
 
@@ -239,16 +278,33 @@ user_message_received_callback(WebKitWebPage *webPage,
     LOG_DEBUG("called, userData(%p)\n", userData);
     LOG_DEBUG("hvmlInfo->appName: %s\n", hvmlInfo->appName);
     LOG_DEBUG("hvmlInfo->runnerName: %s\n", hvmlInfo->runnerName);
-    LOG_DEBUG("HVML.onmessage (%p)\n", hvmlInfo->onmessage);
-
-    if (hvmlInfo->onmessage == NULL ||
-            !jsc_value_is_function(hvmlInfo->onmessage)) {
-        LOG_WARN("HVML.onmessage is not set\n");
-        return FALSE;
-    }
+    LOG_DEBUG("HVML.onrequest (%p)\n", hvmlInfo->onrequest);
+    LOG_DEBUG("HVML.onresponse (%p)\n", hvmlInfo->onresponse);
+    LOG_DEBUG("HVML.onevent (%p)\n", hvmlInfo->onevent);
 
     const char* name = webkit_user_message_get_name(message);
     LOG_DEBUG("Got a message with name (%s)\n", name);
+
+    JSCValue *handler = NULL;
+    if (strcmp(name, "request") == 0) {
+        handler = hvmlInfo->onrequest;
+    }
+    else if (strcmp(name, "response") == 0) {
+        handler = hvmlInfo->onresponse;
+    }
+    else if (strcmp(name, "event") == 0) {
+        handler = hvmlInfo->onevent;
+    }
+    else {
+        LOG_WARN("Unknown message name: %s\n", name);
+        return FALSE;
+    }
+
+    if (handler == NULL || !jsc_value_is_function(handler)) {
+        LOG_WARN("Handler not set for message (%s) or is not a function\n",
+                name);
+        return FALSE;
+    }
 
     GVariant *param = webkit_user_message_get_parameters(message);
     const char* type = g_variant_get_type_string(param);
@@ -257,20 +313,20 @@ user_message_received_callback(WebKitWebPage *webPage,
         return FALSE;
     }
 
-    JSCValue *result = jsc_value_function_call(hvmlInfo->onmessage,
+    JSCValue *result = jsc_value_function_call(handler,
             G_TYPE_STRING, g_variant_get_string(param, NULL),
             G_TYPE_NONE);
 
     char *result_in_json = jsc_value_to_json(result, 0);
-    LOG_INFO("result of onmessage: (%s)\n", result_in_json);
-    if (result_in_json == NULL)
-        result_in_json = g_strdup("");
-    webkit_user_message_send_reply(message,
-            webkit_user_message_new(name, g_variant_new_string(result_in_json)));
-    free(result_in_json);
+    LOG_INFO("result of onrequest: (%s)\n", result_in_json);
+    if (result_in_json) {
+        webkit_user_message_send_reply(message,
+                webkit_user_message_new(name, g_variant_new_string(result_in_json)));
+        free(result_in_json);
+    }
+
     return TRUE;
 }
-
 
 static void
 window_object_cleared_callback(WebKitScriptWorld* world,
@@ -325,24 +381,29 @@ webkit_web_extension_initialize_with_user_data(WebKitWebExtension *extension,
 
     if (user_data == NULL) {
         LOG_INFO("no user data\n");
+        goto failed;
     }
     else {
         const char* type = g_variant_get_type_string(user_data);
-        if (strcmp(type, "u") == 0) {
-            LOG_INFO("got desired user data: %u\n",
-                    g_variant_get_uint32(user_data));
+        if (strcmp(type, "s") == 0) {
+            LOG_INFO("got desired user data: %s\n",
+                    g_variant_get_string(user_data, NULL));
         }
         else {
             LOG_INFO("not desired user data type: %s\n", type);
+            goto failed;
         }
     }
 
     g_signal_connect(extension, "page-created",
             G_CALLBACK(web_page_created_callback),
-            user_data);
+            NULL);
     g_signal_connect(webkit_script_world_get_default(),
             "window-object-cleared",
             G_CALLBACK(window_object_cleared_callback),
             extension);
+
+failed:
+    return;
 }
 

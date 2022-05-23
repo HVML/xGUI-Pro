@@ -53,6 +53,30 @@ following repositories:
 ## Building xGUI Pro
 
 
+## Debugging xGUI Pro
+
+```
+$ sudo su
+# echo "/tmp/core-pid_%p.dump" > /proc/sys/kernel/core_pattern
+# exit
+
+$ ulimit -c unlimited
+$ WEBKIT_WEBEXT_DIR=/srv/devel/hvml/xgui-pro/build/lib/webext bin/xguipro hvml://localhost/cn.fmsoft.hvml.sample/calculator/main
+```
+
+Run `purcsmg` in another terminal:
+
+```
+$ cd /path/to/purc-midnight-commander/build/
+$ ./source/bin/purcsmg --app=cn.fmsoft.hvml.purcsmg --runner=test --testmethod=1 --file=fmsoft-cn.html
+```
+
+If encounter core dumps, use `gdb`:
+
+```
+$ gdb bin/xguipro -c /tmp/core-pid_xxxx.dump
+```
+
 ## Current Status
 
 - May 2022: Version 0.9.

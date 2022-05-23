@@ -13,7 +13,7 @@ function checkHVML() {
                 return true;
             }
             else {
-                console.log("Make sure to use the correct version of xGUI Pro");
+                console.log("A new HVML content loaded");
             }
         }
         else {
@@ -21,16 +21,16 @@ function checkHVML() {
         }
     }
     else {
-        console.log("Make sure to use the tailored WebKit by HVML community and the configuration option `ENABLE_HVML_ATTRS` is ON.");
+        console.log("Make sure to use the tailored WebKit released by HVML community and the configuration option `ENABLE_HVML_ATTRS` is ON.");
     }
 
     return false;
 }
 
 if (checkHVML()) {
-    HVML.onmessage = function (json) {
+    HVML.onrequest = function (json) {
         msg = JSON.parse(json);
-        console.log("HVML.onmessage called: " + json);
+        console.log("HVML.onrequest called: " + msg.operation);
 
         if (msg.operation === 'load') {
             document.open();
@@ -142,7 +142,7 @@ function onChangeDocument(msg)
     }
 }
 
-HVML.onmessage = function (msg) {
+HVML.onrequest = function (msg) {
     log.console();
     if (msg.type === 'request' && msg.target !== 'dom') {
         return onChangePage(msg);

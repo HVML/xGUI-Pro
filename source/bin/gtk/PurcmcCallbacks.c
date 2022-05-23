@@ -108,7 +108,7 @@ purcmc_session *gtk_create_session(void *context, purcmc_endpoint *endpt)
     g_object_unref(manager);
 
     g_signal_connect(webContext, "initialize-web-extensions",
-            G_CALLBACK(initializeWebExtensionsCallback), NULL);
+            G_CALLBACK(initializeWebExtensionsCallback), (gpointer)"HVML");
 
 #if 0
     if (enableSandbox)
@@ -167,7 +167,7 @@ int gtk_remove_session(purcmc_session *sess)
 
     LOG_DEBUG("removing session (%p)...\n", sess);
 
-    LOG_DEBUG("destroy all plain windows...\n");
+    LOG_DEBUG("destroy all ungrouped plain windows...\n");
     kvlist_for_each_safe(&sess->workspace.ug_wins, name, next, data) {
         plainWin = *(purcmc_plainwin **)data;
 
@@ -179,9 +179,6 @@ int gtk_remove_session(purcmc_session *sess)
 
     LOG_DEBUG("destroy sorted array for all handles...\n");
     sorted_array_destroy(sess->all_handles);
-
-    LOG_DEBUG("clear webContext...\n");
-    g_clear_object(&sess->webContext);
 
     LOG_DEBUG("free session...\n");
     free(sess);
@@ -279,7 +276,8 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         webkit_web_view_load_uri(webView, uri);
 
         g_object_unref(sess->webContext);
-        g_object_unref(userContentManager);
+        if (userContentManager)
+            g_object_unref(userContentManager);
 
         gtk_widget_grab_focus(GTK_WIDGET(webView));
         gtk_widget_show(GTK_WIDGET(mainWin));
@@ -290,6 +288,7 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         LOG_DEBUG("A new plain window created: %p\n", plainWin);
         LOG_DEBUG("A new webView created: %p\n", webView);
 
+        kvlist_set(&sess->workspace.ug_wins, name, &plainWin);
         sorted_array_add(sess->all_handles, (uint64_t)(uintptr_t)plainWin,
                 (void *)(uintptr_t)HT_PLAINWIN);
         sorted_array_add(sess->all_handles, (uint64_t)(uintptr_t)webView,
@@ -333,9 +332,12 @@ int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
 static void
 do_destroy_plainwin(purcmc_session *sess, purcmc_plainwin *plainWin)
 {
+    LOG_DEBUG("destroy plain window with name (%s)...\n", plainWin->name);
+
     sorted_array_remove(sess->all_handles, (uint64_t)(uintptr_t)plainWin);
     kvlist_delete(&sess->workspace.ug_wins, plainWin->name);
     free(plainWin->name);
+    free(plainWin->title);
     webkit_web_view_try_close(plainWin->webView);
     free(plainWin);
 }
@@ -443,7 +445,7 @@ purcmc_dom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
     gchar *json = g_strdup_printf(PAGE_MESSAGE_FORMAT, op_name,
             request_id, escaped);
 
-    WebKitUserMessage * message = webkit_user_message_new(op_name,
+    WebKitUserMessage * message = webkit_user_message_new("request",
             g_variant_new_string(json));
     g_free(json);
     free(escaped);
@@ -483,7 +485,7 @@ int gtk_update_dom(purcmc_session *sess, purcmc_dom *dom,
             element_type, element_value, property,
             escaped);
 
-    WebKitUserMessage * message = webkit_user_message_new(op_name,
+    WebKitUserMessage * message = webkit_user_message_new("request",
             g_variant_new_string(json));
     g_free(json);
     free(escaped);
