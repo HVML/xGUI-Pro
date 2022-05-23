@@ -75,11 +75,11 @@ struct purcmc_session {
 purcmc_session *gtk_create_session(void *context, purcmc_endpoint *endpt)
 {
     purcmc_session* sess = calloc(1, sizeof(purcmc_session));
-    sess->uriPrefix = purc_assemble_hvml_uri_alloc(
+    sess->uriPrefix = purc_hvml_uri_assemble_alloc(
             purcmc_endpoint_host_name(endpt),
             purcmc_endpoint_app_name(endpt),
             purcmc_endpoint_runner_name(endpt),
-            NULL);
+            NULL, NULL);
     if (sess->uriPrefix == NULL) {
         free(sess);
         return NULL;
