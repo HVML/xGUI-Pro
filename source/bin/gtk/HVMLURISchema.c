@@ -54,62 +54,7 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
     const char *uri = webkit_uri_scheme_request_get_uri(request);
     char *host = NULL, *app = NULL, *runner = NULL;
 
-#ifndef NDEBUG
-    do {
-        const char *bad_hvml_uri[] = {
-            "http://",
-            "hvml://",
-            "hvml://host",
-            "hvml://host/app",
-            "hvml://host/app/runner",
-            "hvml://host/app/runner/group/",
-            "hvml://host/app/runner/group/page/",
-            "hvml://host/app/runner/group/page/trail",
-        };
-
-        const char *good_hvml_uri[] = {
-            "hvml://host/app/runner/page",
-            "hvml://host/app/runner/group/page",
-            "HVML://HOST/APP/RUNNER/GROUP/PAGE",
-        };
-
-        for (size_t i = 0; i < sizeof(bad_hvml_uri)/sizeof(const char*); i++) {
-            bool ret = hvml_uri_split(bad_hvml_uri[i],
-                    NULL, NULL, NULL, NULL, NULL);
-            assert(!ret);
-        }
-
-        for (size_t i = 0; i < sizeof(good_hvml_uri)/sizeof(const char*); i++) {
-            char *host, *app, *runner, *group, *page;
-            bool ret = hvml_uri_split(good_hvml_uri[i],
-                    &host, &app, &runner, &group, &page);
-            assert(ret);
-
-            char *my_uri;
-            if (group == NULL) {
-                my_uri = g_strdup_printf("hvml://%s/%s/%s/%s",
-                        host, app, runner, page);
-            }
-            else {
-                my_uri = g_strdup_printf("hvml://%s/%s/%s/%s/%s",
-                        host, app, runner, group, page);
-            }
-
-            assert(strcasecmp(good_hvml_uri[i], my_uri) == 0);
-            g_free(my_uri);
-
-            free(host);
-            free(app);
-            free(runner);
-            if (group)
-                free(group);
-            free(page);
-        }
-
-    } while(0);
-#endif
-
-    if (!hvml_uri_split(uri,
+    if (!purc_hvml_uri_split_alloc(uri,
             &host, &app, &runner, NULL, NULL) ||
             !purc_is_valid_host_name(host) ||
             !purc_is_valid_app_name(app) ||

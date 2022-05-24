@@ -36,31 +36,31 @@ if (checkHVML()) {
             document.open();
             document.write(msg.data);
             document.close();
-            return { requestId: msg.requestId, result: "Ok" };
+            return { requestId: msg.requestId, state: "Ok" };
         }
         else if (msg.operation === 'writeBegin') {
             document.open();
             document.write(msg.data);
-            return { requestId: msg.requestId, result: "Ok" };
+            return { requestId: msg.requestId, state: "Ok" };
         }
         else if (msg.operation === 'writeMore') {
             document.write(msg.data);
-            return { requestId: msg.requestId, result: "Ok" };
+            return { requestId: msg.requestId, state: "Ok" };
         }
         else if (msg.operation === 'writeEnd') {
             document.write(msg.data);
             document.close();
-            return { requestId: msg.requestId, result: "Ok" };
+            return { requestId: msg.requestId, state: "Ok" };
         }
         else if (msg.operation === 'update') {
             if (msg.elementType === 'handle') {
                 var elem = document.getElementByHVMLHandle(msg.element);
                 if (elem) {
                     if (!updateProperty(elem, msg.property, msg.data))
-                        return { requestId: msg.requestId, result: "BadRequest" };
+                        return { requestId: msg.requestId, state: "BadRequest" };
                 }
                 else {
-                    return { requestId: msg.requestId, result: "NotFound" };
+                    return { requestId: msg.requestId, state: "NotFound" };
                 }
             }
             else if (msg.elementType == 'handles') {
@@ -75,15 +75,15 @@ if (checkHVML()) {
                 }
 
                 if (nr_updated == 0)
-                    return { requestId: msg.requestId, result: "NotFound" };
+                    return { requestId: msg.requestId, state: "NotFound" };
                 else if (nr_updated == handles.length)
-                    return { requestId: msg.requestId, result: "Ok" };
+                    return { requestId: msg.requestId, state: "Ok" };
                 else
-                    return { requestId: msg.requestId, result: "Partial" };
+                    return { requestId: msg.requestId, state: "PartialContent" };
             }
         }
 
-        return { requestId: msg.requestId, result: "NotImplemented" };
+        return { requestId: msg.requestId, state: "NotImplemented" };
     }
 }
 

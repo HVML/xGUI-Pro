@@ -29,6 +29,7 @@
 
 #include "purcmc/purcmc.h"
 
+#include "utils/list.h"
 #include "utils/kvlist.h"
 #include "utils/sorted-array.h"
 
@@ -59,11 +60,16 @@ struct purcmc_workspace {
 };
 
 struct purcmc_session {
+    purcmc_server *srv;
+
     WebKitSettings *webkitSettings;
     WebKitWebContext *webContext;
 
     /* the sorted array of all valid handles */
     struct sorted_array *all_handles;
+
+    /* the pending requests */
+    struct kvlist pending_responses;
 
     /* the only workspace */
     purcmc_workspace workspace;
@@ -72,7 +78,147 @@ struct purcmc_session {
     char *uriPrefix;
 };
 
-purcmc_session *gtk_create_session(void *context, purcmc_endpoint *endpt)
+#define PTR2U64(x)     (uint64_t)(uintptr_t)(x)
+#define INT2PTR(x)     (void *)(uintptr_t)(x)
+
+/*
+ * Use this function to retrieve the endpoint of a session.
+ * the endpoint might be deleted earlier than session.
+ */
+static inline purcmc_endpoint* get_endpoint_by_session(purcmc_session *sess)
+{
+    char host[PURC_LEN_HOST_NAME + 1];
+    char app[PURC_LEN_APP_NAME + 1];
+    char runner[PURC_LEN_RUNNER_NAME + 1];
+
+    purc_hvml_uri_split(sess->uriPrefix, host, app, runner, NULL, NULL);
+
+    char endpoint_name[PURC_LEN_ENDPOINT_NAME + 1];
+    purc_assemble_endpoint_name(host, app, runner, endpoint_name);
+
+    return purcmc_endpoint_from_name(sess->srv, endpoint_name);
+}
+
+bool gtk_pend_response(purcmc_session* sess, const char *operation,
+        const char *request_id, void *result_value)
+{
+    if (kvlist_get(&sess->pending_responses, request_id)) {
+        LOG_ERROR("Duplicated requestId (%s) to pend.\n", request_id);
+        return false;
+    }
+    else
+        kvlist_set(&sess->pending_responses, request_id, &result_value);
+
+    return true;
+}
+
+static void finish_response(purcmc_session* sess, const char *request_id,
+        unsigned int ret_code)
+{
+    void *data;
+
+    if ((data = kvlist_get(&sess->pending_responses, request_id))) {
+        void *result_value;
+        result_value = *(void **)data;
+
+        purcmc_endpoint* endpoint;
+        endpoint = get_endpoint_by_session(sess);
+        if (endpoint) {
+            pcrdr_msg response;
+            response.type = PCRDR_MSG_TYPE_RESPONSE;
+            response.requestId =
+                purc_variant_make_string_static(request_id, false);
+            response.retCode = ret_code;
+            response.resultValue = PTR2U64(result_value);
+            response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+
+            purcmc_endpoint_send_response(sess->srv, endpoint, &response);
+        }
+
+        kvlist_delete(&sess->pending_responses, request_id);
+    }
+}
+
+static int state_string_to_value(const char *state)
+{
+    if (state) {
+        if (strcasecmp(state, "Ok") == 0) {
+            return PCRDR_SC_OK;
+        }
+        else if (strcasecmp(state, "NotFound") == 0) {
+            return PCRDR_SC_NOT_FOUND;
+        }
+        else if (strcasecmp(state, "NotImplemented") == 0) {
+            return PCRDR_SC_NOT_IMPLEMENTED;
+        }
+        else if (strcasecmp(state, "PartialContent") == 0) {
+            return PCRDR_SC_PARTIAL_CONTENT;
+        }
+        else if (strcasecmp(state, "BadRequest") == 0) {
+            return PCRDR_SC_BAD_REQUEST;
+        }
+        else {
+            LOG_WARN("Unknown state: %s", state);
+        }
+    }
+
+    return PCRDR_SC_INTERNAL_SERVER_ERROR;
+}
+
+static void handle_response_from_webpage(purcmc_session *sess,
+        const char * str, size_t len)
+{
+    purc_variant_t result;
+    result = purc_variant_make_from_json_string(str, len);
+
+    const char *request_id = NULL;
+    const char *state = NULL;
+
+    purc_variant_t tmp;
+    if ((tmp = purc_variant_object_get_by_ckey(result, "requestId"))) {
+        request_id = purc_variant_get_string_const(tmp);
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(result, "state"))) {
+        state = purc_variant_get_string_const(tmp);
+    }
+
+    if (request_id) {
+        finish_response(sess, request_id, state_string_to_value(state));
+    }
+    else {
+        LOG_ERROR("No requestId in the user message from webPage.\n");
+    }
+
+    purc_variant_unref(result);
+}
+
+static gboolean
+user_message_received_callback(WebKitWebView *web_view,
+        WebKitUserMessage *message, gpointer user_data)
+{
+    purcmc_session *sess = user_data;
+
+    const char* name = webkit_user_message_get_name(message);
+    if (strcmp(name, "page-ready") == 0) {
+        GVariant *param = webkit_user_message_get_parameters(message);
+        const char* type = g_variant_get_type_string(param);
+        if (strcmp(type, "s") == 0) {
+            size_t len;
+            const char *str = g_variant_get_string(param, &len);
+            handle_response_from_webpage(sess, str, len);
+        }
+        else {
+            LOG_ERROR("the parameter of the message is not a string (%s)\n", type);
+        }
+    }
+    else if (strcmp(name, "event") == 0) {
+    }
+
+    return TRUE;
+}
+
+purcmc_session *gtk_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
 {
     purcmc_session* sess = calloc(1, sizeof(purcmc_session));
     sess->uriPrefix = purc_hvml_uri_assemble_alloc(
@@ -91,7 +237,8 @@ purcmc_session *gtk_create_session(void *context, purcmc_endpoint *endpt)
         return NULL;
     }
 
-    WebKitSettings *webkitSettings = context;
+    sess->srv = srv;
+    WebKitSettings *webkitSettings = purcmc_rdrsrv_get_user_data(srv);
     WebKitWebsiteDataManager *manager;
     manager = g_object_get_data(G_OBJECT(webkitSettings),
             "default-website-data-manager");
@@ -150,6 +297,7 @@ purcmc_session *gtk_create_session(void *context, purcmc_endpoint *endpt)
     sess->webkitSettings = webkitSettings;
     sess->webContext = webContext;
 
+    kvlist_init(&sess->pending_responses, NULL);
     kvlist_init(&sess->workspace.ug_wins, NULL);
     return sess;
 }
@@ -192,15 +340,15 @@ int gtk_remove_session(purcmc_session *sess)
     LOG_DEBUG("destroy sorted array for all handles...\n");
     sorted_array_destroy(sess->all_handles);
 
+    LOG_DEBUG("destroy kvlist for pending responses...\n");
+    kvlist_free(&sess->pending_responses);
+
     LOG_DEBUG("free session...\n");
     free(sess);
 
     LOG_DEBUG("done\n");
     return PCRDR_SC_OK;
 }
-
-#define PTR2U64(x)     (uint64_t)(uintptr_t)(x)
-#define INT2PTR(x)     (void *)(uintptr_t)(x)
 
 static gboolean on_webview_close(WebKitWebView *webView, purcmc_session *sess)
 {
@@ -209,12 +357,38 @@ static gboolean on_webview_close(WebKitWebView *webView, purcmc_session *sess)
     if (sorted_array_remove(sess->all_handles, PTR2U64(webView))) {
         purcmc_plainwin *plainWin = g_object_get_data(G_OBJECT(webView),
                 "purcmc-plainwin");
+
+        pcrdr_msg event;
+        event.type = PCRDR_MSG_TYPE_EVENT;
+        event.event = purc_variant_make_string_static("close", false);
+        event.element = PURC_VARIANT_INVALID;
+        event.property = PURC_VARIANT_INVALID;
+        event.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+
         if (plainWin) {
+            purcmc_endpoint *endpoint = get_endpoint_by_session(sess);
+
+            /* endpoint might be deleted already. */
+            if (endpoint) {
+                /* post close event for the plainwindow */
+                LOG_DEBUG("post close event for the plainwindow (%p)\n", plainWin);
+                event.target = PCRDR_MSG_TARGET_PLAINWINDOW;
+                event.targetValue = PTR2U64(plainWin);
+                purcmc_endpoint_post_event(sess->srv, endpoint, &event);
+            }
+
             sorted_array_remove(sess->all_handles, PTR2U64(plainWin));
             kvlist_delete(&sess->workspace.ug_wins, plainWin->name);
             free(plainWin->name);
             free(plainWin->title);
             free(plainWin);
+        }
+        else {
+            /* post close event for the page */
+            event.target = PCRDR_MSG_TARGET_PAGE;
+            event.targetValue = PTR2U64(webView);
+            purcmc_endpoint_post_event(sess->srv,
+                get_endpoint_by_session(sess), &event);
         }
     }
 
@@ -223,7 +397,7 @@ static gboolean on_webview_close(WebKitWebView *webView, purcmc_session *sess)
 
 purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace,
-        const char *gid,
+        const char *request_id, const char *gid,
         const char *name, const char *title, purc_variant_t properties,
         int *retv)
 {
@@ -305,6 +479,9 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         g_object_set_data(G_OBJECT(webView), "purcmc-plainwin", plainWin);
         g_signal_connect(webView, "close",
                 G_CALLBACK(on_webview_close), sess);
+        g_signal_connect(webView, "user-message-received",
+                G_CALLBACK(user_message_received_callback),
+                sess);
 
         browser_window_append_view(mainWin, webView);
 
@@ -328,6 +505,8 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
                 INT2PTR(HT_PLAINWIN));
         sorted_array_add(sess->all_handles, PTR2U64(webView),
                 INT2PTR(HT_WEBVIEW));
+
+        *retv = 0;  // pend the response
     }
     else {
         /* TODO: create a plain window in the specified group */
@@ -429,7 +608,7 @@ request_ready_callback(GObject* obj, GAsyncResult* result, gpointer userData)
         GVariant *param = webkit_user_message_get_parameters(message);
 
         const char* type = g_variant_get_type_string(param);
-        if (strcmp(type, "s")) {
+        if (strcmp(type, "s") == 0) {
             LOG_DEBUG("The parameter of message named (%s): %s\n",
                     name, g_variant_get_string(param, NULL));
         }

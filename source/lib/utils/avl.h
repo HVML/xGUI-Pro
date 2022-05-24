@@ -553,7 +553,7 @@ __avl_find_element(const struct avl_tree *tree, const void *key, size_t offset, 
 #define avl_remove_all_elements(tree, element, node_member, ptr) \
   for (element = avl_first_element(tree, element, node_member), \
        ptr = avl_next_element(element, node_member), \
-       INIT_LIST_HEAD(&(tree)->list_head), \
+       list_head_init(&(tree)->list_head), \
        (tree)->root = NULL; \
        (tree)->count > 0; \
        element = ptr, ptr = avl_next_element(ptr, node_member), (tree)->count--)

@@ -200,7 +200,7 @@ us_handle_accept (USServer* server)
         return NULL;
     }
 
-    INIT_LIST_HEAD (&usc->pending);
+    list_head_init (&usc->pending);
     usc->sz_pending = 0;
 
     newfd = us_accept (server->listener, &pid, &uid);

@@ -29,11 +29,11 @@
 extern "C" {
 #endif
 
-purcmc_session *gtk_create_session(void *context, purcmc_endpoint *);
+purcmc_session *gtk_create_session(purcmc_server *, purcmc_endpoint *);
 int gtk_remove_session(purcmc_session *);
 
 purcmc_plainwin *gtk_create_plainwin(purcmc_session *, purcmc_workspace *,
-        const char *gid,
+        const char *request_id, const char *gid,
         const char *name, const char *title, purc_variant_t properties,
         int *retv);
 int gtk_update_plainwin(purcmc_session *, purcmc_workspace *,
@@ -51,6 +51,9 @@ int gtk_update_dom(purcmc_session *, purcmc_dom *,
             const char* element_type, const char* element_value,
             const char* property,
             const char *content, size_t length);
+
+bool gtk_pend_response(purcmc_session* sess, const char *operation,
+        const char *request_id, void *result_value);
 
 #ifdef __cplusplus
 }

@@ -851,7 +851,7 @@ deinit_server(void)
 
 purcmc_server *
 purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
-        void *context, const purcmc_server_callbacks *cbs,
+        void *user_data, const purcmc_server_callbacks *cbs,
         const char *markup_langs,
         int nr_workspaces, int nr_plainwindows,
         int nr_tabbedwindows, int nr_tabbedpages)
@@ -898,7 +898,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
         goto error;
     }
 
-    the_server.context = context;
+    the_server.user_data = user_data;
     the_server.cbs = *cbs;
     return &the_server;
 
@@ -912,5 +912,10 @@ purcmc_rdrsrv_deinit(purcmc_server *srv)
     deinit_server();
     purc_cleanup();
     return 0;
+}
+
+void *purcmc_rdrsrv_get_user_data(purcmc_server *srv)
+{
+    return srv->user_data;
 }
 

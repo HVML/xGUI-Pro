@@ -725,6 +725,8 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
         .write = gtk_load_or_write,
 
         .update_dom = gtk_update_dom,
+
+        .pend_response = gtk_pend_response,
     };
 
     pcmc_srvcfg.app_name = APP_NAME;

@@ -52,7 +52,7 @@ struct list_head {
 #define LIST_HEAD(name)    struct list_head name = LIST_HEAD_INIT(name)
 
 static inline void
-INIT_LIST_HEAD(struct list_head *list)
+list_head_init(struct list_head *list)
 {
     list->next = list->prev = list;
 }
@@ -106,7 +106,7 @@ static inline void
 list_del_init(struct list_head *entry)
 {
     _list_del(entry);
-    INIT_LIST_HEAD(entry);
+    list_head_init(entry);
 }
 
 #define list_entry(ptr, type, field)        container_of(ptr, type, field)
@@ -199,14 +199,14 @@ static inline void
 list_splice_init(struct list_head *list, struct list_head *head)
 {
     _list_splice(list, head, head->next);
-    INIT_LIST_HEAD(list);
+    list_head_init(list);
 }
 
 static inline void
 list_splice_tail_init(struct list_head *list, struct list_head *head)
 {
     _list_splice(list, head->prev, head);
-    INIT_LIST_HEAD(list);
+    list_head_init(list);
 }
 
 #endif /* __LIB_UTILS_LIST_H */

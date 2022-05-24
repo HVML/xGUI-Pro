@@ -172,8 +172,8 @@ struct purcmc_server
     /* the AVL tree of endpoints sorted by living time */
     struct avl_tree living_avl;
 
-    /* the context of upper module */
-    void *context;
+    /* the user data */
+    void *user_data;
 
     /* the callbacks */
     purcmc_server_callbacks cbs;

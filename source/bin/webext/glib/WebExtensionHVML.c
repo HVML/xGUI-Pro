@@ -241,6 +241,10 @@ console_message_sent_callback(WebKitWebPage *web_page,
             webkit_console_message_get_text(console_message));
 }
 
+#define PAGE_READY_FORMAT  "{"      \
+        "\"requestId\":\"%s\","     \
+        "\"state\":\"Ok\"}"
+
 static void
 document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
 {
@@ -266,6 +270,18 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
         LOG_INFO("result of injected script: (%s)\n", result_in_json);
         if (result_in_json)
             free(result_in_json);
+
+        const char *uri = webkit_web_page_get_uri(web_page);
+        char request_id[128];
+        if (!hvml_uri_get_query_value(uri, "requestId", request_id))
+            request_id[0] = 0;
+
+        result_in_json = g_strdup_printf(PAGE_READY_FORMAT, request_id);
+        WebKitUserMessage * message = webkit_user_message_new("page-ready",
+                g_variant_new_string(result_in_json));
+        webkit_web_page_send_message_to_view(web_page, message,
+                NULL, NULL, NULL);
+        free(result_in_json);
     }
 }
 
@@ -337,7 +353,8 @@ window_object_cleared_callback(WebKitScriptWorld* world,
     const gchar *uri = webkit_web_page_get_uri(webPage);
 
     LOG_DEBUG("uri (%s)\n", uri);
-    if (hvml_uri_split(uri, &hostName, &appName, &runnerName, NULL, NULL)) {
+    if (hvml_uri_split_alloc(uri, &hostName, &appName, &runnerName,
+                NULL, NULL)) {
         JSCContext *context;
         context = webkit_frame_get_js_context_for_script_world(frame, world);
 

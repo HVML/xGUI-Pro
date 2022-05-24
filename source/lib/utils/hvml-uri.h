@@ -27,14 +27,29 @@
 extern "C" {
 #endif
 
+size_t hvml_uri_assemble(char *uri, const char *host, const char* app,
+        const char* runner, const char *group, const char *page);
+
+char* hvml_uri_assemble_alloc(const char* host, const char* app,
+        const char* runner, const char *group, const char *page);
+
+bool hvml_uri_split(const char *uri,
+        char *host, char *app, char *runner, char *group, char *page);
+
 /*
  * Break down an HVML URI in the following pattern:
  *
- *      hvml://<host>/<app>/<runner>/[<group>/]<page>
+ *      hvml://<host>/<app>/<runner>/[<group>/]<page>[?key1=value1&key2=value2]
  *
  */
-bool hvml_uri_split(const char *uri,
+bool hvml_uri_split_alloc(const char *uri,
         char **host, char **app, char **runner, char **group, char **page);
+
+bool hvml_uri_get_query_value(const char *uri, const char *key,
+        char *value_buff);
+
+bool hvml_uri_get_query_value_alloc(const char *uri, const char *key,
+        char **value_buff);
 
 #ifdef __cplusplus
 }

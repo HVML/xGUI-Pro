@@ -72,7 +72,7 @@ typedef struct purcmc_server_config {
 } purcmc_server_config;
 
 typedef struct purcmc_server_callbacks {
-    purcmc_session *(*create_session)(void *context, purcmc_endpoint *);
+    purcmc_session *(*create_session)(purcmc_server *, purcmc_endpoint *);
     int (*remove_session)(purcmc_session *);
 
     /* nullable */
@@ -96,7 +96,7 @@ typedef struct purcmc_server_callbacks {
             const char* gid);
 
     purcmc_plainwin *(*create_plainwin)(purcmc_session *, purcmc_workspace *,
-            const char *gid,
+            const char *request_id, const char *gid,
             const char *name, const char *title, purc_variant_t properties,
             int *retv);
     int (*update_plainwin)(purcmc_session *, purcmc_workspace *,
@@ -109,7 +109,7 @@ typedef struct purcmc_server_callbacks {
 
     /* nullable */
     purcmc_page *(*create_page)(purcmc_session *, purcmc_workspace *,
-            const char *gid, const char *type,
+            const char *request_id, const char *gid, const char *type,
             const char *name, const char *title, purc_variant_t properties,
             int *retv);
     /* null if create_page is null */
@@ -136,6 +136,8 @@ typedef struct purcmc_server_callbacks {
     purc_variant_t (*call_method)(purcmc_session *, purcmc_dom *,
             const pcrdr_msg *msg, int* retv);
 
+    bool (*pend_response)(purcmc_session *, const char *operation,
+            const char *request_id, void *result_value);
 } purcmc_server_callbacks;
 
 #ifdef __cplusplus
@@ -144,7 +146,7 @@ extern "C" {
 
 /* Initialize the PurCMC renderer server */
 purcmc_server *purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
-        void *context, const purcmc_server_callbacks *cbs,
+        void *user_data, const purcmc_server_callbacks *cbs,
         const char *markup_langs,
         int nr_workspaces, int nr_plainwindows,
         int nr_tabbedwindows, int nr_tabbedpages);
@@ -155,8 +157,20 @@ bool purcmc_rdrsrv_check(purcmc_server *srv);
 /* Deinitialize the PurCMC renderer server */
 int purcmc_rdrsrv_deinit(purcmc_server *srv);
 
-/* Post a message (generally an event) to HVML interpreter */
-int purcmc_post_message(const pcrdr_msg *msg);
+/* retrieve the user data attached to the renederer server */
+void *purcmc_rdrsrv_get_user_data(purcmc_server *srv);
+
+/* retrieve the endpoint by endpoint name */
+purcmc_endpoint *purcmc_endpoint_from_name(purcmc_server *srv,
+        const char *endpoint_name);
+
+/* Send a response message to HVML interpreter */
+int purcmc_endpoint_send_response(purcmc_server *srv,
+        purcmc_endpoint *endpoint, const pcrdr_msg *msg);
+
+/* Post an event message to HVML interpreter */
+int purcmc_endpoint_post_event(purcmc_server *srv,
+        purcmc_endpoint *endpoint, const pcrdr_msg *msg);
 
 /* Return the host name of the specified endpoint */
 const char *purcmc_endpoint_host_name(purcmc_endpoint *endpoint);
