@@ -52,10 +52,12 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext)
 {
     const char *uri = webkit_uri_scheme_request_get_uri(request);
-    char *host = NULL, *app = NULL, *runner = NULL;
+    char host[PURC_LEN_HOST_NAME + 1];
+    char app[PURC_LEN_APP_NAME + 1];
+    char runner[PURC_LEN_RUNNER_NAME + 1];
 
-    if (!purc_hvml_uri_split_alloc(uri,
-            &host, &app, &runner, NULL, NULL) ||
+    if (!purc_hvml_uri_split(uri,
+            host, app, runner, NULL, NULL) ||
             !purc_is_valid_host_name(host) ||
             !purc_is_valid_app_name(app) ||
             !purc_is_valid_runner_name(runner)) {
@@ -64,7 +66,19 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
                 "Invalid HVML uri: hvml://%s/%s/%s/xxx", host, app, runner);
         webkit_uri_scheme_request_finish_error(request, error);
         g_error_free(error);
-        goto error;
+        return;
+    }
+
+    char *initial_request_id = NULL;
+    if (!purc_hvml_uri_get_query_value_alloc(uri,
+                "irId", &initial_request_id) ||
+            !purc_is_valid_unique_id(initial_request_id)) {
+        GError *error = g_error_new(XGUI_PRO_ERROR,
+                XGUI_PRO_ERROR_INVALID_HVML_URI,
+                "Invalid initial request identifier: %s", initial_request_id);
+        webkit_uri_scheme_request_finish_error(request, error);
+        g_error_free(error);
+        return;
     }
 
     const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
@@ -94,13 +108,5 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
 
     webkit_uri_scheme_request_finish(request, stream, streamLength, "text/html");
     g_object_unref(stream);
-
-error:
-    if (runner)
-        free(runner);
-    if (app)
-        free(app);
-    if (host)
-        free(host);
 }
 

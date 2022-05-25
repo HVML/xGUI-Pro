@@ -248,6 +248,14 @@ console_message_sent_callback(WebKitWebPage *web_page,
 static void
 document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
 {
+    const char *uri = webkit_web_page_get_uri(web_page);
+    LOG_DEBUG("uri: %s\n", uri);
+    char request_id[128];
+    if (!hvml_uri_get_query_value(uri, "irId", request_id)) {
+        LOG_DEBUG("No initial request identifier passed\n");
+        return;
+    }
+
     LOG_DEBUG("inject hvml.js to page (%p)\n", web_page);
 
     /* inject hvml.js */
@@ -265,23 +273,17 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
                 webkit_web_page_get_uri(web_page), 1);
         free(code);
 
-        char *result_in_json = jsc_value_to_json(result, 0);
+        char *json = jsc_value_to_json(result, 0);
+        LOG_INFO("result of injected script: (%s)\n", json);
+        if (json)
+            free(json);
 
-        LOG_INFO("result of injected script: (%s)\n", result_in_json);
-        if (result_in_json)
-            free(result_in_json);
-
-        const char *uri = webkit_web_page_get_uri(web_page);
-        char request_id[128];
-        if (!hvml_uri_get_query_value(uri, "requestId", request_id))
-            request_id[0] = 0;
-
-        result_in_json = g_strdup_printf(PAGE_READY_FORMAT, request_id);
+        json = g_strdup_printf(PAGE_READY_FORMAT, request_id);
         WebKitUserMessage * message = webkit_user_message_new("page-ready",
-                g_variant_new_string(result_in_json));
+                g_variant_new_string(json));
         webkit_web_page_send_message_to_view(web_page, message,
                 NULL, NULL, NULL);
-        free(result_in_json);
+        free(json);
     }
 }
 

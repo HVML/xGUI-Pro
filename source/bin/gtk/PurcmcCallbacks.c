@@ -485,9 +485,12 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
 
         browser_window_append_view(mainWin, webView);
 
-        char uri[strlen(sess->uriPrefix) + strlen(name) + 2];
+        char uri[strlen(sess->uriPrefix) + strlen(name) +
+            strlen(request_id) + 8];
         strcpy(uri, sess->uriPrefix);
         strcat(uri, name);
+        strcat(uri, "?irId=");
+        strcat(uri, request_id);
         webkit_web_view_load_uri(webView, uri);
 
         g_object_unref(sess->webContext);
@@ -596,9 +599,10 @@ static inline WebKitWebView *validate_page(purcmc_session *sess,
 }
 
 static void
-request_ready_callback(GObject* obj, GAsyncResult* result, gpointer userData)
+request_ready_callback(GObject* obj, GAsyncResult* result, gpointer user_data)
 {
-    WebKitWebView *webView = (WebKitWebView*)userData;
+    WebKitWebView *webView = WEBKIT_WEB_VIEW(obj);
+    purcmc_session *sess = user_data;
 
     WebKitUserMessage * message;
     message = webkit_web_view_send_message_to_page_finish(webView, result, NULL);
@@ -609,6 +613,9 @@ request_ready_callback(GObject* obj, GAsyncResult* result, gpointer userData)
 
         const char* type = g_variant_get_type_string(param);
         if (strcmp(type, "s") == 0) {
+            size_t len;
+            const char *str = g_variant_get_string(param, &len);
+            handle_response_from_webpage(sess, str, len);
             LOG_DEBUG("The parameter of message named (%s): %s\n",
                     name, g_variant_get_string(param, NULL));
         }
@@ -641,7 +648,7 @@ purcmc_dom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
     free(escaped);
 
     webkit_web_view_send_message_to_page(webView, message, NULL,
-            request_ready_callback, webView);
+            request_ready_callback, sess);
 
     *retv = PCRDR_SC_OK;
     return (purcmc_dom *)webView;
@@ -678,8 +685,8 @@ int gtk_update_dom(purcmc_session *sess, purcmc_dom *dom,
     free(escaped);
 
     webkit_web_view_send_message_to_page(webView, message, NULL,
-            request_ready_callback, webView);
+            request_ready_callback, sess);
 
-    return retv;
+    return 0;
 }
 
