@@ -640,7 +640,7 @@ purcmc_dom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
 
     char *escaped = pcutils_escape_string_for_json(content);
     gchar *json = g_strdup_printf(PAGE_MESSAGE_FORMAT, op_name,
-            request_id, escaped);
+            request_id, escaped ? escaped : "");
 
     WebKitUserMessage * message = webkit_user_message_new("request",
             g_variant_new_string(json));
@@ -674,10 +674,15 @@ int gtk_update_dom(purcmc_session *sess, purcmc_dom *dom,
     if (webView == NULL)
         return retv;
 
-    char *escaped = pcutils_escape_string_for_json(content);
+    char *escaped;
+    if (content)
+        escaped = pcutils_escape_string_for_json(content);
+    else
+        escaped = NULL;
+
     gchar *json = g_strdup_printf(DOM_MESSAGE_FORMAT, op_name, request_id,
-            element_type, element_value, property,
-            escaped);
+            element_type, element_value, property ? property : "",
+            escaped ? escaped : "");
 
     WebKitUserMessage * message = webkit_user_message_new("request",
             g_variant_new_string(json));

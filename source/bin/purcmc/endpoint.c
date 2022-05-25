@@ -1408,8 +1408,8 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     const char *content = NULL;
-    size_t content_len;
-    if (op != PCRDR_K_OPERATION_ERASE || op != PCRDR_K_OPERATION_CLEAR) {
+    size_t content_len = 0;
+    if (op != PCRDR_K_OPERATION_ERASE && op != PCRDR_K_OPERATION_CLEAR) {
         if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
                 msg->data == PURC_VARIANT_INVALID) {
             retv = PCRDR_SC_BAD_REQUEST;

@@ -1,8 +1,4 @@
 function checkHVML() {
-    console.log(typeof(document.getElementByHVMLHandle));
-    console.log(typeof(HVML));
-    console.log(HVML.version);
-
     if (typeof(document.getElementByHVMLHandle) == "function") {
         if (typeof(HVML) == "object" && HVML.version >= @HVMLJS_VERSION@) {
             var elemStatus = document.getElementByHVMLHandle('731128');
@@ -29,6 +25,8 @@ function checkHVML() {
 
 if (checkHVML()) {
     HVML.onrequest = function (json) {
+        const dom_update_ops = ['append', 'prepend', 'insertAfter', 'insertBefore', 'displace'];
+
         msg = JSON.parse(json);
         console.log("HVML.onrequest called: " + msg.operation);
 
@@ -62,8 +60,10 @@ if (checkHVML()) {
                 else {
                     return { requestId: msg.requestId, state: "NotFound" };
                 }
+
+                return { requestId: msg.requestId, state: "Ok" };
             }
-            else if (msg.elementType == 'handles') {
+            else if (msg.elementType === 'handles') {
                 var handles = msg.element.split(',');
                 var nr_updated = 0;
                 for (var i = 0; i < handles.length; i++) {
@@ -76,11 +76,92 @@ if (checkHVML()) {
 
                 if (nr_updated == 0)
                     return { requestId: msg.requestId, state: "NotFound" };
-                else if (nr_updated == handles.length)
-                    return { requestId: msg.requestId, state: "Ok" };
-                else
+                else if (nr_updated < handles.length)
                     return { requestId: msg.requestId, state: "PartialContent" };
+
+                return { requestId: msg.requestId, state: "Ok" };
             }
+        }
+        else if (msg.operation === 'clear') {
+            if (msg.elementType === 'handle') {
+                var elem = document.getElementByHVMLHandle(msg.element);
+                if (elem) {
+                    if (!clearElement(elem, msg.property))
+                        return { requestId: msg.requestId, state: "BadRequest" };
+                }
+                else {
+                    return { requestId: msg.requestId, state: "NotFound" };
+                }
+
+                return { requestId: msg.requestId, state: "Ok" };
+            }
+            else if (msg.elementType === 'handles') {
+                var handles = msg.element.split(',');
+                var nr_cleared = 0;
+                for (var i = 0; i < handles.length; i++) {
+                    var elem = document.getElementByHVMLHandle(handles[i]);
+                    if (elem) {
+                        if (clearElement(elem, msg.property))
+                            nr_cleared++;
+                    }
+                }
+
+                if (nr_cleared == 0)
+                    return { requestId: msg.requestId, state: "NotFound" };
+                else if (nr_cleared < handles.length)
+                    return { requestId: msg.requestId, state: "PartialContent" };
+
+                return { requestId: msg.requestId, state: "Ok" };
+            }
+        }
+        else if (msg.operation === 'erase') {
+            if (msg.elementType === 'handle') {
+                var elem = document.getElementByHVMLHandle(msg.element);
+                if (elem) {
+                    if (!eraseElement(elem, msg.property))
+                        return { requestId: msg.requestId, state: "BadRequest" };
+                }
+                else {
+                    return { requestId: msg.requestId, state: "NotFound" };
+                }
+
+                return { requestId: msg.requestId, state: "Ok" };
+            }
+            else if (msg.elementType === 'handles') {
+                var handles = msg.element.split(',');
+                var nr_erased = 0;
+                for (var i = 0; i < handles.length; i++) {
+                    var elem = document.getElementByHVMLHandle(handles[i]);
+                    if (elem) {
+                        if (eraseElement(elem, msg.property))
+                            nr_erased++;
+                    }
+                }
+
+                if (nr_erased == 0)
+                    return { requestId: msg.requestId, state: "NotFound" };
+                else if (nr_erased < handles.length)
+                    return { requestId: msg.requestId, state: "PartialContent" };
+
+                return { requestId: msg.requestId, state: "Ok" };
+            }
+        }
+        else if (dom_update_ops.indexOf(msg.operation) !== -1) {
+            if (msg.elementType === 'handle') {
+                var elem = document.getElementByHVMLHandle(msg.element);
+                if (elem) {
+                    if (!updateDocument(elem, msg.operation, msg.data))
+                        return { requestId: msg.requestId, state: "BadRequest" };
+                }
+                else {
+                    return { requestId: msg.requestId, state: "NotFound" };
+                }
+
+                return { requestId: msg.requestId, state: "Ok" };
+            }
+        }
+        else if (msg.operation === 'callMethod') {
+            // return onCallMethod(msg);
         }
 
         return { requestId: msg.requestId, state: "NotImplemented" };
@@ -102,59 +183,95 @@ function updateProperty(elem, property, data)
     return false;
 }
 
-/*
-function onChangePage(msg)
+function updateDocument(elem, op, data)
 {
-    if (msg.operation === 'load') {
-        document.open();
-        document.write(msg.data);
-        document.close();
-    }
-    else if (msg.operation === 'writeBegin') {
-        document.open();
-        document.write(msg.data);
-    }
-    else if (msg.operation === 'writeMore') {
-        document.write(msg.data);
-    }
-    else if (msg.operation === 'writeEnd') {
-        document.write(msg.data);
-        document.close();
-    }
+    let fragment = new DocumentFragment();
+    let container = document.createElement("div");
+    container.innerHTML = data;
 
-    // check all elements which defined hvml:events and listen the events
-}
+    let nr_elements = container.children.length;
+    if (nr_elements > 0) {
 
-function onChangeDocument(msg)
-{
-    var elements;
-
-    if (msg.elementType === 'css') {
-        elements = document.querySelectorAll(msg.elementValue);
-    }
-    else if (msg.elementType === 'handle') {
-        elements = document.getElementByHVMLHandle(msg.elementValue);
-    }
-
-    if (msg.operation === 'append') {
-    }
-    else if (msg.operation === 'prepend') {
-    }
-}
-
-HVML.onrequest = function (msg) {
-    log.console();
-    if (msg.type === 'request' && msg.target !== 'dom') {
-        return onChangePage(msg);
-    }
-
-    if (msg.type === 'request' && msg.target === 'dom') {
-        if (msg.operation != 'request') {
-            return onChangeDocument(msg);
+        /* have child elements, discard any Text node out all children. */
+        while (container.firstChild) {
+            fragment.appendChild(container.firstChild);
         }
-        else if (msg.operation.startsWith('callMethod') {
-            return onCallMethod(msg);
+
+        switch (op) {
+            case 'append':
+                console.log("result" + elem.appendChild(fragment));
+                break;
+            case 'prepend':
+                elem.insertBefore(fragment, elem.firstChild);
+                break;
+            case 'insertBefore':
+                elem.parentNode.insertBefore(fragment, elem);
+                break;
+            case 'insertAfter':
+                elem.parentNode.insertBefore(fragment, elem.nextSibling)
+                break;
+            case 'displace':
+                elem.replaceChildren();
+                elem.appendChild(fragment);
+                break;
+            default:
+                return false;
         }
     }
+    else {
+        /* no child elements, treat as Text node. */
+        switch (op) {
+            case 'append':
+                elem.append(data);
+                break;
+            case 'prepend':
+                elem.prepend(data);
+                break;
+            case 'insertBefore':
+                elem.before(data);
+                break;
+            case 'insertAfter':
+                elem.after(data);
+                break;
+            case 'displace':
+                elem.replaceChildren();
+                elem.append(data);
+                break;
+            default:
+                return false;
+        }
+    }
+
+    return true;
 }
-*/
+
+function clearElement(elem, property)
+{
+    if (property === "textContent") {
+        elem.textContent = "";
+    }
+    else if (property.startsWith("attr.")) {
+        var attr = property.substring(5);
+        elem.setAttribute(attr, "");
+    }
+    else
+        elem.replaceChildren();
+
+    return true;
+}
+
+function eraseElement(elem, property)
+{
+    if (property === "textContent") {
+        elem.textContent = "";
+    }
+    else if (property.startsWith("attr.")) {
+        var attr = property.substring(5);
+        elem.removeAttribute(attr);
+    }
+    else
+        elem.remove();
+
+    return true;
+}
+
