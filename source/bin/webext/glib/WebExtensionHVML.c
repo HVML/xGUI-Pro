@@ -35,6 +35,10 @@ struct HVMLInfo {
     char *hostName;
     char *appName;
     char *runnerName;
+    char *groupName;
+    char *pageName;
+    char *requestId;
+
     JSCValue *onrequest;
     JSCValue *onresponse;
     JSCValue *onevent;
@@ -43,41 +47,57 @@ struct HVMLInfo {
 static JSCValue * hvml_get_property(JSCClass *jsc_class,
         JSCContext *context, gpointer instance, const char *name)
 {
-    struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)instance;
+    WebKitWebPage *web_page = instance;
+    g_assert_true(WEBKIT_IS_WEB_PAGE(web_page));
+
+    struct HVMLInfo *info;
+    info = g_object_get_data(G_OBJECT(web_page), "hvml-instance");
+    g_assert_true(info != NULL);
 
     if (g_strcmp0(name, "vendor") == 0) {
-        return jsc_value_new_string(context, hvmlInfo->vendor);
+        return jsc_value_new_string(context, info->vendor);
     }
     if (g_strcmp0(name, "version") == 0) {
-        return jsc_value_new_number(context, (double)hvmlInfo->version);
+        return jsc_value_new_number(context, (double)info->version);
     }
     else if (g_strcmp0(name, "protocol") == 0) {
-        return jsc_value_new_string(context, hvmlInfo->protocol);
+        return jsc_value_new_string(context, info->protocol);
     }
     else if (g_strcmp0(name, "hostName") == 0) {
-        return jsc_value_new_string(context, hvmlInfo->hostName);
+        return jsc_value_new_string(context, info->hostName);
     }
     else if (g_strcmp0(name, "appName") == 0) {
-        return jsc_value_new_string(context, hvmlInfo->appName);
+        return jsc_value_new_string(context, info->appName);
     }
     else if (g_strcmp0(name, "runnerName") == 0) {
-        return jsc_value_new_string(context, hvmlInfo->runnerName);
+        return jsc_value_new_string(context, info->runnerName);
+    }
+    else if (g_strcmp0(name, "groupName") == 0) {
+        if (info->groupName)
+            return jsc_value_new_string(context, info->groupName);
+        return jsc_value_new_undefined(context);
+    }
+    else if (g_strcmp0(name, "pageName") == 0) {
+        return jsc_value_new_string(context, info->pageName);
+    }
+    else if (g_strcmp0(name, "requestId") == 0) {
+        return jsc_value_new_string(context, info->requestId);
     }
     else if (g_strcmp0(name, "onrequest") == 0) {
-        if (hvmlInfo->onrequest) {
-            return hvmlInfo->onrequest;
+        if (info->onrequest) {
+            return info->onrequest;
         }
         return jsc_value_new_undefined(context);
     }
     else if (g_strcmp0(name, "onresponse") == 0) {
-        if (hvmlInfo->onresponse) {
-            return hvmlInfo->onresponse;
+        if (info->onresponse) {
+            return info->onresponse;
         }
         return jsc_value_new_undefined(context);
     }
     else if (g_strcmp0(name, "onevent") == 0) {
-        if (hvmlInfo->onevent) {
-            return hvmlInfo->onevent;
+        if (info->onevent) {
+            return info->onevent;
         }
         return jsc_value_new_undefined(context);
     }
@@ -89,35 +109,40 @@ static gboolean hvml_set_property(JSCClass *jsc_class,
         JSCContext *context, gpointer instance,
         const char *name, JSCValue *value)
 {
-    struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)instance;
+    WebKitWebPage *web_page = instance;
+    g_assert_true(WEBKIT_IS_WEB_PAGE(web_page));
+
+    struct HVMLInfo *info;
+    info = g_object_get_data(G_OBJECT(web_page), "hvml-instance");
+    g_assert_true(info != NULL);
 
     if (g_strcmp0(name, "onrequest") == 0) {
         LOG_DEBUG("set HVML.onrequest with a value (%p)\n", value);
         if (jsc_value_is_function(value)) {
             LOG_DEBUG("value (%p) is a function\n", value);
 
-            if (hvmlInfo->onrequest)
-                g_object_unref(hvmlInfo->onrequest);
+            if (info->onrequest)
+                g_object_unref(info->onrequest);
             g_object_ref(value);
-            hvmlInfo->onrequest = value;
+            info->onrequest = value;
             return TRUE;
         }
     }
     else if (g_strcmp0(name, "onresponse") == 0) {
         if (jsc_value_is_function(value)) {
-            if (hvmlInfo->onresponse)
-                g_object_unref(hvmlInfo->onresponse);
+            if (info->onresponse)
+                g_object_unref(info->onresponse);
             g_object_ref(value);
-            hvmlInfo->onresponse = value;
+            info->onresponse = value;
             return TRUE;
         }
     }
     else if (g_strcmp0(name, "onevent") == 0) {
         if (jsc_value_is_function(value)) {
-            if (hvmlInfo->onevent)
-                g_object_unref(hvmlInfo->onevent);
+            if (info->onevent)
+                g_object_unref(info->onevent);
             g_object_ref(value);
-            hvmlInfo->onevent = value;
+            info->onevent = value;
             return TRUE;
         }
     }
@@ -138,51 +163,82 @@ static JSCClassVTable hvmlVTable = {
     NULL,
 };
 
-static void destroyed_notify(gpointer instance)
+static void destroyed_notify(WebKitWebPage* web_page)
 {
-    struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)instance;
+    struct HVMLInfo *info;
 
-    if (hvmlInfo->protocol)
-        free(hvmlInfo->protocol);
-    if (hvmlInfo->hostName)
-        free(hvmlInfo->hostName);
-    if (hvmlInfo->appName)
-        free(hvmlInfo->appName);
-    if (hvmlInfo->runnerName)
-        free(hvmlInfo->runnerName);
-    if (hvmlInfo->onrequest)
-        g_object_unref(hvmlInfo->onrequest);
-    if (hvmlInfo->onresponse)
-        g_object_unref(hvmlInfo->onresponse);
-    if (hvmlInfo->onevent)
-        g_object_unref(hvmlInfo->onevent);
+    info = g_object_get_data(G_OBJECT(web_page), "hvml-instance");
+    if (info) {
+        if (info->protocol)
+            free(info->protocol);
+        if (info->hostName)
+            free(info->hostName);
+        if (info->appName)
+            free(info->appName);
+        if (info->runnerName)
+            free(info->runnerName);
+        if (info->runnerName)
+            free(info->runnerName);
+        if (info->groupName)
+            free(info->groupName);
+        if (info->pageName)
+            free(info->pageName);
+        if (info->requestId)
+            free(info->requestId);
 
-    free(hvmlInfo);
+        if (info->onrequest)
+            g_object_unref(info->onrequest);
+        if (info->onresponse)
+            g_object_unref(info->onresponse);
+        if (info->onevent)
+            g_object_unref(info->onevent);
+
+        free(info);
+    }
+
+    g_object_unref(web_page);
+}
+
+static gboolean on_hvml_post(WebKitWebPage* web_page,
+        const char* handle, const char *event, const char *details_in_json)
+{
+    g_assert_true(WEBKIT_IS_WEB_PAGE(web_page));
+
+    LOG_DEBUG("got an event (%s) from %s: %s\n",
+            event, handle, details_in_json);
+    return TRUE;
 }
 
 static struct HVMLInfo *create_hvml_instance(JSCContext *context,
-        gchar *hostName, gchar *appName, gchar* runnerName)
+        WebKitWebPage* web_page,
+        char *host, char *app, char* runner, char *group, char *page,
+        char *request_id)
 {
-    LOG_DEBUG("hostName (%s), appname (%s), runnerName (%s)\n",
-             hostName, appName, runnerName);
-
     JSCClass* hvmlClass = jsc_context_register_class(context,
-            "HVML", NULL, &hvmlVTable, destroyed_notify);
+            "HVML", NULL, &hvmlVTable, (GDestroyNotify)destroyed_notify);
 
-    struct HVMLInfo *hvmlInfo = calloc(1, sizeof(struct HVMLInfo));
+    jsc_class_add_method(hvmlClass, "post",
+            G_CALLBACK(on_hvml_post), NULL, NULL,
+            G_TYPE_BOOLEAN, 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
 
-    hvmlInfo->vendor = HVMLJS_VENDOR_STRING;
-    hvmlInfo->version = HVMLJS_VERSION_CODE;
-    hvmlInfo->protocol = strdup("PURCMC:100");
-    hvmlInfo->hostName = hostName;
-    hvmlInfo->appName = appName;
-    hvmlInfo->runnerName = runnerName;
+    struct HVMLInfo *info = calloc(1, sizeof(struct HVMLInfo));
 
-    JSCValue *HVML = jsc_value_new_object(context, hvmlInfo, hvmlClass);
+    info->vendor = HVMLJS_VENDOR_STRING;
+    info->version = HVMLJS_VERSION_CODE;
+    info->protocol = strdup("PURCMC:100");
+    info->hostName = host;
+    info->appName = app;
+    info->runnerName = runner;
+    info->groupName = group;
+    info->pageName = page;
+    info->requestId = request_id;
+
+    g_object_set_data(G_OBJECT(web_page), "hvml-instance", info);
+
+    JSCValue *HVML;
+    HVML = jsc_value_new_object(context, g_object_ref(web_page), hvmlClass);
     jsc_context_set_value(context, "HVML", HVML);
-
-    LOG_DEBUG("HVML object set\n");
-    return hvmlInfo;
+    return info;
 }
 
 static char *load_asset_content(const char *file)
@@ -235,10 +291,10 @@ static void
 console_message_sent_callback(WebKitWebPage *web_page,
         WebKitConsoleMessage *console_message, gpointer user_data)
 {
-    LOG_INFO("%s (line: %u): %s\n",
+    LOG_JSC("%s from source %s, line: %u\n",
+            webkit_console_message_get_text(console_message),
             webkit_console_message_get_source_id(console_message),
-            webkit_console_message_get_line(console_message),
-            webkit_console_message_get_text(console_message));
+            webkit_console_message_get_line(console_message));
 }
 
 #define PAGE_READY_FORMAT  "{"      \
@@ -288,30 +344,25 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
 }
 
 static gboolean
-user_message_received_callback(WebKitWebPage *webPage,
+user_message_received_callback(WebKitWebPage *web_page,
         WebKitUserMessage *message, gpointer userData)
 {
-    struct HVMLInfo *hvmlInfo = (struct HVMLInfo *)userData;
-
-    LOG_DEBUG("called, userData(%p)\n", userData);
-    LOG_DEBUG("hvmlInfo->appName: %s\n", hvmlInfo->appName);
-    LOG_DEBUG("hvmlInfo->runnerName: %s\n", hvmlInfo->runnerName);
-    LOG_DEBUG("HVML.onrequest (%p)\n", hvmlInfo->onrequest);
-    LOG_DEBUG("HVML.onresponse (%p)\n", hvmlInfo->onresponse);
-    LOG_DEBUG("HVML.onevent (%p)\n", hvmlInfo->onevent);
+    struct HVMLInfo *info;
+    info = g_object_get_data(G_OBJECT(web_page), "hvml-instance");
+    g_assert_true(info != NULL);
 
     const char* name = webkit_user_message_get_name(message);
     LOG_DEBUG("Got a message with name (%s)\n", name);
 
     JSCValue *handler = NULL;
     if (strcmp(name, "request") == 0) {
-        handler = hvmlInfo->onrequest;
+        handler = info->onrequest;
     }
     else if (strcmp(name, "response") == 0) {
-        handler = hvmlInfo->onresponse;
+        handler = info->onresponse;
     }
     else if (strcmp(name, "event") == 0) {
-        handler = hvmlInfo->onevent;
+        handler = info->onevent;
     }
     else {
         LOG_WARN("Unknown message name: %s\n", name);
@@ -348,31 +399,40 @@ user_message_received_callback(WebKitWebPage *webPage,
 
 static void
 window_object_cleared_callback(WebKitScriptWorld* world,
-        WebKitWebPage* webPage, WebKitFrame* frame,
+        WebKitWebPage* web_page, WebKitFrame* frame,
         WebKitWebExtension* extension)
 {
-    gchar *hostName, *appName, *runnerName;
-    const gchar *uri = webkit_web_page_get_uri(webPage);
+    const gchar *uri = webkit_web_page_get_uri(web_page);
 
-    LOG_DEBUG("uri (%s)\n", uri);
-    if (hvml_uri_split_alloc(uri, &hostName, &appName, &runnerName,
-                NULL, NULL)) {
+    char *host = NULL, *app = NULL, *runner = NULL, *group = NULL, *page = NULL;
+    char *request_id = NULL;
+    if (hvml_uri_split_alloc(uri, &host, &app, &runner, &group, &page) &&
+            hvml_uri_get_query_value_alloc(uri, "irId", &request_id)) {
         JSCContext *context;
         context = webkit_frame_get_js_context_for_script_world(frame, world);
 
-        struct HVMLInfo *hvmlInfo;
-        hvmlInfo = create_hvml_instance(context, hostName, appName, runnerName);
-        LOG_DEBUG("hvmlInfo (%p)\n", hvmlInfo);
+        create_hvml_instance(context, web_page,
+                host, app, runner, group, page, request_id);
 
-        g_signal_connect(webPage, "document-loaded",
+        g_signal_connect(web_page, "document-loaded",
                 G_CALLBACK(document_loaded_callback),
                 NULL);
-        g_signal_connect(webPage, "console-message-sent",
+        g_signal_connect(web_page, "console-message-sent",
                 G_CALLBACK(console_message_sent_callback),
                 NULL);
-        g_signal_connect(webPage, "user-message-received",
+        g_signal_connect(web_page, "user-message-received",
                 G_CALLBACK(user_message_received_callback),
-                hvmlInfo);
+                NULL);
+    }
+    else {
+        if (host) free(host);
+        if (app) free(app);
+        if (runner) free(runner);
+        if (group) free(group);
+        if (page) free(page);
+        if (request_id) free(request_id);
+
+        LOG_WARN("Invalid HVML URI: %s\n", uri);
     }
 }
 
@@ -383,13 +443,6 @@ web_page_created_callback(WebKitWebExtension *extension,
     LOG_DEBUG("Page %llu created for %s\n",
             (unsigned long long)webkit_web_page_get_id(web_page),
             webkit_web_page_get_uri(web_page));
-
-#if 0
-    WebKitFrame *frame = webkit_web_page_get_main_frame(web_page);
-    JSCContext *context = webkit_frame_get_js_context(frame);
-
-    create_hvml_instance(context, webkit_web_page_get_uri(web_page));
-#endif
 }
 
 G_MODULE_EXPORT void

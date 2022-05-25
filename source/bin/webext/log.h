@@ -85,6 +85,16 @@ my_log_error(const char *msg, ...)
     va_end(ap);
 }
 
+MY_ATTRIBUTE_PRINTF(1, 2)
+static inline void
+my_log_jsc(const char *msg, ...)
+{
+    va_list ap;
+    va_start(ap, msg);
+    my_log_with_tag("JSC", msg, ap);
+    va_end(ap);
+}
+
 #ifdef NDEBUG
 #define LOG_DEBUG(x, ...)
 #else
@@ -100,4 +110,7 @@ my_log_error(const char *msg, ...)
 
 #define LOG_INFO(x, ...)    \
     my_log_info("%s: " x, __func__, ##__VA_ARGS__)
+
+#define LOG_JSC(x, ...)    \
+    my_log_jsc("%s " x, __func__, ##__VA_ARGS__)
 

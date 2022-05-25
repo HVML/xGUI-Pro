@@ -34,6 +34,11 @@ if (checkHVML()) {
             document.open();
             document.write(msg.data);
             document.close();
+
+            console.log("checking elements with hvml:events attribute...");
+            const interestedElements = document.querySelectorAll(".hvml-events");
+            if (interestedElements.length > 0)
+                registerEventsListener(interestedElements);
             return { requestId: msg.requestId, state: "Ok" };
         }
         else if (msg.operation === 'writeBegin') {
@@ -48,6 +53,11 @@ if (checkHVML()) {
         else if (msg.operation === 'writeEnd') {
             document.write(msg.data);
             document.close();
+
+            console.log("checking elements with hvml:events attribute...");
+            const interestedElements = document.querySelectorAll(".hvml-events");
+            if (interestedElements.length > 0)
+                registerEventsListener(interestedElements);
             return { requestId: msg.requestId, state: "Ok" };
         }
         else if (msg.operation === 'update') {
@@ -166,6 +176,31 @@ if (checkHVML()) {
 
         return { requestId: msg.requestId, state: "NotImplemented" };
     }
+
+}
+
+function registerEventsListener(elems)
+{
+    console.log("registerEventsListener called");
+
+    elems.forEach (function (elem) {
+        if (elem.hvmlHandle !== 0) {
+            console.log("elem.hvmlEventList: " + elem.hvmlEventList.length);
+            for (let i = 0; i < elem.hvmlEventList.length; i++) {
+                let eventName = elem.hvmlEventList.item(i);
+
+                elem.addEventListener(eventName, function (evt) {
+                        evt.preventDefault();
+                        HVML.post(evt.target.hvmlHandleText,
+                                evt.type, JSON.stringify(evt));
+                });
+            }
+        }
+        else {
+            console.log("invalid hvmlHandle");
+        }
+
+    });
 }
 
 function updateProperty(elem, property, data)
@@ -192,6 +227,10 @@ function updateDocument(elem, op, data)
     let nr_elements = container.children.length;
     if (nr_elements > 0) {
 
+        const interestedElements = container.querySelectorAll(".hvml-events");
+        if (interestedElements.length > 0)
+            registerEventsListener(interestedElements);
+
         /* have child elements, discard any Text node out all children. */
         while (container.firstChild) {
             fragment.appendChild(container.firstChild);
@@ -199,7 +238,7 @@ function updateDocument(elem, op, data)
 
         switch (op) {
             case 'append':
-                console.log("result" + elem.appendChild(fragment));
+                elem.appendChild(fragment);
                 break;
             case 'prepend':
                 elem.insertBefore(fragment, elem.firstChild);
