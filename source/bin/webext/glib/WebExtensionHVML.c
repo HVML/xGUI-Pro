@@ -200,12 +200,22 @@ static void destroyed_notify(WebKitWebPage* web_page)
 }
 
 static gboolean on_hvml_post(WebKitWebPage* web_page,
-        const char* handle, const char *event, const char *details_in_json)
+        const char *event, const char* handle, const char *details_in_json)
 {
     g_assert_true(WEBKIT_IS_WEB_PAGE(web_page));
 
     LOG_DEBUG("got an event (%s) from %s: %s\n",
             event, handle, details_in_json);
+
+    const char *params[] = {
+        event, handle, details_in_json,
+    };
+
+    WebKitUserMessage * message = webkit_user_message_new("event",
+            g_variant_new_strv(params, sizeof(params)/sizeof(params[0])));
+    webkit_web_page_send_message_to_view(web_page, message,
+            NULL, NULL, NULL);
+
     return TRUE;
 }
 

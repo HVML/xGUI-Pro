@@ -209,10 +209,50 @@ user_message_received_callback(WebKitWebView *web_view,
             handle_response_from_webpage(sess, str, len);
         }
         else {
-            LOG_ERROR("the parameter of the message is not a string (%s)\n", type);
+            LOG_ERROR("the parameter of the message is not a string (%s)\n",
+                    type);
         }
     }
     else if (strcmp(name, "event") == 0) {
+        GVariant *param = webkit_user_message_get_parameters(message);
+        const char* type = g_variant_get_type_string(param);
+        if (strcmp(type, "as") == 0) {
+            size_t len;
+            const char **strv = g_variant_get_strv(param, &len);
+            purcmc_endpoint* endpoint = get_endpoint_by_session(sess);
+
+            if (len == 3 && endpoint) {
+                pcrdr_msg event;
+
+                event.type = PCRDR_MSG_TYPE_EVENT;
+                event.target = PCRDR_MSG_TARGET_DOM;
+                event.targetValue = PTR2U64(web_view);
+                event.event =
+                    purc_variant_make_string(strv[0], false);
+                event.elementType = PCRDR_MSG_ELEMENT_TYPE_HANDLE;
+                event.element =
+                    purc_variant_make_string(strv[1], false);
+                event.property = PURC_VARIANT_INVALID;
+
+                event.dataType = PCRDR_MSG_DATA_TYPE_EJSON;
+                event.data =
+                    purc_variant_make_from_json_string(strv[2],
+                            strlen(strv[2]));
+                if (event.data == PURC_VARIANT_INVALID) {
+                    LOG_ERROR("bad JSON: %s\n", strv[2]);
+                }
+
+                free(strv);
+                purcmc_endpoint_post_event(sess->srv, endpoint, &event);
+            }
+            else {
+                LOG_ERROR("wrong parameters of event message (%s)\n", type);
+            }
+        }
+        else {
+            LOG_ERROR("the parameter of the event is not an array of string (%s)\n",
+                    type);
+        }
     }
 
     return TRUE;

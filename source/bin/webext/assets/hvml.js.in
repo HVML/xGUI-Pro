@@ -187,13 +187,47 @@ function registerEventsListener(elems)
         if (elem.hvmlHandle !== 0) {
             console.log("elem.hvmlEventList: " + elem.hvmlEventList.length);
             for (let i = 0; i < elem.hvmlEventList.length; i++) {
-                let eventName = elem.hvmlEventList.item(i);
+                let eventTokens = elem.hvmlEventList.item(i).split(':');
+                let eventName = eventTokens[0];
+                let eventOpts = eventTokens[1];
 
-                elem.addEventListener(eventName, function (evt) {
-                        evt.preventDefault();
-                        HVML.post(evt.target.hvmlHandleText,
-                                evt.type, JSON.stringify(evt));
-                });
+                var optList = [];
+                if (eventOpts)
+                    optList = eventOpts.split(',');
+
+                // TODO: handle more options
+                if (optList.length > 0) {
+                    elem.addEventListener(eventName, function (evt) {
+                        let data = {
+                            targetTagName: evt.target.tagName,
+                            targetHandle: evt.target.hvmlHandleText,
+                            targetId: evt.target.id,
+                            targetClass: evt.target.className,
+                            targetValue: evt.target.value,
+                            timeStamp: evt.timeStamp,
+                            details: evt};
+
+                        if (optList.includes('cancel') && evt.cancelable)
+                            evt.preventDefault();
+                        HVML.post(evt.type, evt.currentTarget.hvmlHandleText,
+                                JSON.stringify(data));
+                    });
+                }
+                else {
+                    elem.addEventListener(eventName, function (evt) {
+                        let data = {
+                            targetTagName: evt.target.tagName,
+                            targetHandle: evt.target.hvmlHandleText,
+                            targetId: evt.target.id,
+                            targetClass: evt.target.className,
+                            targetValue: evt.target.value,
+                            timeStamp: evt.timeStamp,
+                            details: evt};
+
+                        HVML.post(evt.type, evt.currentTarget.hvmlHandleText,
+                                JSON.stringify(data));
+                    });
+                }
             }
         }
         else {
