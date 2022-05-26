@@ -195,39 +195,24 @@ function registerEventsListener(elems)
                 if (eventOpts)
                     optList = eventOpts.split(',');
 
-                // TODO: handle more options
-                if (optList.length > 0) {
-                    elem.addEventListener(eventName, function (evt) {
-                        let data = {
-                            targetTagName: evt.target.tagName,
-                            targetHandle: evt.target.hvmlHandleText,
-                            targetId: evt.target.id,
-                            targetClass: evt.target.className,
-                            targetValue: evt.target.value,
-                            timeStamp: evt.timeStamp,
-                            details: evt};
+                elem.addEventListener(eventName, function (evt) {
+                    let data = {
+                        targetTagName: evt.target.tagName,
+                        targetHandle: evt.target.hvmlHandleText,
+                        targetId: evt.target.id,
+                        targetClass: evt.target.className,
+                        targetValue: evt.target.value,
+                        timeStamp: evt.timeStamp,
+                        details: evt};
 
-                        if (optList.includes('cancel') && evt.cancelable)
-                            evt.preventDefault();
-                        HVML.post(evt.type, evt.currentTarget.hvmlHandleText,
-                                JSON.stringify(data));
-                    });
-                }
-                else {
-                    elem.addEventListener(eventName, function (evt) {
-                        let data = {
-                            targetTagName: evt.target.tagName,
-                            targetHandle: evt.target.hvmlHandleText,
-                            targetId: evt.target.id,
-                            targetClass: evt.target.className,
-                            targetValue: evt.target.value,
-                            timeStamp: evt.timeStamp,
-                            details: evt};
-
-                        HVML.post(evt.type, evt.currentTarget.hvmlHandleText,
-                                JSON.stringify(data));
-                    });
-                }
+                    // TODO: handle more options
+                    if (optList.includes('prevent') && evt.cancelable)
+                        evt.preventDefault();
+                    if (optList.includes('stop'))
+                        evt.stopPropagation();
+                    HVML.post(evt.type, evt.currentTarget.hvmlHandleText,
+                            JSON.stringify(data));
+                });
             }
         }
         else {
