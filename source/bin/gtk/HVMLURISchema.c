@@ -92,8 +92,8 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             "<html>"
             "<body>"
             "<h1>xGUI Pro - an advanced HVML renderer</h1>"
-            "<p>Status: <strong hvml:handle=\"731128\">Checking...</strong>.</p>"
-            "<p>This content will be replaced by the HVML runner <span hvml:handle=\"790715\"></span>.</p>"
+            "<p>Status: <strong hvml-handle=\"731128\">Checking...</strong>.</p>"
+            "<p>This content will be replaced by the HVML runner <span hvml-handle=\"790715\"></span>.</p>"
             "<p><small>WebKit2GTK API Version %s, WebKit Version %d.%d.%d, Build %s</small></p>"
             "</body>"
             "</html>",

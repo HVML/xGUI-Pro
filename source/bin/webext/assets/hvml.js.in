@@ -35,8 +35,8 @@ if (checkHVML()) {
             document.write(msg.data);
             document.close();
 
-            console.log("checking elements with hvml:events attribute...");
-            const interestedElements = document.querySelectorAll(".hvml-events");
+            console.log("checking elements with hvml-events attribute...");
+            const interestedElements = document.querySelectorAll("[hvml-events]");
             if (interestedElements.length > 0)
                 registerEventsListener(interestedElements);
             return { requestId: msg.requestId, state: "Ok" };
@@ -54,8 +54,8 @@ if (checkHVML()) {
             document.write(msg.data);
             document.close();
 
-            console.log("checking elements with hvml:events attribute...");
-            const interestedElements = document.querySelectorAll(".hvml-events");
+            console.log("checking elements with hvml-events attribute...");
+            const interestedElements = document.querySelectorAll("[hvml-events]");
             if (interestedElements.length > 0)
                 registerEventsListener(interestedElements);
             return { requestId: msg.requestId, state: "Ok" };
