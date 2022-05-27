@@ -711,27 +711,215 @@ int gtk_update_dom(purcmc_session *sess, purcmc_dom *dom,
     int retv = PCRDR_SC_OK;
 
     WebKitWebView *webView = validate_page(sess, (purcmc_page *)dom, &retv);
-    if (webView == NULL)
+    if (webView == NULL) {
+        LOG_ERROR("Bad DOM pointer: %p.\n", dom);
         return retv;
+    }
 
-    char *escaped;
+    if (!purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME)) {
+        return PCRDR_SC_BAD_REQUEST;
+    }
+
+    char *element_escaped = NULL;
+    if (element_value)
+        element_escaped = pcutils_escape_string_for_json(element_value);
+
+    char *escaped = NULL;
     if (content)
         escaped = pcutils_escape_string_for_json(content);
-    else
-        escaped = NULL;
 
     gchar *json = g_strdup_printf(DOM_MESSAGE_FORMAT, op_name, request_id,
-            element_type, element_value, property ? property : "",
-            escaped ? escaped : "");
+            element_type, element_escaped ? element_escaped : "",
+            property ? property : "", escaped ? escaped : "");
+    if (element_escaped)
+        free(element_escaped);
+    if (escaped)
+        free(escaped);
 
     WebKitUserMessage * message = webkit_user_message_new("request",
             g_variant_new_string(json));
     g_free(json);
-    free(escaped);
 
     webkit_web_view_send_message_to_page(webView, message, NULL,
             request_ready_callback, sess);
 
     return 0;
 }
+
+#define DOM_MESSAGE_FORMAT_CALLMETHOD  "{"      \
+        "\"operation\":\"callMethod\","         \
+        "\"requestId\":\"%s\","                 \
+        "\"elementType\":\"%s\","               \
+        "\"element\":\"%s\","                   \
+        "\"method\":\"%s\","                    \
+        "\"arg\":%s}"
+
+purc_variant_t
+gtk_call_method_in_dom(purcmc_session *sess, const char *request_id,
+        purcmc_dom *dom, const char* element_type, const char* element_value,
+        const char *method, purc_variant_t arg, int* retv)
+{
+    WebKitWebView *webView = validate_page(sess, (purcmc_page *)dom, retv);
+    if (webView == NULL) {
+        LOG_ERROR("Bad DOM pointer: %p.\n", dom);
+        return PURC_VARIANT_INVALID;
+    }
+
+    char *element_escaped = NULL;
+    if (element_value)
+        element_escaped = pcutils_escape_string_for_json(element_value);
+
+    char *method_escaped;
+    method_escaped = pcutils_escape_string_for_json(method);
+
+    char *arg_in_json = NULL;
+    if (arg) {
+        purc_rwstream_t buffer = NULL;
+        buffer = purc_rwstream_new_buffer(PCRDR_MIN_PACKET_BUFF_SIZE,
+                PCRDR_MAX_INMEM_PAYLOAD_SIZE);
+
+        if (purc_variant_serialize(arg, buffer, 0,
+                PCVARIANT_SERIALIZE_OPT_PLAIN, NULL) < 0) {
+            *retv = PCRDR_SC_INSUFFICIENT_STORAGE;
+            return PURC_VARIANT_INVALID;
+        }
+
+        purc_rwstream_write(buffer, "", 1); // the terminating null byte.
+
+        arg_in_json = purc_rwstream_get_mem_buffer_ex(buffer,
+                NULL, NULL, true);
+        purc_rwstream_destroy(buffer);
+    }
+
+    gchar *json = g_strdup_printf(DOM_MESSAGE_FORMAT_CALLMETHOD, request_id,
+            element_type, element_escaped ? element_escaped : "",
+            method_escaped, arg_in_json ? arg_in_json : "null");
+    if (element_escaped)
+        free(element_escaped);
+    free(method_escaped);
+    if (arg_in_json)
+        free(arg_in_json);
+
+    WebKitUserMessage * message = webkit_user_message_new("request",
+            g_variant_new_string(json));
+    g_free(json);
+
+    webkit_web_view_send_message_to_page(webView, message, NULL,
+            request_ready_callback, sess);
+
+    *retv = 0;
+    return PURC_VARIANT_INVALID;
+}
+
+#define DOM_MESSAGE_FORMAT_GETPROPERTY  "{"     \
+        "\"operation\":\"getProperty\","        \
+        "\"requestId\":\"%s\","                 \
+        "\"elementType\":\"%s\","               \
+        "\"element\":\"%s\","                   \
+        "\"property\":\"%s\"}"                  \
+
+purc_variant_t
+gtk_get_property_in_dom(purcmc_session *sess, const char *request_id,
+        purcmc_dom *dom, const char* element_type, const char* element_value,
+        const char *property, int *retv)
+{
+    WebKitWebView *webView = validate_page(sess, (purcmc_page *)dom, retv);
+    if (webView == NULL) {
+        LOG_ERROR("Bad DOM pointer: %p.\n", dom);
+        return PURC_VARIANT_INVALID;
+    }
+
+    if (!purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME)) {
+        *retv = PCRDR_SC_BAD_REQUEST;
+        return PURC_VARIANT_INVALID;
+    }
+
+    char *element_escaped = NULL;
+    if (element_value)
+        element_escaped = pcutils_escape_string_for_json(element_value);
+
+    gchar *json = g_strdup_printf(DOM_MESSAGE_FORMAT_GETPROPERTY, request_id,
+            element_type ? element_type : "",
+            element_escaped ? element_escaped : "", property);
+    if (element_escaped)
+        free(element_escaped);
+
+    WebKitUserMessage * message = webkit_user_message_new("request",
+            g_variant_new_string(json));
+    g_free(json);
+
+    webkit_web_view_send_message_to_page(webView, message, NULL,
+            request_ready_callback, sess);
+
+    *retv = 0;
+    return PURC_VARIANT_INVALID;
+}
+
+#define DOM_MESSAGE_FORMAT_SETPROPERTY  "{"     \
+        "\"operation\":\"setProperty\","        \
+        "\"requestId\":\"%s\","                 \
+        "\"elementType\":\"%s\","               \
+        "\"element\":\"%s\","                   \
+        "\"property\":\"%s\","                  \
+        "\"value\":%s}"
+
+purc_variant_t
+gtk_set_property_in_dom(purcmc_session *sess, const char *request_id,
+        purcmc_dom *dom, const char* element_type, const char* element_value,
+        const char *property, purc_variant_t value, int *retv)
+{
+    WebKitWebView *webView = validate_page(sess, (purcmc_page *)dom, retv);
+    if (webView == NULL) {
+        LOG_ERROR("Bad DOM pointer: %p.\n", dom);
+        return PURC_VARIANT_INVALID;
+    }
+
+    if (!purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME)) {
+        *retv = PCRDR_SC_BAD_REQUEST;
+        return PURC_VARIANT_INVALID;
+    }
+
+    char *element_escaped = NULL;
+    if (element_value)
+        element_escaped = pcutils_escape_string_for_json(element_value);
+
+    char *value_in_json = NULL;
+    if (value) {
+        purc_rwstream_t buffer = NULL;
+        buffer = purc_rwstream_new_buffer(PCRDR_MIN_PACKET_BUFF_SIZE,
+                PCRDR_MAX_INMEM_PAYLOAD_SIZE);
+
+        if (purc_variant_serialize(value, buffer, 0,
+                PCVARIANT_SERIALIZE_OPT_PLAIN, NULL) < 0) {
+            *retv = PCRDR_SC_INSUFFICIENT_STORAGE;
+            return PURC_VARIANT_INVALID;
+        }
+
+        purc_rwstream_write(buffer, "", 1); // the terminating null byte.
+
+        value_in_json = purc_rwstream_get_mem_buffer_ex(buffer,
+                NULL, NULL, true);
+        purc_rwstream_destroy(buffer);
+    }
+
+    gchar *json = g_strdup_printf(DOM_MESSAGE_FORMAT_SETPROPERTY, request_id,
+            element_type ? element_type : "",
+            element_escaped ? element_escaped : "", property,
+            value_in_json ? value_in_json : "null");
+    if (element_escaped)
+        free(element_escaped);
+    if (value_in_json)
+        free(value_in_json);
+
+    WebKitUserMessage * message = webkit_user_message_new("request",
+            g_variant_new_string(json));
+    g_free(json);
+
+    webkit_web_view_send_message_to_page(webView, message, NULL,
+            request_ready_callback, sess);
+
+    *retv = 0;
+    return PURC_VARIANT_INVALID;
+}
+
 

@@ -615,7 +615,9 @@ static int on_update_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     const char *property;
     property = purc_variant_get_string_const(msg->property);
-    if (property == NULL || msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
+    if (property == NULL ||
+            !purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME) ||
+            msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
@@ -960,7 +962,9 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     const char *property;
     property = purc_variant_get_string_const(msg->property);
-    if (property == NULL || msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
+    if (property == NULL ||
+            !purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME) ||
+            msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
@@ -1159,7 +1163,9 @@ static int on_update_page(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     const char *property;
     property = purc_variant_get_string_const(msg->property);
-    if (property == NULL || msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
+    if (property == NULL ||
+            !purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME) ||
+            msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
@@ -1424,7 +1430,7 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     const char *element_type = NULL;
-    switch(msg->elementType) {
+    switch (msg->elementType) {
         case PCRDR_MSG_ELEMENT_TYPE_HANDLE:
             element_type = "handle";
             break;
@@ -1539,30 +1545,90 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    purcmc_dom *dom = NULL;
     pcrdr_msg response;
     purc_variant_t result = PURC_VARIANT_INVALID;
 
-    if (srv->cbs.call_method == NULL) {
-        retv = PCRDR_SC_NOT_IMPLEMENTED;
-        goto failed;
-    }
+    const char *request_id = purc_variant_get_string_const(msg->requestId);
+    const char *method;
+    purc_variant_t arg = PURC_VARIANT_INVALID;
 
-    if (msg->target == PCRDR_MSG_TARGET_DOM) {
-        dom = (purcmc_dom *)(uintptr_t)msg->targetValue;
-    }
-
-    if (dom == NULL) {
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_EJSON) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
 
-    result = srv->cbs.call_method(endpoint->session, dom, msg, &retv);
+    if ((arg = purc_variant_object_get_by_ckey(msg->data, "method"))) {
+        method = purc_variant_get_string_const(arg);
+    }
+    if (method == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    arg = purc_variant_object_get_by_ckey(msg->data, "arg");
+
+    const char *element_type = NULL;
+    switch (msg->elementType) {
+        case PCRDR_MSG_ELEMENT_TYPE_HANDLE:
+            element_type = "handle";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_HANDLES:
+            element_type = "handles";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_CSS:
+            element_type = "css";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_XPATH:
+            element_type = "xpath";
+            break;
+        default:
+            element_type = NULL;
+            break;
+    }
+
+    const char *element_value;
+    element_value = purc_variant_get_string_const(msg->element);
+
+    if (msg->target == PCRDR_MSG_TARGET_DOM) {
+        if (srv->cbs.call_method_in_dom == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
+
+        purcmc_dom *dom = NULL;
+        dom = (purcmc_dom *)(uintptr_t)msg->targetValue;
+        if (dom == NULL) {
+            retv = PCRDR_SC_BAD_REQUEST;
+            goto failed;
+        }
+
+        result = srv->cbs.call_method_in_dom(endpoint->session, request_id,
+                dom, element_type, element_value,
+                method, arg, &retv);
+
+    }
+    else if (msg->target != PCRDR_MSG_TARGET_THREAD) {
+        if (srv->cbs.call_method_in_session == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
+
+        result = srv->cbs.call_method_in_session(endpoint->session,
+                msg->target, msg->targetValue,
+                element_type, element_value,
+                purc_variant_get_string_const(msg->property),
+                method, arg, &retv);
+    }
+    else {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
-                purc_variant_get_string_const(msg->requestId),
-                dom);
+                request_id,
+                (void *)(uintptr_t)msg->targetValue);
         return PCRDR_SC_OK;
     }
 
@@ -1570,7 +1636,200 @@ failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
     response.retCode = retv;
-    response.resultValue = 0;
+    response.resultValue = msg->targetValue;
+    response.dataType = result ?
+        PCRDR_MSG_DATA_TYPE_EJSON : PCRDR_MSG_DATA_TYPE_VOID;
+    response.data = result;
+
+    return purcmc_endpoint_send_response(srv, endpoint, &response);
+}
+
+static int on_get_property(purcmc_server* srv, purcmc_endpoint* endpoint,
+        const pcrdr_msg *msg)
+{
+    int retv = PCRDR_SC_OK;
+    pcrdr_msg response;
+    purc_variant_t result = PURC_VARIANT_INVALID;
+
+    const char *request_id = purc_variant_get_string_const(msg->requestId);
+
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_EJSON) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    const char *element_type = NULL;
+    switch (msg->elementType) {
+        case PCRDR_MSG_ELEMENT_TYPE_HANDLE:
+            element_type = "handle";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_HANDLES:
+            element_type = "handles";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_CSS:
+            element_type = "css";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_XPATH:
+            element_type = "xpath";
+            break;
+        default:
+            element_type = NULL;
+            break;
+    }
+
+    const char *element_value;
+    element_value = purc_variant_get_string_const(msg->element);
+
+    const char *property;
+    property = purc_variant_get_string_const(msg->property);
+    if (property == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    if (msg->target == PCRDR_MSG_TARGET_DOM) {
+        if (srv->cbs.get_property_in_dom == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
+
+        purcmc_dom *dom = NULL;
+        dom = (purcmc_dom *)(uintptr_t)msg->targetValue;
+        if (dom == NULL) {
+            retv = PCRDR_SC_BAD_REQUEST;
+            goto failed;
+        }
+
+        result = srv->cbs.get_property_in_dom(endpoint->session, request_id,
+                dom, element_type, element_value,
+                property, &retv);
+    }
+    else if (msg->target != PCRDR_MSG_TARGET_THREAD) {
+        if (srv->cbs.get_property_in_session == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
+
+        result = srv->cbs.get_property_in_session(endpoint->session,
+                msg->target, msg->targetValue,
+                element_type, element_value,
+                property, &retv);
+    }
+    else {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    if (retv == 0) {
+        srv->cbs.pend_response(endpoint->session,
+                purc_variant_get_string_const(msg->operation),
+                request_id,
+                (void *)(uintptr_t)msg->targetValue);
+        return PCRDR_SC_OK;
+    }
+
+failed:
+    response.type = PCRDR_MSG_TYPE_RESPONSE;
+    response.requestId = purc_variant_ref(msg->requestId);
+    response.retCode = retv;
+    response.resultValue = msg->targetValue;
+    response.dataType = result ?
+        PCRDR_MSG_DATA_TYPE_EJSON : PCRDR_MSG_DATA_TYPE_VOID;
+    response.data = result;
+
+    return purcmc_endpoint_send_response(srv, endpoint, &response);
+}
+
+static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
+        const pcrdr_msg *msg)
+{
+    int retv = PCRDR_SC_OK;
+    pcrdr_msg response;
+    purc_variant_t result = PURC_VARIANT_INVALID;
+
+    const char *request_id = purc_variant_get_string_const(msg->requestId);
+
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_EJSON) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    const char *element_type = NULL;
+    switch (msg->elementType) {
+        case PCRDR_MSG_ELEMENT_TYPE_HANDLE:
+            element_type = "handle";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_HANDLES:
+            element_type = "handles";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_CSS:
+            element_type = "css";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_XPATH:
+            element_type = "xpath";
+            break;
+        default:
+            element_type = NULL;
+            break;
+    }
+
+    const char *element_value;
+    element_value = purc_variant_get_string_const(msg->element);
+
+    const char *property;
+    property = purc_variant_get_string_const(msg->property);
+    if (property == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    if (msg->target == PCRDR_MSG_TARGET_DOM) {
+        if (srv->cbs.set_property_in_dom == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
+
+        purcmc_dom *dom = NULL;
+        dom = (purcmc_dom *)(uintptr_t)msg->targetValue;
+        if (dom == NULL) {
+            retv = PCRDR_SC_BAD_REQUEST;
+            goto failed;
+        }
+
+        result = srv->cbs.set_property_in_dom(endpoint->session, request_id,
+                dom, element_type, element_value,
+                property, msg->data, &retv);
+
+    }
+    else if (msg->target != PCRDR_MSG_TARGET_THREAD) {
+        if (srv->cbs.set_property_in_session == NULL) {
+            retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto failed;
+        }
+
+        result = srv->cbs.set_property_in_session(endpoint->session,
+                msg->target, msg->targetValue,
+                element_type, element_value,
+                property, msg->data, &retv);
+    }
+    else {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    if (retv == 0) {
+        srv->cbs.pend_response(endpoint->session,
+                purc_variant_get_string_const(msg->operation),
+                request_id,
+                (void *)(uintptr_t)msg->targetValue);
+        return PCRDR_SC_OK;
+    }
+
+failed:
+    response.type = PCRDR_MSG_TYPE_RESPONSE;
+    response.requestId = purc_variant_ref(msg->requestId);
+    response.retCode = retv;
+    response.resultValue = msg->targetValue;
     response.dataType = result ?
         PCRDR_MSG_DATA_TYPE_EJSON : PCRDR_MSG_DATA_TYPE_VOID;
     response.data = result;
@@ -1595,12 +1854,14 @@ static struct request_handler {
     { PCRDR_OPERATION_DISPLACE, on_displace },
     { PCRDR_OPERATION_ENDSESSION, on_end_session },
     { PCRDR_OPERATION_ERASE, on_erase },
+    { PCRDR_OPERATION_GETPROPERTY, on_get_property },
     { PCRDR_OPERATION_INSERTAFTER, on_insert_after },
     { PCRDR_OPERATION_INSERTBEFORE, on_insert_before },
     { PCRDR_OPERATION_LOAD, on_load },
     { PCRDR_OPERATION_PREPEND, on_prepend },
     { PCRDR_OPERATION_REMOVEPAGEGROUP, on_remove_page_group },
     { PCRDR_OPERATION_RESETPAGEGROUPS, on_reset_page_groups },
+    { PCRDR_OPERATION_SETPROPERTY, on_set_property },
     { PCRDR_OPERATION_STARTSESSION, on_start_session },
     { PCRDR_OPERATION_UPDATE, on_update },
     { PCRDR_OPERATION_UPDATEPLAINWINDOW, on_update_plain_window },

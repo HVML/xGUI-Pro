@@ -68,7 +68,7 @@ Run `purcsmg` in another terminal:
 
 ```
 $ cd /path/to/purc-midnight-commander/build/
-$ ./source/bin/purcsmg --app=cn.fmsoft.hvml.purcsmg --runner=test --testmethod=1 --file=fmsoft-cn.html
+$ ./source/bin/purcsmg --app=cn.fmsoft.hvml.purcsmg --runner=test --testmethod=1 --file=simplest.html
 ```
 
 If encounter core dumps, use `gdb`:

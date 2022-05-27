@@ -52,6 +52,18 @@ int gtk_update_dom(purcmc_session *, purcmc_dom *,
             const char* property,
             const char *content, size_t length);
 
+purc_variant_t gtk_call_method_in_dom(purcmc_session *, const char *,
+        purcmc_dom *, const char* element_type, const char* element_value,
+        const char *method, purc_variant_t arg, int* retv);
+
+purc_variant_t gtk_get_property_in_dom(purcmc_session *, const char *,
+        purcmc_dom *, const char* element_type, const char* element_value,
+        const char *property, int *retv);
+
+purc_variant_t gtk_set_property_in_dom(purcmc_session *, const char *,
+        purcmc_dom *, const char* element_type, const char* element_value,
+        const char *property, purc_variant_t value, int *retv);
+
 bool gtk_pend_response(purcmc_session* sess, const char *operation,
         const char *request_id, void *result_value);
 

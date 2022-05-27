@@ -133,8 +133,35 @@ typedef struct purcmc_server_callbacks {
             const char *content, size_t length);
 
     /* nullable */
-    purc_variant_t (*call_method)(purcmc_session *, purcmc_dom *,
-            const pcrdr_msg *msg, int* retv);
+    purc_variant_t (*call_method_in_session)(purcmc_session *,
+            pcrdr_msg_target target, uint64_t target_value,
+            const char *element_type, const char *element_value,
+            const char *property, const char *method, purc_variant_t arg,
+            int* retv);
+    /* nullable */
+    purc_variant_t (*call_method_in_dom)(purcmc_session *, const char *,
+            purcmc_dom *, const char* element_type, const char* element_value,
+            const char *method, purc_variant_t arg, int* retv);
+
+    /* nullable */
+    purc_variant_t (*get_property_in_session)(purcmc_session *,
+            pcrdr_msg_target target, uint64_t target_value,
+            const char *element_type, const char *element_value,
+            const char *property, int *retv);
+    /* nullable */
+    purc_variant_t (*get_property_in_dom)(purcmc_session *, const char *,
+            purcmc_dom *, const char* element_type, const char* element_value,
+            const char *property, int *retv);
+
+    /* nullable */
+    purc_variant_t (*set_property_in_session)(purcmc_session *,
+            pcrdr_msg_target target, uint64_t target_value,
+            const char *element_type, const char *element_value,
+            const char *property, purc_variant_t value, int *retv);
+    /* nullable */
+    purc_variant_t (*set_property_in_dom)(purcmc_session *, const char *,
+            purcmc_dom *, const char* element_type, const char* element_value,
+            const char *property, purc_variant_t value, int *retv);
 
     bool (*pend_response)(purcmc_session *, const char *operation,
             const char *request_id, void *result_value);
