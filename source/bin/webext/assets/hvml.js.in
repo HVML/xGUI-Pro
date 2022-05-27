@@ -229,8 +229,20 @@ function updateProperty(elem, property, data)
         return true;
     }
     else if (property.startsWith("attr.")) {
-        var attr = property.substring(5);
+        let attr = property.substring(5);
         elem.setAttribute(attr, data);
+        return true;
+    }
+    else if (property.startsWith("prop.")) {
+        let name = property.substring(5);
+        try {
+            const method = new Function('ELEM', 'VALUE', 'ELEM.' + name + '=VALUE');
+            method(elem, data);
+        } catch (error) {
+            console.error(error);
+            return false;
+        }
+
         return true;
     }
 
@@ -331,5 +343,50 @@ function eraseElement(elem, property)
         elem.remove();
 
     return true;
+}
+
+function getProperty(obj, property)
+{
+    try {
+        const func = new Function('OBJ', 'return OBJ.' + property);
+        return func(obj);
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+}
+
+function setProperty(obj, property, value)
+{
+    try {
+        const func = new Function('OBJ', 'VALUE', 'OBJ.' + property + '=VALUE; return OBJ.' + property);
+        return func(obj, value);
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+}
+
+function callMethod(elem, method, arg)
+{
+    let funcBody;
+
+    if (method.startsWith("call:")) {
+        funcBody = method.substring(5);
+    }
+    else if (arg) {
+        funcBody = 'return ELEM.' + method + '(ARG)';
+    }
+    else {
+        funcBody = 'return ELEM.' + method + '()';
+    }
+
+    try {
+        const func = new Function('ELEM', 'ARG', funcBody);
+        return func(elem, arg);
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
 }
 
