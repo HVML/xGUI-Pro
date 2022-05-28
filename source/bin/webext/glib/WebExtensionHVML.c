@@ -400,7 +400,8 @@ user_message_received_callback(WebKitWebPage *web_page,
     LOG_INFO("result of onrequest: (%s)\n", result_in_json);
     if (result_in_json) {
         webkit_user_message_send_reply(message,
-                webkit_user_message_new(name, g_variant_new_string(result_in_json)));
+                webkit_user_message_new(name,
+                    g_variant_new_string(result_in_json)));
         free(result_in_json);
     }
 

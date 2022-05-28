@@ -1,11 +1,12 @@
 function checkHVML() {
     if (typeof(document.getElementByHVMLHandle) == "function") {
         if (typeof(HVML) == "object" && HVML.version >= @HVMLJS_VERSION@) {
-            var elemStatus = document.getElementByHVMLHandle('731128');
-            var elemRunner = document.getElementByHVMLHandle('790715');
+            let elemStatus = document.getElementByHVMLHandle('731128');
+            let elemRunner = document.getElementByHVMLHandle('790715');
             if (elemStatus && elemRunner) {
                 elemStatus.textContent = 'Ready';
-                elemRunner.textContent = '@' + HVML.hostName + '/' + HVML.appName + '/' + HVML.runnerName;
+                elemRunner.textContent = '@' + HVML.hostName + '/' +
+                    HVML.appName + '/' + HVML.runnerName;
                 return true;
             }
             else {
@@ -17,7 +18,9 @@ function checkHVML() {
         }
     }
     else {
-        console.log("Make sure to use the tailored WebKit released by HVML community and the configuration option `ENABLE_HVML_ATTRS` is ON.");
+        console.log("Make sure to use the tailored WebKit (2.34.1 or later) " +
+                "released by HVML community and " +
+                "the configuration option `ENABLE_HVML_ATTRS` is ON.");
     }
 
     return false;
@@ -25,7 +28,8 @@ function checkHVML() {
 
 if (checkHVML()) {
     HVML.onrequest = function (json) {
-        const dom_update_ops = ['append', 'prepend', 'insertAfter', 'insertBefore', 'displace'];
+        const dom_update_ops = ['append', 'prepend', 'insertAfter',
+              'insertBefore', 'displace'];
 
         msg = JSON.parse(json);
         console.log("HVML.onrequest called: " + msg.operation);
@@ -62,7 +66,7 @@ if (checkHVML()) {
         }
         else if (msg.operation === 'update') {
             if (msg.elementType === 'handle') {
-                var elem = document.getElementByHVMLHandle(msg.element);
+                let elem = document.getElementByHVMLHandle(msg.element);
                 if (elem) {
                     if (!updateProperty(elem, msg.property, msg.data))
                         return { requestId: msg.requestId, state: "BadRequest" };
@@ -74,10 +78,10 @@ if (checkHVML()) {
                 return { requestId: msg.requestId, state: "Ok" };
             }
             else if (msg.elementType === 'handles') {
-                var handles = msg.element.split(',');
-                var nr_updated = 0;
-                for (var i = 0; i < handles.length; i++) {
-                    var elem = document.getElementByHVMLHandle(handles[i]);
+                let handles = msg.element.split(',');
+                let nr_updated = 0;
+                for (let i = 0; i < handles.length; i++) {
+                    let elem = document.getElementByHVMLHandle(handles[i]);
                     if (elem) {
                         if (updateProperty(elem, msg.property, msg.data))
                             nr_updated++;
@@ -94,7 +98,7 @@ if (checkHVML()) {
         }
         else if (msg.operation === 'clear') {
             if (msg.elementType === 'handle') {
-                var elem = document.getElementByHVMLHandle(msg.element);
+                let elem = document.getElementByHVMLHandle(msg.element);
                 if (elem) {
                     if (!clearElement(elem, msg.property))
                         return { requestId: msg.requestId, state: "BadRequest" };
@@ -106,10 +110,10 @@ if (checkHVML()) {
                 return { requestId: msg.requestId, state: "Ok" };
             }
             else if (msg.elementType === 'handles') {
-                var handles = msg.element.split(',');
-                var nr_cleared = 0;
-                for (var i = 0; i < handles.length; i++) {
-                    var elem = document.getElementByHVMLHandle(handles[i]);
+                let handles = msg.element.split(',');
+                let nr_cleared = 0;
+                for (let i = 0; i < handles.length; i++) {
+                    let elem = document.getElementByHVMLHandle(handles[i]);
                     if (elem) {
                         if (clearElement(elem, msg.property))
                             nr_cleared++;
@@ -126,7 +130,7 @@ if (checkHVML()) {
         }
         else if (msg.operation === 'erase') {
             if (msg.elementType === 'handle') {
-                var elem = document.getElementByHVMLHandle(msg.element);
+                let elem = document.getElementByHVMLHandle(msg.element);
                 if (elem) {
                     if (!eraseElement(elem, msg.property))
                         return { requestId: msg.requestId, state: "BadRequest" };
@@ -138,10 +142,10 @@ if (checkHVML()) {
                 return { requestId: msg.requestId, state: "Ok" };
             }
             else if (msg.elementType === 'handles') {
-                var handles = msg.element.split(',');
-                var nr_erased = 0;
-                for (var i = 0; i < handles.length; i++) {
-                    var elem = document.getElementByHVMLHandle(handles[i]);
+                let handles = msg.element.split(',');
+                let nr_erased = 0;
+                for (let i = 0; i < handles.length; i++) {
+                    let elem = document.getElementByHVMLHandle(handles[i]);
                     if (elem) {
                         if (eraseElement(elem, msg.property))
                             nr_erased++;
@@ -158,7 +162,7 @@ if (checkHVML()) {
         }
         else if (dom_update_ops.indexOf(msg.operation) !== -1) {
             if (msg.elementType === 'handle') {
-                var elem = document.getElementByHVMLHandle(msg.element);
+                let elem = document.getElementByHVMLHandle(msg.element);
                 if (elem) {
                     if (!updateDocument(elem, msg.operation, msg.data))
                         return { requestId: msg.requestId, state: "BadRequest" };
@@ -171,7 +175,72 @@ if (checkHVML()) {
             }
         }
         else if (msg.operation === 'callMethod') {
-            // return onCallMethod(msg);
+            let data = null;
+            let state = "Ok";
+            if (msg.elementType === 'handle') {
+                const elem = document.getElementByHVMLHandle(msg.element);
+                if (elem) {
+                    if (typeof(msg.data.method) != 'string')
+                        state = "BadRequest";
+                    else
+                        data = callMethod(elem, msg.data.method, msg.data.arg);
+                }
+                else {
+                    state = "NotFound";
+                }
+
+                return { requestId: msg.requestId, state: state, data: data };
+            }
+            else if (msg.elementType === 'void') {
+                if (typeof(msg.data.method) != 'string')
+                    state = "BadRequest";
+                else
+                    data = callMethod(document, msg.data.method, msg.data.arg);
+
+                return { requestId: msg.requestId, state: state, data: data };
+            }
+        }
+        else if (msg.operation === 'getProperty') {
+            let data = null;
+            let state = "Ok";
+            if (msg.elementType === 'handle') {
+                const elem = document.getElementByHVMLHandle(msg.element);
+                if (elem) {
+                    data = getProperty(elem, msg.property);
+                }
+                else {
+                    state = "NotFound";
+                }
+
+                return { requestId: msg.requestId, state: state, data: data };
+            }
+            else if (msg.elementType === 'void') {
+                data = getProperty(document, msg.property);
+
+                return { requestId: msg.requestId, state: state, data: data };
+            }
+        }
+        else if (msg.operation === 'setProperty') {
+            let data = null;
+            let state = "Ok";
+            if (msg.elementType === 'handle') {
+                const elem = document.getElementByHVMLHandle(msg.element);
+                if (elem) {
+                    if (typeof(msg.property) != 'string')
+                        state = "BadRequest";
+                    else
+                        data = setProperty(elem, msg.property, msg.data);
+                }
+                else {
+                    state = "NotFound";
+                }
+
+                return { requestId: msg.requestId, state: state, data: data };
+            }
+            else if (msg.elementType === 'void') {
+                data = setProperty(document, msg.property, msg.data);
+                return { requestId: msg.requestId, state: state, data: data };
+            }
         }
 
         return { requestId: msg.requestId, state: "NotImplemented" };
@@ -321,7 +390,7 @@ function clearElement(elem, property)
         elem.textContent = "";
     }
     else if (property.startsWith("attr.")) {
-        var attr = property.substring(5);
+        const attr = property.substring(5);
         elem.setAttribute(attr, "");
     }
     else
@@ -336,7 +405,7 @@ function eraseElement(elem, property)
         elem.textContent = "";
     }
     else if (property.startsWith("attr.")) {
-        var attr = property.substring(5);
+        const attr = property.substring(5);
         elem.removeAttribute(attr);
     }
     else

@@ -1444,7 +1444,7 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
             element_type = "xpath";
             break;
         default:
-            element_type = NULL;
+            element_type = "void";
             break;
     }
 
@@ -1582,7 +1582,7 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
             element_type = "xpath";
             break;
         default:
-            element_type = NULL;
+            element_type = "void";
             break;
     }
 
@@ -1673,7 +1673,7 @@ static int on_get_property(purcmc_server* srv, purcmc_endpoint* endpoint,
             element_type = "xpath";
             break;
         default:
-            element_type = NULL;
+            element_type = "void";
             break;
     }
 
