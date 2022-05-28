@@ -26,6 +26,8 @@
 #include "xguipro-features.h"
 
 #include "utils/hvml-uri.h"
+#include "utils/load-asset.h"
+
 #include "webext/log.h"
 
 struct HVMLInfo {
@@ -251,52 +253,6 @@ static struct HVMLInfo *create_hvml_instance(JSCContext *context,
     return info;
 }
 
-static char *load_asset_content(const char *file)
-{
-    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
-    char *buf = NULL;
-
-    if (webext_dir == NULL) {
-        webext_dir = WEBKIT_WEBEXT_DIR;
-    }
-
-    gchar *path = g_strdup_printf("%s/assets/%s", webext_dir, file);
-    if (path) {
-        LOG_DEBUG("path: %s\n", path);
-
-        FILE *f = fopen(path, "r");
-        free(path);
-
-        if (f) {
-            if (fseek(f, 0, SEEK_END))
-                goto failed;
-
-            long len = ftell(f);
-            if (len < 0)
-                goto failed;
-
-            buf = malloc(len + 1);
-            if (buf == NULL)
-                goto failed;
-
-            fseek(f, 0, SEEK_SET);
-            if (fread(buf, 1, len, f) < (size_t)len) {
-                free(buf);
-                buf = NULL;
-            }
-            buf[len] = '\0';
-
-failed:
-            fclose(f);
-        }
-        else {
-            LOG_ERROR("failed to load asset %s\n", file);
-        }
-    }
-
-    return buf;
-}
-
 static void
 console_message_sent_callback(WebKitWebPage *web_page,
         WebKitConsoleMessage *console_message, gpointer user_data)
@@ -322,10 +278,12 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
         return;
     }
 
-    LOG_DEBUG("inject hvml.js to page (%p)\n", web_page);
+    LOG_DEBUG("injecting hvml.js to page (%p)\n", web_page);
 
     /* inject hvml.js */
-    gchar *code = load_asset_content("hvml.js");
+    char *code = load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
+            "assets/hvml.js", NULL);
+
     if (code) {
         WebKitFrame *frame;
         frame = webkit_web_page_get_main_frame(web_page);
@@ -350,6 +308,9 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
         webkit_web_page_send_message_to_view(web_page, message,
                 NULL, NULL, NULL);
         free(json);
+    }
+    else {
+        LOG_ERROR("failed to load hvml.js\n");
     }
 }
 

@@ -536,8 +536,9 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         browser_window_append_view(main_win, web_view);
 
         char uri[strlen(sess->uri_prefix) + strlen(name) +
-            strlen(request_id) + 8];
+            strlen(request_id) + 12];
         strcpy(uri, sess->uri_prefix);
+        strcat(uri, "-/");  // null group name
         strcat(uri, name);
         strcat(uri, "?irId=");
         strcat(uri, request_id);

@@ -27,8 +27,10 @@
 #include "BuildRevision.h"
 
 #include "utils/hvml-uri.h"
+#include "utils/load-asset.h"
 
 #include <webkit2/webkit2.h>
+#include <purc/purc-pcrdr.h>
 #include <purc/purc-helpers.h>
 
 #include <assert.h>
@@ -40,8 +42,6 @@ void initializeWebExtensionsCallback(WebKitWebContext *context,
     if (webext_dir == NULL) {
         webext_dir = WEBKIT_WEBEXT_DIR;
     }
-
-    purc_log_debug("%s: webext in %s\n", __func__, webext_dir);
 
     webkit_web_context_set_web_extensions_directory(context, webext_dir);
     webkit_web_context_set_web_extensions_initialization_user_data(context,
@@ -63,10 +63,20 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             !purc_is_valid_runner_name(runner)) {
         GError *error = g_error_new(XGUI_PRO_ERROR,
                 XGUI_PRO_ERROR_INVALID_HVML_URI,
-                "Invalid HVML uri: hvml://%s/%s/%s/xxx", host, app, runner);
+                "Invalid HVML URI (%s): bad host, app, or runner name", uri);
         webkit_uri_scheme_request_finish_error(request, error);
         g_error_free(error);
         return;
+    }
+
+    char *group = NULL;
+    char *page = NULL;
+    if (!purc_hvml_uri_split_alloc(uri, NULL, NULL, NULL, &group, &page)) {
+        GError *error = g_error_new(XGUI_PRO_ERROR,
+                XGUI_PRO_ERROR_INVALID_HVML_URI,
+                "Invalid HVML URI (%s): bad group or page name", uri);
+        webkit_uri_scheme_request_finish_error(request, error);
+        g_error_free(error);
     }
 
     char *initial_request_id = NULL;
@@ -75,37 +85,51 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             !purc_is_valid_unique_id(initial_request_id)) {
         GError *error = g_error_new(XGUI_PRO_ERROR,
                 XGUI_PRO_ERROR_INVALID_HVML_URI,
-                "Invalid initial request identifier: %s", initial_request_id);
+                "Invalid HVML URI (%s): bad initial request identifier", uri);
         webkit_uri_scheme_request_finish_error(request, error);
         g_error_free(error);
         return;
     }
 
-    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
-    if (webext_dir == NULL) {
-        webext_dir = WEBKIT_WEBEXT_DIR;
+    gchar *contents;
+    gsize streamLength;
+
+    /* check if it is an asset was built in the renderer */
+    if (strcmp(host, PCRDR_LOCALHOST) == 0 &&
+            strcmp(app, PCRDR_APP_RENDERER) == 0 &&
+            strcmp(runner, PCRDR_RUNNER_BUILTIN) == 0 &&
+            strcmp(group, PCRDR_GROUP_NULL) == 0) {
+
+        contents = load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
+                page, &streamLength);
+        if (contents == NULL) {
+            GError *error = g_error_new(XGUI_PRO_ERROR,
+                    XGUI_PRO_ERROR_INVALID_HVML_URI,
+                    "Can not load contents from asset file (%s)", page);
+            webkit_uri_scheme_request_finish_error(request, error);
+            g_error_free(error);
+            return;
+        }
+    }
+    else {
+        contents = g_strdup_printf(
+                "<!DOCTYPE html>"
+                "<html>"
+                "<body>"
+                "<h1>xGUI Pro - an advanced HVML renderer</h1>"
+                "<p>Status: <strong hvml-handle=\"731128\">Checking...</strong>.</p>"
+                "<p>This content will be replaced by the HVML runner <span hvml-handle=\"790715\"></span>.</p>"
+                "<p><small>WebKit2GTK API Version %s, WebKit Version %d.%d.%d, Build %s</small></p>"
+                "</body>"
+                "</html>",
+                WEBKITGTK_API_VERSION_STRING,
+                WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, WEBKIT_MICRO_VERSION,
+                BUILD_REVISION);
+        streamLength = strlen(contents);
     }
 
-    gchar *contents;
-    contents = g_strdup_printf(
-            "<!DOCTYPE html>"
-            "<html>"
-            "<body>"
-            "<h1>xGUI Pro - an advanced HVML renderer</h1>"
-            "<p>Status: <strong hvml-handle=\"731128\">Checking...</strong>.</p>"
-            "<p>This content will be replaced by the HVML runner <span hvml-handle=\"790715\"></span>.</p>"
-            "<p><small>WebKit2GTK API Version %s, WebKit Version %d.%d.%d, Build %s</small></p>"
-            "</body>"
-            "</html>",
-            WEBKITGTK_API_VERSION_STRING,
-            WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, WEBKIT_MICRO_VERSION,
-            BUILD_REVISION);
-
     GInputStream *stream;
-    gsize streamLength;
-    streamLength = strlen(contents);
     stream = g_memory_input_stream_new_from_data(contents, streamLength, g_free);
-
     webkit_uri_scheme_request_finish(request, stream, streamLength, "text/html");
     g_object_unref(stream);
 }
