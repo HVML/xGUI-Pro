@@ -103,13 +103,15 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         gboolean result_uncertain;
         content_type = g_content_type_guess(page,
                 (const guchar *)contents, content_length, &result_uncertain);
+
+        LOG_DEBUG("content type of page (%s): %s (%s)\n",
+                page, content_type,
+                result_uncertain ? "uncertain" : "certain");
+
         if (result_uncertain) {
             if (content_type)
                 free(content_type);
             content_type = NULL;
-        }
-        else {
-            LOG_DEBUG("content type of page (%s): %s\n", page, content_type);
         }
     }
     else {
