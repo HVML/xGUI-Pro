@@ -77,6 +77,7 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
                 "Invalid HVML URI (%s): bad group or page name", uri);
         webkit_uri_scheme_request_finish_error(request, error);
         g_error_free(error);
+        return;
     }
 
     char *initial_request_id = NULL;
@@ -91,8 +92,8 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         return;
     }
 
-    gchar *contents;
-    gsize streamLength;
+    gchar *contents, *content_type = NULL;
+    gsize content_length;
 
     /* check if it is an asset was built in the renderer */
     if (strcmp(host, PCRDR_LOCALHOST) == 0 &&
@@ -101,7 +102,7 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             strcmp(group, PCRDR_GROUP_NULL) == 0) {
 
         contents = load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
-                page, &streamLength);
+                page, &content_length);
         if (contents == NULL) {
             GError *error = g_error_new(XGUI_PRO_ERROR,
                     XGUI_PRO_ERROR_INVALID_HVML_URI,
@@ -109,6 +110,14 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             webkit_uri_scheme_request_finish_error(request, error);
             g_error_free(error);
             return;
+        }
+
+        gboolean result_uncertain;
+        content_type = g_content_type_guess(page,
+                (const guchar *)contents, content_length, &result_uncertain);
+        if (result_uncertain) {
+            g_free(content_type);
+            content_type = NULL;
         }
     }
     else {
@@ -125,12 +134,15 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
                 WEBKITGTK_API_VERSION_STRING,
                 WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, WEBKIT_MICRO_VERSION,
                 BUILD_REVISION);
-        streamLength = strlen(contents);
+        content_length = strlen(contents);
+        content_type = g_strdup("text/html");
     }
 
     GInputStream *stream;
-    stream = g_memory_input_stream_new_from_data(contents, streamLength, g_free);
-    webkit_uri_scheme_request_finish(request, stream, streamLength, "text/html");
+    stream = g_memory_input_stream_new_from_data(contents, content_length, g_free);
+    webkit_uri_scheme_request_finish(request, stream, content_length,
+            content_type ? content_type : "application/octet-stream");
+    if (content_type) g_free(content_type);
     g_object_unref(stream);
 }
 
