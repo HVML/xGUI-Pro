@@ -56,46 +56,34 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
     char app[PURC_LEN_APP_NAME + 1];
     char runner[PURC_LEN_RUNNER_NAME + 1];
 
+    GError *error = NULL;
+    char *group = NULL;
+    char *page = NULL;
+    char *initial_request_id = NULL;
+    gchar *contents, *content_type = NULL;
+    gsize content_length;
+
     if (!purc_hvml_uri_split(uri,
             host, app, runner, NULL, NULL) ||
             !purc_is_valid_host_name(host) ||
             !purc_is_valid_app_name(app) ||
             !purc_is_valid_runner_name(runner)) {
-        GError *error = g_error_new(XGUI_PRO_ERROR,
+         error = g_error_new(XGUI_PRO_ERROR,
                 XGUI_PRO_ERROR_INVALID_HVML_URI,
                 "Invalid HVML URI (%s): bad host, app, or runner name", uri);
         webkit_uri_scheme_request_finish_error(request, error);
-        g_error_free(error);
-        return;
+        goto failed;
     }
 
-    char *group = NULL;
-    char *page = NULL;
     if (!purc_hvml_uri_split_alloc(uri, NULL, NULL, NULL, &group, &page)) {
-        GError *error = g_error_new(XGUI_PRO_ERROR,
+        error = g_error_new(XGUI_PRO_ERROR,
                 XGUI_PRO_ERROR_INVALID_HVML_URI,
                 "Invalid HVML URI (%s): bad group or page name", uri);
         webkit_uri_scheme_request_finish_error(request, error);
-        g_error_free(error);
-        return;
+        goto failed;
     }
 
-    char *initial_request_id = NULL;
-    if (!purc_hvml_uri_get_query_value_alloc(uri,
-                "irId", &initial_request_id) ||
-            !purc_is_valid_unique_id(initial_request_id)) {
-        GError *error = g_error_new(XGUI_PRO_ERROR,
-                XGUI_PRO_ERROR_INVALID_HVML_URI,
-                "Invalid HVML URI (%s): bad initial request identifier", uri);
-        webkit_uri_scheme_request_finish_error(request, error);
-        g_error_free(error);
-        return;
-    }
-
-    gchar *contents, *content_type = NULL;
-    gsize content_length;
-
-    /* check if it is an asset was built in the renderer */
+    /* check if it is an asset which was built in the renderer */
     if (strcmp(host, PCRDR_LOCALHOST) == 0 &&
             strcmp(app, PCRDR_APP_RENDERER) == 0 &&
             strcmp(runner, PCRDR_RUNNER_BUILTIN) == 0 &&
@@ -103,24 +91,38 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
 
         contents = load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
                 page, &content_length);
+
         if (contents == NULL) {
-            GError *error = g_error_new(XGUI_PRO_ERROR,
+            error = g_error_new(XGUI_PRO_ERROR,
                     XGUI_PRO_ERROR_INVALID_HVML_URI,
                     "Can not load contents from asset file (%s)", page);
             webkit_uri_scheme_request_finish_error(request, error);
-            g_error_free(error);
-            return;
+            goto failed;
         }
 
         gboolean result_uncertain;
         content_type = g_content_type_guess(page,
                 (const guchar *)contents, content_length, &result_uncertain);
         if (result_uncertain) {
-            g_free(content_type);
+            if (content_type)
+                free(content_type);
             content_type = NULL;
+        }
+        else {
+            LOG_DEBUG("content type of page (%s): %s\n", page, content_type);
         }
     }
     else {
+        if (!purc_hvml_uri_get_query_value_alloc(uri,
+                    "irId", &initial_request_id) ||
+                !purc_is_valid_unique_id(initial_request_id)) {
+            error = g_error_new(XGUI_PRO_ERROR,
+                    XGUI_PRO_ERROR_INVALID_HVML_URI,
+                    "Invalid HVML URI (%s): bad initial request identifier", uri);
+            webkit_uri_scheme_request_finish_error(request, error);
+            goto failed;
+        }
+
         contents = g_strdup_printf(
                 "<!DOCTYPE html>"
                 "<html>"
@@ -142,7 +144,18 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
     stream = g_memory_input_stream_new_from_data(contents, content_length, g_free);
     webkit_uri_scheme_request_finish(request, stream, content_length,
             content_type ? content_type : "application/octet-stream");
-    if (content_type) g_free(content_type);
     g_object_unref(stream);
+
+failed:
+    if (error)
+        g_error_free(error);
+    if (group)
+        free(group);
+    if (page)
+        free(page);
+    if (initial_request_id)
+        free(initial_request_id);
+    if (content_type)
+        g_free(content_type);
 }
 
