@@ -405,8 +405,13 @@ function eraseElement(elem, property)
         elem.textContent = "";
     }
     else if (property.startsWith("attr.")) {
-        const attr = property.substring(5);
-        elem.removeAttribute(attr);
+        try {
+            const attr = property.substring(5);
+            elem.removeAttribute(attr);
+        } catch (error) {
+            console.error(error);
+            return false;
+        }
     }
     else
         elem.remove();

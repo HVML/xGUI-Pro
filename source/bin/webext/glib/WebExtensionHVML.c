@@ -270,8 +270,14 @@ console_message_sent_callback(WebKitWebPage *web_page,
 static void
 document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
 {
-    const char *uri = webkit_web_page_get_uri(web_page);
+    if (g_object_get_data(G_OBJECT(web_page), "hvml-js-injected")) {
+        LOG_INFO("hvml.js injected\n");
+        return;
+    }
+
+    const gchar *uri = webkit_web_page_get_uri(web_page);
     LOG_DEBUG("uri: %s\n", uri);
+
     char request_id[128];
     if (!hvml_uri_get_query_value(uri, "irId", request_id)) {
         LOG_DEBUG("No initial request identifier passed\n");
@@ -308,6 +314,8 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
         webkit_web_page_send_message_to_view(web_page, message,
                 NULL, NULL, NULL);
         free(json);
+
+        g_object_set_data(G_OBJECT(web_page), "hvml-js-injected", web_page);
     }
     else {
         LOG_ERROR("failed to load hvml.js\n");

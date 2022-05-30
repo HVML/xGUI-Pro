@@ -112,5 +112,5 @@ my_log_jsc(const char *msg, ...)
     my_log_info("%s: " x, __func__, ##__VA_ARGS__)
 
 #define LOG_JSC(x, ...)    \
-    my_log_jsc("%s " x, __func__, ##__VA_ARGS__)
+    my_log_jsc("%s: " x, __func__, ##__VA_ARGS__)
 

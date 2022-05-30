@@ -410,6 +410,7 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
         pcrdr_msg event;
         event.type = PCRDR_MSG_TYPE_EVENT;
         event.event = purc_variant_make_string_static("close", false);
+        event.elementType = PCRDR_MSG_ELEMENT_TYPE_VOID;
         event.element = PURC_VARIANT_INVALID;
         event.property = PURC_VARIANT_INVALID;
         event.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -727,8 +728,13 @@ int gtk_update_dom(purcmc_session *sess, purcmc_dom *dom,
         return retv;
     }
 
-    if (!purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME)) {
-        return PCRDR_SC_BAD_REQUEST;
+    if (property) {
+        if (strncmp(property, "attr:", 5) == 0) {
+            if (!purc_is_valid_token(property + 5, PURC_LEN_PROPERTY_NAME)) {
+                LOG_WARN("Bad property: %s.\n", property);
+                return PCRDR_SC_BAD_REQUEST;
+            }
+        }
     }
 
     char *element_escaped = NULL;
