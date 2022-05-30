@@ -346,21 +346,6 @@ int check_dangling_endpoints(purcmc_server *srv)
     return n;
 }
 
-int send_packet_to_endpoint(purcmc_server* srv,
-        purcmc_endpoint* endpoint, const char* body, int len_body)
-{
-    if (endpoint->type == ET_UNIX_SOCKET) {
-        return us_send_packet(srv->us_srv, (USClient *)endpoint->entity.client,
-                US_OPCODE_TEXT, body, len_body);
-    }
-    else if (endpoint->type == ET_WEB_SOCKET) {
-        return ws_send_packet(srv->ws_srv, (WSClient *)endpoint->entity.client,
-                WS_OPCODE_TEXT, body, len_body);
-    }
-
-    return -1;
-}
-
 int send_initial_response(purcmc_server* srv, purcmc_endpoint* endpoint)
 {
     int retv = PCRDR_SC_OK;
@@ -1769,7 +1754,7 @@ static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
             element_type = "xpath";
             break;
         default:
-            element_type = NULL;
+            element_type = "void";
             break;
     }
 
@@ -1848,8 +1833,8 @@ static struct request_handler {
     { PCRDR_OPERATION_CREATEPLAINWINDOW, on_create_plain_window },
     { PCRDR_OPERATION_CREATEPAGE, on_create_page },
     { PCRDR_OPERATION_CREATEWORKSPACE, on_create_workspace },
-    { PCRDR_OPERATION_DESTROYPLAINWINDOW, on_destroy_plain_window },
     { PCRDR_OPERATION_DESTROYPAGE, on_destroy_page },
+    { PCRDR_OPERATION_DESTROYPLAINWINDOW, on_destroy_plain_window },
     { PCRDR_OPERATION_DESTROYWORKSPACE, on_destroy_workspace },
     { PCRDR_OPERATION_DISPLACE, on_displace },
     { PCRDR_OPERATION_ENDSESSION, on_end_session },

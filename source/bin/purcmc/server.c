@@ -234,6 +234,29 @@ on_error(void* sock_srv, SockClient* client, int err_code)
     }
 }
 
+int send_packet_to_endpoint(purcmc_server* srv,
+        purcmc_endpoint* endpoint, const char* body, int len_body)
+{
+    if (the_srvcfg->accesslog) {
+        char *tmp = strndup(body, len_body);
+        purc_log_info("Sending a packet to @%s/%s/%s:\n%s\n",
+                endpoint->host_name, endpoint->app_name,
+                endpoint->runner_name, tmp);
+        free(tmp);
+    }
+
+    if (endpoint->type == ET_UNIX_SOCKET) {
+        return us_send_packet(srv->us_srv, (USClient *)endpoint->entity.client,
+                US_OPCODE_TEXT, body, len_body);
+    }
+    else if (endpoint->type == ET_WEB_SOCKET) {
+        return ws_send_packet(srv->ws_srv, (WSClient *)endpoint->entity.client,
+                WS_OPCODE_TEXT, body, len_body);
+    }
+
+    return -1;
+}
+
 static inline void
 update_endpoint_living_time(purcmc_server *srv, purcmc_endpoint* endpoint)
 {
