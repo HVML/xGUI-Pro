@@ -32,7 +32,8 @@ if (checkHVML()) {
               'insertBefore', 'displace'];
 
         msg = JSON.parse(json);
-        console.log("HVML.onrequest called: " + msg.operation);
+        console.log("HVML.onrequest operation: " + msg.operation);
+        console.log("HVML.onrequest elementType: " + msg.elementType);
 
         if (msg.operation === 'load') {
             document.open();
@@ -65,8 +66,13 @@ if (checkHVML()) {
             return { requestId: msg.requestId, state: "Ok" };
         }
         else if (msg.operation === 'update') {
-            if (msg.elementType === 'handle') {
-                let elem = document.getElementByHVMLHandle(msg.element);
+            if (msg.elementType === 'handle' || msg.elementType === 'id') {
+                let elem;
+                if (msg.elementType === 'id')
+                    elem = document.getElementById(msg.element);
+                else
+                    elem = document.getElementByHVMLHandle(msg.element);
+
                 if (elem) {
                     if (!updateProperty(elem, msg.property, msg.data))
                         return { requestId: msg.requestId, state: "BadRequest" };
@@ -97,8 +103,13 @@ if (checkHVML()) {
             }
         }
         else if (msg.operation === 'clear') {
-            if (msg.elementType === 'handle') {
-                let elem = document.getElementByHVMLHandle(msg.element);
+            if (msg.elementType === 'handle' || msg.elementType === 'id') {
+                let elem;
+                if (msg.elementType === 'id')
+                    elem = document.getElementById(msg.element);
+                else
+                    elem = document.getElementByHVMLHandle(msg.element);
+
                 if (elem) {
                     if (!clearElement(elem, msg.property))
                         return { requestId: msg.requestId, state: "BadRequest" };
@@ -129,8 +140,13 @@ if (checkHVML()) {
             }
         }
         else if (msg.operation === 'erase') {
-            if (msg.elementType === 'handle') {
-                let elem = document.getElementByHVMLHandle(msg.element);
+            if (msg.elementType === 'handle' || msg.elementType === 'id') {
+                let elem;
+                if (msg.elementType === 'id')
+                    elem = document.getElementById(msg.element);
+                else
+                    elem = document.getElementByHVMLHandle(msg.element);
+
                 if (elem) {
                     if (!eraseElement(elem, msg.property))
                         return { requestId: msg.requestId, state: "BadRequest" };
@@ -161,8 +177,13 @@ if (checkHVML()) {
             }
         }
         else if (dom_update_ops.indexOf(msg.operation) !== -1) {
-            if (msg.elementType === 'handle') {
-                let elem = document.getElementByHVMLHandle(msg.element);
+            if (msg.elementType === 'handle' || msg.elementType === 'id') {
+                let elem;
+                if (msg.elementType === 'id')
+                    elem = document.getElementById(msg.element);
+                else
+                    elem = document.getElementByHVMLHandle(msg.element);
+
                 if (elem) {
                     if (!updateDocument(elem, msg.operation, msg.data))
                         return { requestId: msg.requestId, state: "BadRequest" };
@@ -177,8 +198,13 @@ if (checkHVML()) {
         else if (msg.operation === 'callMethod') {
             let data = null;
             let state = "Ok";
-            if (msg.elementType === 'handle') {
-                const elem = document.getElementByHVMLHandle(msg.element);
+            if (msg.elementType === 'handle' || msg.elementType === 'id') {
+                let elem;
+                if (msg.elementType === 'id')
+                    elem = document.getElementById(msg.element);
+                else
+                    elem = document.getElementByHVMLHandle(msg.element);
+
                 if (elem) {
                     if (typeof(msg.data.method) != 'string')
                         state = "BadRequest";
@@ -203,8 +229,13 @@ if (checkHVML()) {
         else if (msg.operation === 'getProperty') {
             let data = null;
             let state = "Ok";
-            if (msg.elementType === 'handle') {
-                const elem = document.getElementByHVMLHandle(msg.element);
+            if (msg.elementType === 'handle' || msg.elementType === 'id') {
+                let elem;
+                if (msg.elementType === 'id')
+                    elem = document.getElementById(msg.element);
+                else
+                    elem = document.getElementByHVMLHandle(msg.element);
+
                 if (elem) {
                     data = getProperty(elem, msg.property);
                 }
@@ -223,8 +254,13 @@ if (checkHVML()) {
         else if (msg.operation === 'setProperty') {
             let data = null;
             let state = "Ok";
-            if (msg.elementType === 'handle') {
-                const elem = document.getElementByHVMLHandle(msg.element);
+            if (msg.elementType === 'handle' || msg.elementType === 'id') {
+                let elem;
+                if (msg.elementType === 'id')
+                    elem = document.getElementById(msg.element);
+                else
+                    elem = document.getElementByHVMLHandle(msg.element);
+
                 if (elem) {
                     if (typeof(msg.property) != 'string')
                         state = "BadRequest";

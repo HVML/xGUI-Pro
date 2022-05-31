@@ -7,6 +7,7 @@ set(XGUIPRO_WEBEXT_ASSETS_INSTALL_DIR "${XGUIPRO_WEB_EXTENSIONS_INSTALL_DIR}/ass
 
 set(assets_SOURCES
     "${xGUIPro_DERIVED_SOURCES_DIR}/webext/hvml.js"
+    "${XGUIPRO_BIN_DIR}/webext/assets/hvml.png"
 )
 
 set(bootstrap_DIRECTORY
