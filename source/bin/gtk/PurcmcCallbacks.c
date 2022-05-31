@@ -230,7 +230,7 @@ user_message_received_callback(WebKitWebView *web_view,
             const char **strv = g_variant_get_strv(param, &len);
             purcmc_endpoint* endpoint = get_endpoint_by_session(sess);
 
-            if (len == 3 && endpoint) {
+            if (len == 4 && endpoint) {
                 pcrdr_msg event;
 
                 event.type = PCRDR_MSG_TYPE_EVENT;
@@ -238,15 +238,22 @@ user_message_received_callback(WebKitWebView *web_view,
                 event.targetValue = PTR2U64(web_view);
                 event.event =
                     purc_variant_make_string(strv[0], false);
-                event.elementType = PCRDR_MSG_ELEMENT_TYPE_HANDLE;
-                event.element =
-                    purc_variant_make_string(strv[1], false);
+                if (strcasecmp(strv[1], "id") == 0) {
+                    event.elementType = PCRDR_MSG_ELEMENT_TYPE_ID;
+                    event.element =
+                        purc_variant_make_string(strv[2], false);
+                }
+                else {
+                    event.elementType = PCRDR_MSG_ELEMENT_TYPE_HANDLE;
+                    event.element =
+                        purc_variant_make_string(strv[2], false);
+                }
                 event.property = PURC_VARIANT_INVALID;
 
                 event.dataType = PCRDR_MSG_DATA_TYPE_EJSON;
                 event.data =
-                    purc_variant_make_from_json_string(strv[2],
-                            strlen(strv[2]));
+                    purc_variant_make_from_json_string(strv[3],
+                            strlen(strv[3]));
                 if (event.data == PURC_VARIANT_INVALID) {
                     LOG_ERROR("bad JSON: %s\n", strv[2]);
                 }

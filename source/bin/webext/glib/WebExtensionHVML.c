@@ -202,15 +202,16 @@ static void destroyed_notify(WebKitWebPage* web_page)
 }
 
 static gboolean on_hvml_post(WebKitWebPage* web_page,
-        const char *event, const char* handle, const char *details_in_json)
+        const char *event, const char *elem_type, const char* elem_value,
+        const char *details_in_json)
 {
     g_assert_true(WEBKIT_IS_WEB_PAGE(web_page));
 
-    LOG_DEBUG("got an event (%s) from %s: %s\n",
-            event, handle, details_in_json);
+    LOG_DEBUG("got an event (%s/%s) from %s: %s\n",
+            event, elem_type, elem_value, details_in_json);
 
     const char *params[] = {
-        event, handle, details_in_json,
+        event, elem_type, elem_value, details_in_json,
     };
 
     WebKitUserMessage * message = webkit_user_message_new("event",
@@ -231,7 +232,8 @@ static struct HVMLInfo *create_hvml_instance(JSCContext *context,
 
     jsc_class_add_method(hvmlClass, "post",
             G_CALLBACK(on_hvml_post), NULL, NULL,
-            G_TYPE_BOOLEAN, 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
+            G_TYPE_BOOLEAN, 4,
+            G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
 
     struct HVMLInfo *info = calloc(1, sizeof(struct HVMLInfo));
 

@@ -289,7 +289,7 @@ function registerEventsListener(elems)
     console.log("registerEventsListener called");
 
     elems.forEach (function (elem) {
-        if (elem.hvmlHandle !== 0) {
+        if (elem.hvmlHandle !== 0 || elem.id != "") {
             console.log("elem.hvmlEventList: " + elem.hvmlEventList.length);
             for (let i = 0; i < elem.hvmlEventList.length; i++) {
                 let eventTokens = elem.hvmlEventList.item(i).split(':');
@@ -315,8 +315,17 @@ function registerEventsListener(elems)
                         evt.preventDefault();
                     if (optList.includes('stop'))
                         evt.stopPropagation();
-                    HVML.post(evt.type, evt.currentTarget.hvmlHandleText,
-                            JSON.stringify(data));
+
+                    if (evt.currentTarget.hvmlHandle == 0) {
+                        HVML.post(evt.type, "id",
+                                evt.currentTarget.id,
+                                JSON.stringify(data));
+                    }
+                    else {
+                        HVML.post(evt.type, "handle",
+                                evt.currentTarget.hvmlHandleText,
+                                JSON.stringify(data));
+                    }
                 });
             }
         }
