@@ -61,14 +61,21 @@ $ sudo su
 # exit
 
 $ ulimit -c unlimited
-$ WEBKIT_WEBEXT_DIR=/srv/devel/hvml/xgui-pro/build/lib/webext bin/xguipro hvml://localhost/cn.fmsoft.hvml.sample/calculator/main
+$ WEBKIT_WEBEXT_DIR=/path/to/xgui-pro/build/lib/webext bin/xguipro hvml://localhost/cn.fmsoft.hvml.sample/calculator/main
 ```
 
 Run `purcsmg` in another terminal:
 
 ```
 $ cd /path/to/purc-midnight-commander/build/
-$ ./source/bin/purcsmg --app=cn.fmsoft.hvml.purcsmg --runner=test --testmethod=1 --file=simplest.html
+$ source/bin/purcsmg --app=cn.fmsoft.hvml.purcsmg --runner=test --testmethod=1 --file=simplest.html
+```
+
+Or run `purcsex` in another terminal:
+
+```
+$ cd /path/to/purc-midnight-commander/build/
+$ source/bin/purcsex/purcsex --name=shownews
 ```
 
 If encounter core dumps, use `gdb`:
