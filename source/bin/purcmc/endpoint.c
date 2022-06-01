@@ -116,10 +116,12 @@ int purcmc_endpoint_post_event(purcmc_server *srv,
 
         retv = do_send_message(srv, endpoint, msg);
 
-        if (msg->event)
-            purc_variant_unref(msg->event);
-        if (msg->element)
-            purc_variant_unref(msg->element);
+        if (msg->eventName)
+            purc_variant_unref(msg->eventName);
+        if (msg->eventSource)
+            purc_variant_unref(msg->eventSource);
+        if (msg->elementValue)
+            purc_variant_unref(msg->elementValue);
         if (msg->property)
             purc_variant_unref(msg->property);
         if (msg->dataType == PCRDR_MSG_DATA_TYPE_JSON) {
@@ -579,7 +581,7 @@ static int on_update_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
-        const char *element = purc_variant_get_string_const(msg->element);
+        const char *element = purc_variant_get_string_const(msg->elementValue);
         if (element == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
@@ -640,7 +642,7 @@ static int on_destroy_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
-        const char *element = purc_variant_get_string_const(msg->element);
+        const char *element = purc_variant_get_string_const(msg->elementValue);
         if (element == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
@@ -810,7 +812,7 @@ static int on_remove_page_group(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_ID) {
-        gid = purc_variant_get_string_const(msg->element);
+        gid = purc_variant_get_string_const(msg->elementValue);
         if (gid == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
@@ -870,7 +872,7 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_ID) {
-        gid = purc_variant_get_string_const(msg->element);
+        gid = purc_variant_get_string_const(msg->elementValue);
         if (gid == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
@@ -929,7 +931,7 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
-        const char *element = purc_variant_get_string_const(msg->element);
+        const char *element = purc_variant_get_string_const(msg->elementValue);
         if (element == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
@@ -991,7 +993,7 @@ static int on_destroy_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint
     }
 
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
-        const char *element = purc_variant_get_string_const(msg->element);
+        const char *element = purc_variant_get_string_const(msg->elementValue);
         if (element == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
@@ -1055,7 +1057,7 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     const char* gid = NULL;
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_ID) {
-        gid = purc_variant_get_string_const(msg->element);
+        gid = purc_variant_get_string_const(msg->elementValue);
     }
 
     if (gid == NULL) {
@@ -1130,7 +1132,7 @@ static int on_update_page(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
-        const char *element = purc_variant_get_string_const(msg->element);
+        const char *element = purc_variant_get_string_const(msg->elementValue);
         if (element == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
@@ -1197,7 +1199,7 @@ static int on_destroy_page(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
-        const char *element = purc_variant_get_string_const(msg->element);
+        const char *element = purc_variant_get_string_const(msg->elementValue);
         if (element == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
@@ -1436,7 +1438,7 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
             break;
     }
 
-    const char *element_value = purc_variant_get_string_const(msg->element);
+    const char *element_value = purc_variant_get_string_const(msg->elementValue);
     if (element_type == NULL || element_value == NULL) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto done;
@@ -1578,7 +1580,7 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     const char *element_value;
-    element_value = purc_variant_get_string_const(msg->element);
+    element_value = purc_variant_get_string_const(msg->elementValue);
 
     if (msg->target == PCRDR_MSG_TARGET_DOM) {
         if (srv->cbs.call_method_in_dom == NULL) {
@@ -1672,7 +1674,7 @@ static int on_get_property(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     const char *element_value;
-    element_value = purc_variant_get_string_const(msg->element);
+    element_value = purc_variant_get_string_const(msg->elementValue);
 
     const char *property;
     property = purc_variant_get_string_const(msg->property);
@@ -1771,7 +1773,7 @@ static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     const char *element_value;
-    element_value = purc_variant_get_string_const(msg->element);
+    element_value = purc_variant_get_string_const(msg->elementValue);
 
     const char *property;
     property = purc_variant_get_string_const(msg->property);
@@ -1943,7 +1945,7 @@ int on_got_message(purcmc_server* srv, purcmc_endpoint* endpoint, const pcrdr_ms
     else if (msg->type == PCRDR_MSG_TYPE_EVENT) {
         // TODO
         purc_log_info("Got an event message: %s\n",
-                purc_variant_get_string_const(msg->event));
+                purc_variant_get_string_const(msg->eventName));
     }
     else {
         // TODO

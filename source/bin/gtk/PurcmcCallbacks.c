@@ -236,16 +236,19 @@ user_message_received_callback(WebKitWebView *web_view,
                 event.type = PCRDR_MSG_TYPE_EVENT;
                 event.target = PCRDR_MSG_TARGET_DOM;
                 event.targetValue = PTR2U64(web_view);
-                event.event =
+                event.eventName =
                     purc_variant_make_string(strv[0], false);
+                /* TODO: user URI for the eventSource */
+                event.eventSource = purc_variant_make_string_static(
+                        PCRDR_APP_RENDERER, false);
                 if (strcasecmp(strv[1], "id") == 0) {
                     event.elementType = PCRDR_MSG_ELEMENT_TYPE_ID;
-                    event.element =
+                    event.elementValue =
                         purc_variant_make_string(strv[2], false);
                 }
                 else {
                     event.elementType = PCRDR_MSG_ELEMENT_TYPE_HANDLE;
-                    event.element =
+                    event.elementValue =
                         purc_variant_make_string(strv[2], false);
                 }
                 event.property = PURC_VARIANT_INVALID;
@@ -416,9 +419,11 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
 
         pcrdr_msg event;
         event.type = PCRDR_MSG_TYPE_EVENT;
-        event.event = purc_variant_make_string_static("close", false);
+        event.eventName = purc_variant_make_string_static("close", false);
+        /* TODO: user URI for the eventSource */
+        event.eventSource = purc_variant_make_string_static(PCRDR_APP_RENDERER, false);
         event.elementType = PCRDR_MSG_ELEMENT_TYPE_VOID;
-        event.element = PURC_VARIANT_INVALID;
+        event.elementValue = PURC_VARIANT_INVALID;
         event.property = PURC_VARIANT_INVALID;
         event.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
