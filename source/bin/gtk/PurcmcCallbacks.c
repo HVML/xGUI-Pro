@@ -131,7 +131,7 @@ static void finish_response(purcmc_session* sess, const char *request_id,
             response.retCode = ret_code;
             response.resultValue = PTR2U64(result_value);
             if (ret_code == PCRDR_SC_OK && ret_data) {
-                response.dataType = PCRDR_MSG_DATA_TYPE_EJSON;
+                response.dataType = PCRDR_MSG_DATA_TYPE_JSON;
                 response.data = purc_variant_ref(ret_data);
             }
             else {
@@ -250,7 +250,7 @@ user_message_received_callback(WebKitWebView *web_view,
                 }
                 event.property = PURC_VARIANT_INVALID;
 
-                event.dataType = PCRDR_MSG_DATA_TYPE_EJSON;
+                event.dataType = PCRDR_MSG_DATA_TYPE_JSON;
                 event.data =
                     purc_variant_make_from_json_string(strv[3],
                             strlen(strv[3]));

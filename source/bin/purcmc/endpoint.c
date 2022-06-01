@@ -97,7 +97,7 @@ int purcmc_endpoint_send_response(purcmc_server* srv,
         }
 
         purc_variant_unref(msg->requestId);
-        if (msg->dataType == PCRDR_MSG_DATA_TYPE_EJSON) {
+        if (msg->dataType == PCRDR_MSG_DATA_TYPE_JSON) {
             purc_variant_unref(msg->data);
         }
     }
@@ -122,7 +122,7 @@ int purcmc_endpoint_post_event(purcmc_server *srv,
             purc_variant_unref(msg->element);
         if (msg->property)
             purc_variant_unref(msg->property);
-        if (msg->dataType == PCRDR_MSG_DATA_TYPE_EJSON) {
+        if (msg->dataType == PCRDR_MSG_DATA_TYPE_JSON) {
             purc_variant_unref(msg->data);
         }
     }
@@ -528,7 +528,7 @@ static int on_create_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char* title = NULL;
     purc_variant_t tmp;
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_EJSON ||
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_JSON ||
             !purc_variant_is_object(msg->data)) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
@@ -863,7 +863,7 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     purc_variant_t tmp;
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_EJSON ||
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_JSON ||
             !purc_variant_is_object(msg->data)) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
@@ -1047,7 +1047,7 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_EJSON ||
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_JSON ||
             !purc_variant_is_object(msg->data)) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
@@ -1540,7 +1540,7 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char *method;
     purc_variant_t arg = PURC_VARIANT_INVALID;
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_EJSON) {
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_JSON) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
@@ -1629,7 +1629,7 @@ failed:
     response.retCode = retv;
     response.resultValue = msg->targetValue;
     response.dataType = result ?
-        PCRDR_MSG_DATA_TYPE_EJSON : PCRDR_MSG_DATA_TYPE_VOID;
+        PCRDR_MSG_DATA_TYPE_JSON : PCRDR_MSG_DATA_TYPE_VOID;
     response.data = result;
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
@@ -1644,7 +1644,7 @@ static int on_get_property(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_EJSON) {
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_JSON) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
@@ -1728,7 +1728,7 @@ failed:
     response.retCode = retv;
     response.resultValue = msg->targetValue;
     response.dataType = result ?
-        PCRDR_MSG_DATA_TYPE_EJSON : PCRDR_MSG_DATA_TYPE_VOID;
+        PCRDR_MSG_DATA_TYPE_JSON : PCRDR_MSG_DATA_TYPE_VOID;
     response.data = result;
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
@@ -1743,7 +1743,7 @@ static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_EJSON) {
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_JSON) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
@@ -1828,7 +1828,7 @@ failed:
     response.retCode = retv;
     response.resultValue = msg->targetValue;
     response.dataType = result ?
-        PCRDR_MSG_DATA_TYPE_EJSON : PCRDR_MSG_DATA_TYPE_VOID;
+        PCRDR_MSG_DATA_TYPE_JSON : PCRDR_MSG_DATA_TYPE_VOID;
     response.data = result;
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
