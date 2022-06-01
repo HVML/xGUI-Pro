@@ -265,7 +265,7 @@ if (checkHVML()) {
                     if (typeof(msg.property) != 'string')
                         state = "BadRequest";
                     else
-                        data = setProperty(elem, msg.property, msg.data);
+                        data = setProperty(elem, msg.property, msg.value);
                 }
                 else {
                     state = "NotFound";
@@ -478,6 +478,8 @@ function getProperty(obj, property)
 function setProperty(obj, property, value)
 {
     try {
+        console.log("about to set property `" + property + "` of an element with Id is " + obj.id + " to `" + value + "`");
+
         const func = new Function('OBJ', 'VALUE', 'OBJ.' + property + '=VALUE; return OBJ.' + property);
         return func(obj, value);
     } catch (error) {

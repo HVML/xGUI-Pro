@@ -726,6 +726,10 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
 
         .update_dom = gtk_update_dom,
 
+        .call_method_in_dom = gtk_call_method_in_dom,
+        .get_property_in_dom = gtk_get_property_in_dom,
+        .set_property_in_dom = gtk_set_property_in_dom,
+
         .pend_response = gtk_pend_response,
     };
 

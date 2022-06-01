@@ -1745,7 +1745,7 @@ static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_JSON) {
+    if (msg->dataType == PCRDR_MSG_DATA_TYPE_VOID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
