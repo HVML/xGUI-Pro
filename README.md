@@ -86,7 +86,7 @@ $ gdb bin/xguipro -c /tmp/core-pid_xxxx.dump
 
 ## Current Status
 
-- May 2022: Version 0.9.
+- May 2022: Version 0.2.0.
 
 ## Authors and Contributors
 
