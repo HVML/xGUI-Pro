@@ -61,7 +61,7 @@ $ sudo su
 # exit
 
 $ ulimit -c unlimited
-$ WEBKIT_WEBEXT_DIR=/path/to/xgui-pro/build/lib/webext bin/xguipro hvml://localhost/cn.fmsoft.hvml.sample/calculator/main
+$ WEBKIT_WEBEXT_DIR=/path/to/your/xgui-pro/build/lib/webext bin/xguipro hvml://localhost/_renderer/_builtin/-/assets/about.html
 ```
 
 Run `purcsmg` in another terminal:

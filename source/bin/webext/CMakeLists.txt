@@ -1,12 +1,14 @@
 XGUIPRO_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
 configure_file(assets/hvml.js.in ${xGUIPro_DERIVED_SOURCES_DIR}/webext/hvml.js @ONLY)
+configure_file(assets/about.html.in ${xGUIPro_DERIVED_SOURCES_DIR}/webext/about.html @ONLY)
 
 set(XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR "${XGUIPRO_WEB_EXTENSIONS_OUTPUT_DIR}/assets")
 set(XGUIPRO_WEBEXT_ASSETS_INSTALL_DIR "${XGUIPRO_WEB_EXTENSIONS_INSTALL_DIR}/assets")
 
 set(assets_SOURCES
     "${xGUIPro_DERIVED_SOURCES_DIR}/webext/hvml.js"
+    "${xGUIPro_DERIVED_SOURCES_DIR}/webext/about.html"
     "${XGUIPRO_BIN_DIR}/webext/assets/hvml.png"
 )
 
@@ -16,6 +18,7 @@ set(bootstrap_DIRECTORY
 
 set(assets_FILES
     "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}/hvml.js"
+    "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}/about.html"
 )
 
 add_custom_command(

@@ -414,7 +414,7 @@ window_object_cleared_callback(WebKitScriptWorld* world,
         if (page) free(page);
         if (request_id) free(request_id);
 
-        LOG_WARN("Invalid HVML URI: %s\n", uri);
+        LOG_DEBUG("No need to inject hvml.js for this page: %s\n", uri);
     }
 }
 

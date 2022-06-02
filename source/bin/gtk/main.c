@@ -540,32 +540,39 @@ static void aboutITPHandleRequest(WebKitURISchemeRequest *request, WebKitWebCont
     webkit_website_data_manager_get_itp_summary(manager, NULL, (GAsyncReadyCallback)gotITPSummaryCallback, itpRequest);
 }
 
-static void aboutURISchemeRequestCallback(WebKitURISchemeRequest *request, WebKitWebContext *webContext)
+#define HTML_REDIRECT_TO_ABOUT                                  \
+    "<head>"                                                    \
+    "  <meta http-equiv=\"Refresh\" content=\"0; URL="          \
+    "hvml://localhost/_renderer/_builtin/-/assets/about.html"   \
+    "\">"                                                       \
+    "</head>"
+
+static void aboutURISchemeRequestCallback(WebKitURISchemeRequest *request,
+        WebKitWebContext *webContext)
 {
-    GInputStream *stream;
-    gsize streamLength;
     const gchar *path;
-    gchar *contents;
-    GError *error;
 
     path = webkit_uri_scheme_request_get_path(request);
+    printf("%s: path: %s\n", __func__, path);
 
     if (!g_strcmp0(path, "xguipro")) {
-        contents = g_strdup_printf("<html><body><h1>xGUI Pro</h1><p>An advanced HVML renderer based on tailored WebKit</p><p>WebKit2Gtk version: %d.%d.%d</p></body></html>",
-            webkit_get_major_version(),
-            webkit_get_minor_version(),
-            webkit_get_micro_version());
-        streamLength = strlen(contents);
-        stream = g_memory_input_stream_new_from_data(contents, streamLength, g_free);
+        GInputStream *stream;
+        const gsize streamLength = sizeof(HTML_REDIRECT_TO_ABOUT) - 1;
 
-        webkit_uri_scheme_request_finish(request, stream, streamLength, "text/html");
+        stream = g_memory_input_stream_new_from_data(
+                HTML_REDIRECT_TO_ABOUT, streamLength, NULL);
+        webkit_uri_scheme_request_finish(request,
+                stream, streamLength, "text/html");
         g_object_unref(stream);
     } else if (!g_strcmp0(path, "data"))
         aboutDataHandleRequest(request, webContext);
     else if (!g_strcmp0(path, "itp"))
         aboutITPHandleRequest(request, webContext);
     else {
-        error = g_error_new(XGUI_PRO_ERROR, XGUI_PRO_ERROR_INVALID_ABOUT_PATH, "Invalid about:%s page.", path);
+        GError *error;
+
+        error = g_error_new(XGUI_PRO_ERROR, XGUI_PRO_ERROR_INVALID_ABOUT_PATH,
+                "Invalid about:%s page.", path);
         webkit_uri_scheme_request_finish_error(request, error);
         g_error_free(error);
     }
