@@ -1600,7 +1600,7 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
                 method, arg, &retv);
 
     }
-    else if (msg->target != PCRDR_MSG_TARGET_THREAD) {
+    else if (msg->target < PCRDR_MSG_TARGET_DOM) {
         if (srv->cbs.call_method_in_session == NULL) {
             retv = PCRDR_SC_NOT_IMPLEMENTED;
             goto failed;
@@ -1700,7 +1700,7 @@ static int on_get_property(purcmc_server* srv, purcmc_endpoint* endpoint,
                 dom, element_type, element_value,
                 property, &retv);
     }
-    else if (msg->target != PCRDR_MSG_TARGET_THREAD) {
+    else if (msg->target < PCRDR_MSG_TARGET_DOM) {
         if (srv->cbs.get_property_in_session == NULL) {
             retv = PCRDR_SC_NOT_IMPLEMENTED;
             goto failed;
@@ -1800,7 +1800,7 @@ static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
                 property, msg->data, &retv);
 
     }
-    else if (msg->target != PCRDR_MSG_TARGET_THREAD) {
+    else if (msg->target < PCRDR_MSG_TARGET_DOM) {
         if (srv->cbs.set_property_in_session == NULL) {
             retv = PCRDR_SC_NOT_IMPLEMENTED;
             goto failed;
