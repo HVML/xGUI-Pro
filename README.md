@@ -25,7 +25,7 @@ During the development of [HybridOS], [Vincent Wei] proposed a new-style,
 general-purpose, and easy-to-learn programming language called `HVML`.
 
 HVML provides a totally different framework for GUI applications other than
-C/C++ Java, C#, or Swift. In a complete HVML-based application framework,
+C/C++, Java, C#, or Swift. In a complete HVML-based application framework,
 a standalone GUI renderer is usually included.
 
 xGUI Pro is an open source implementation of the standalone GUI renderer
@@ -33,10 +33,10 @@ for HVML programs. It licensed under GPLv3, and it is free for commercial
 use if you follow the terms of GPLv3.
 
 xGUI Pro is based on the mature browser engine - [WebKit]. By using xGUI Pro,
-the developers can use HTML/SVG and CSS to describe the GUI contents in their
-HVML programs. We reserve the JavaScript engine of WebKit, so it is possible
-to use some popular front-end framwork such as Bootstrap to help xGUI Pro to
-render contents in your user interfaces.
+the developers can use HTML/SVG/MathML and CSS to describe the GUI contents
+in their HVML programs. We reserve the JavaScript engine of WebKit, so it is
+possible to use some popular front-end framwork such as Bootstrap to help
+xGUI Pro to render contents in your user interfaces.
 
 For documents and other open source tools of HVML, please refer to the
 following repositories:
@@ -52,6 +52,10 @@ following repositories:
 
 ## Building xGUI Pro
 
+```
+rm -rf build && cmake -DCMAKE_BUILD_TYPE=Debug -DPORT=Linux -B build && cmake --build build
+```
+
 
 ## Debugging xGUI Pro
 
@@ -59,23 +63,56 @@ following repositories:
 $ sudo su
 # echo "/tmp/core-pid_%p.dump" > /proc/sys/kernel/core_pattern
 # exit
-
 $ ulimit -c unlimited
+```
+
+For security reasons, the core dump is disabled by default on some
+Linux systems. The above command lines specify the core pattern, which will
+be used when dumping the core of an aborted process by the kernel.
+
+```
 $ WEBKIT_WEBEXT_DIR=/path/to/your/xgui-pro/build/lib/webext bin/xguipro hvml://localhost/_renderer/_builtin/-/assets/about.html
 ```
 
-Run `purcsmg` in another terminal:
+In the above command lines, the enviornment variable `WEBKIT_WEBEXT_DIR` can be
+used to specify the directory in which the HVML extension module locates.
+
+By default, if you do not define the enviornment variable, xGUI Pro will try to
+find the extension module in the sub directory called `xguipro/` in the library
+installation directory. Generally, it is `/usr/local/lib/xguipro` on Linux.
+
+You can also pass the following options to your command line when running xGUI Pro:
+
+```
+  --pcmc-nowebsocket       Without support for WebSocket
+  --pcmc-accesslog         Logging the verbose socket access information
+  --pcmc-unixsocket=PATH   The path of the Unix-domain socket to listen on
+  --pcmc-addr              The IPv4 address to bind to for WebSocket
+  --pcmc-port              The port to bind to for WebSocket
+  --pcmc-origin=FQDN       The origin to ensure clients send the specified origin header upon the WebSocket handshake
+  --pcmc-sslcert=FILE      The path to SSL certificate
+  --pcmc-sslkey=FILE       The path to SSL private key
+  --pcmc-maxfrmsize=BYTES  The maximum size of a socket frame
+  --pcmc-backlog=NUMBER    The maximum length to which the queue of pending connections.
+```
+
+After this, run `purc` to execute an HVML program:
+
+```
+```
+
+Or run `purcsmg` in PurC Midnigth Commander in another terminal:
 
 ```
 $ cd /path/to/purc-midnight-commander/build/
 $ source/bin/purcsmg --app=cn.fmsoft.hvml.purcsmg --runner=test --testmethod=1 --file=simplest.html
 ```
 
-Or run `purcsex` in another terminal:
+You can also run `purcsex` in PurC Midnigth Commander in another terminal:
 
 ```
 $ cd /path/to/purc-midnight-commander/build/
-$ source/bin/purcsex/purcsex --name=shownews
+$ source/bin/purcsex/purcsex --name=calculator
 ```
 
 If encounter core dumps, use `gdb`:
