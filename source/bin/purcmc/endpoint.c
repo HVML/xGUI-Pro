@@ -118,8 +118,8 @@ int purcmc_endpoint_post_event(purcmc_server *srv,
 
         if (msg->eventName)
             purc_variant_unref(msg->eventName);
-        if (msg->eventSource)
-            purc_variant_unref(msg->eventSource);
+        if (msg->sourceURI)
+            purc_variant_unref(msg->sourceURI);
         if (msg->elementValue)
             purc_variant_unref(msg->elementValue);
         if (msg->property)
@@ -353,7 +353,7 @@ int send_initial_response(purcmc_server* srv, purcmc_endpoint* endpoint)
     int retv = PCRDR_SC_OK;
     pcrdr_msg *msg = NULL;
 
-    msg = pcrdr_make_response_message(PCRDR_REQUESTID_INITIAL,
+    msg = pcrdr_make_response_message(PCRDR_REQUESTID_INITIAL, NULL,
             PCRDR_SC_OK, 0,
             PCRDR_MSG_DATA_TYPE_TEXT, srv->features,
             strlen(srv->features));
@@ -488,6 +488,7 @@ static int on_start_session(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)info;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -507,6 +508,7 @@ static int on_end_session(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = PCRDR_SC_OK;
     response.resultValue = 0;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -561,6 +563,7 @@ static int on_create_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)workspace;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -622,6 +625,7 @@ static int on_update_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)workspace;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -673,6 +677,7 @@ static int on_destroy_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)workspace;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -727,6 +732,7 @@ static int on_reset_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)workspace;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -782,6 +788,7 @@ static int on_add_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)workspace;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -835,6 +842,7 @@ static int on_remove_page_group(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)workspace;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -907,6 +915,7 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)win;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -969,6 +978,7 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)win;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -1021,6 +1031,7 @@ static int on_destroy_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)win;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -1103,6 +1114,7 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)page;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -1170,6 +1182,7 @@ static int on_update_page(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)page;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -1227,6 +1240,7 @@ static int on_destroy_page(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)page;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -1287,6 +1301,7 @@ static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)dom;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -1346,6 +1361,7 @@ static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)dom;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -1461,6 +1477,7 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
 done:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)dom;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -1628,6 +1645,7 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = msg->targetValue;
     response.dataType = result ?
@@ -1727,6 +1745,7 @@ static int on_get_property(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = msg->targetValue;
     response.dataType = result ?
@@ -1827,6 +1846,7 @@ static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = msg->targetValue;
     response.dataType = result ?
@@ -1922,6 +1942,7 @@ int on_got_message(purcmc_server* srv, purcmc_endpoint* endpoint, const pcrdr_ms
             pcrdr_msg response;
             response.type = PCRDR_MSG_TYPE_RESPONSE;
             response.requestId = purc_variant_ref(msg->requestId);
+            response.sourceURI = PURC_VARIANT_INVALID;
             response.retCode = PCRDR_SC_BAD_REQUEST;
             response.resultValue = 0;
             response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -1935,6 +1956,7 @@ int on_got_message(purcmc_server* srv, purcmc_endpoint* endpoint, const pcrdr_ms
             pcrdr_msg response;
             response.type = PCRDR_MSG_TYPE_RESPONSE;
             response.requestId = purc_variant_ref(msg->requestId);
+            response.sourceURI = PURC_VARIANT_INVALID;
             response.retCode = PCRDR_SC_NOT_IMPLEMENTED;
             response.resultValue = 0;
             response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
