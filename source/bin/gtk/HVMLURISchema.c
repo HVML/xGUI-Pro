@@ -48,6 +48,127 @@ void initializeWebExtensionsCallback(WebKitWebContext *context,
             g_variant_new_string("HVML"));
 }
 
+static const char *cover_page = ""
+    "<!DOCTYPE html>"
+    "<html lang='zh' class='h-100'>"
+    "  <head>"
+    "    <meta charset='utf-8'>"
+    "    <meta name='viewport' content='width=device-width, initial-scale=1'>"
+    "    <meta name='description' content='The default HVML cover'>"
+    "    <meta name='author' content='Vincent Wei'>"
+    "    <title>Welcome to the HVML World</title>"
+    ""
+    "    <!-- Bootstrap core CSS -->"
+    "    <link rel='stylesheet' href='//localhost/_renderer/_builtin/-/assets/bootstrap-5.1.3-dist/css/bootstrap.min.css' />"
+    ""
+    "    <meta name='theme-color' content='#7952b3'>"
+    ""
+    "    <style>"
+    ".btn-secondary,"
+    ".btn-secondary:hover,"
+    ".btn-secondary:focus {"
+    "  color: #333;"
+    "  text-shadow: none; /* Prevent inheritance from `body` */"
+    "}"
+    ""
+    "body {"
+    "  text-shadow: 0 .05rem .1rem rgba(0, 0, 0, .5);"
+    "  box-shadow: inset 0 0 5rem rgba(0, 0, 0, .5);"
+    "}"
+    ""
+    ".cover-container {"
+    "  max-width: 42em;"
+    "}"
+    ""
+    ".nav-masthead .nav-link {"
+    "  padding: .25rem 0;"
+    "  font-weight: 700;"
+    "  color: rgba(255, 255, 255, .5);"
+    "  background-color: transparent;"
+    "  border-bottom: .25rem solid transparent;"
+    "}"
+    ""
+    ".nav-masthead .nav-link:hover,"
+    ".nav-masthead .nav-link:focus {"
+    "  border-bottom-color: rgba(255, 255, 255, .25);"
+    "}"
+    ""
+    ".nav-masthead .nav-link + .nav-link {"
+    "  margin-left: 1rem;"
+    "}"
+    ""
+    ".nav-masthead .active {"
+    "  color: #fff;"
+    "  border-bottom-color: #fff;"
+    "}"
+    "    </style>"
+    ""
+    "  </head>"
+    ""
+    "  <body class='d-flex h-100 text-center text-white bg-dark'>"
+    ""
+    "    <div class='cover-container d-flex w-100 h-100 p-3 mx-auto flex-column'>"
+    "      <header class='mb-auto'>"
+    "        <div>"
+    "          <h3 class='float-md-start mb-0'>HVML</h3>"
+    "          <nav class='nav nav-masthead justify-content-center float-md-end'>"
+    "            <a class='nav-link active' aria-current='page' href='https://hvml.fmsoft.cn/'>创新</a>"
+    "            <a class='nav-link' href='https://github.com/HVML'>开源</a>"
+    "            <a class='nav-link' href='https://hvml.fmsoft.cn/community'>协作</a>"
+    "          </nav>"
+    "        </div>"
+    "      </header>"
+    ""
+    "      <main class='px-3'>"
+    "         <img class='d-block mx-auto mb-4' src='//localhost/_renderer/_builtin/-/assets/hvml.png' width='100' height='100'>"
+    "        <h1>让天下没有难写的程序！</h1>"
+    "        <p class='lead'>HVML 是魏永明提出的全球首款可编程标记语言，昵称“呼噜猫”。HVML 和常见的编程语言，比如 Basic、Python、C/C++ 完全不同，HVML 提出了数据驱动的概念，而程序里边也没有传统的流程控制语句，所有的操作都基于数据……</p>"
+    "        <p class='lead'>"
+    "          <a href='https://hvml.fmsoft.cn' class='btn btn-lg btn-secondary fw-bold border-white bg-white'>了解五大特征</a>"
+    "        </p>"
+    "      </main>"
+    "";
+
+static const char *footer_on_ok = ""
+    "      <footer class='mt-auto text-white-50'>"
+    "        <h4>Powered by xGUI<sup>®</sup> Pro</h4>"
+    "        <p>xGUI Pro is a modern, cross-platform, and advanced HVML renderer which is based on tailored <a href='https://webkit.org'>WebKit</a><br/>"
+    "           xGUI Pro is a free software and licensed under GPLv3+"
+    "        </p>"
+    "        <p>Copyright © <a href='https://www.fmsoft.cn'>FMSoft Technologies</a> and others</p>"
+    "        <p>"
+    "           <small>Status: <strong hvml-handle='731128'>Checking...</strong>.<br/>"
+    "           The contents in this page will be replaced by the HVML runner <span hvml-handle='790715'></span>.<br/>"
+    "           WebKit2GTK API Version " WEBKITGTK_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+    "        </p>"
+    "      </footer>"
+    ""
+    "    </div>"
+    ""
+    "  </body>"
+    "</html>"
+"";
+
+static const char *footer_on_error = ""
+    "      <footer class='mt-auto text-white-50'>"
+    "        <h4>Powered by xGUI<sup>®</sup> Pro</h4>"
+    "        <p>xGUI Pro is a modern, cross-platform, and advanced HVML renderer which is based on tailored <a href='https://webkit.org'>WebKit</a><br/>"
+    "           xGUI Pro is a free software licensed under GPLv3+"
+    "        </p>"
+    "        <p>Copyright © <a href='https://www.fmsoft.cn'>FMSoft Technologies and others</a></p>"
+    "        <p>"
+    "           <small>Status: <strong hvml-handle='731128'>ERROR</strong>.<br/>"
+    "           %s <span hvml-handle='790715'></span>.<br/>"
+    "           WebKit2GTK API Version " WEBKITGTK_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+    "        </p>"
+    "      </footer>"
+    ""
+    "    </div>"
+    ""
+    "  </body>"
+    "</html>"
+"";
+
 void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext)
 {
@@ -56,31 +177,29 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
     char app[PURC_LEN_APP_NAME + 1];
     char runner[PURC_LEN_RUNNER_NAME + 1];
 
-    GError *error = NULL;
     char *group = NULL;
     char *page = NULL;
     char *initial_request_id = NULL;
-    gchar *contents, *content_type = NULL;
+    gchar *contents = NULL, *content_type = NULL;
     gsize content_length;
+
+    GError *error = NULL;
+    gchar *error_str = NULL;
 
     if (!purc_hvml_uri_split(uri,
             host, app, runner, NULL, NULL) ||
             !purc_is_valid_host_name(host) ||
             !purc_is_valid_app_name(app) ||
             !purc_is_valid_runner_name(runner)) {
-         error = g_error_new(XGUI_PRO_ERROR,
-                XGUI_PRO_ERROR_INVALID_HVML_URI,
+        error_str = g_strdup_printf(
                 "Invalid HVML URI (%s): bad host, app, or runner name", uri);
-        webkit_uri_scheme_request_finish_error(request, error);
-        goto failed;
+        goto error;
     }
 
     if (!purc_hvml_uri_split_alloc(uri, NULL, NULL, NULL, &group, &page)) {
-        error = g_error_new(XGUI_PRO_ERROR,
-                XGUI_PRO_ERROR_INVALID_HVML_URI,
+        error_str = g_strdup_printf(
                 "Invalid HVML URI (%s): bad group or page name", uri);
-        webkit_uri_scheme_request_finish_error(request, error);
-        goto failed;
+        goto error;
     }
 
     /* check if it is an asset which was built in the renderer */
@@ -118,37 +237,50 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         if (!purc_hvml_uri_get_query_value_alloc(uri,
                     "irId", &initial_request_id) ||
                 !purc_is_valid_unique_id(initial_request_id)) {
-            error = g_error_new(XGUI_PRO_ERROR,
-                    XGUI_PRO_ERROR_INVALID_HVML_URI,
+            error_str = g_strdup_printf(
                     "Invalid HVML URI (%s): bad initial request identifier", uri);
-            webkit_uri_scheme_request_finish_error(request, error);
-            goto failed;
         }
 
-        contents = g_strdup_printf(
-                "<!DOCTYPE html>"
-                "<html>"
-                "<body>"
-                "<h1>xGUI Pro - an advanced HVML renderer</h1>"
-                "<p>Status: <strong hvml-handle=\"731128\">Checking...</strong>.</p>"
-                "<p>This content will be replaced by the HVML runner <span hvml-handle=\"790715\"></span>.</p>"
-                "<p><small>WebKit2GTK API Version %s, WebKit Version %d.%d.%d, Build %s</small></p>"
-                "</body>"
-                "</html>",
-                WEBKITGTK_API_VERSION_STRING,
-                WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, WEBKIT_MICRO_VERSION,
-                BUILD_REVISION);
+        contents = (char *)cover_page;
         content_length = strlen(contents);
         content_type = g_strdup("text/html");
     }
 
+error:
+    if (contents == NULL) {
+        contents = (char *)cover_page;
+        content_length = strlen(contents);
+        content_type = g_strdup("text/html");
+    }
+
+    gsize footer_length = 0;
     GInputStream *stream;
-    stream = g_memory_input_stream_new_from_data(contents, content_length, g_free);
-    webkit_uri_scheme_request_finish(request, stream, content_length,
+    stream = g_memory_input_stream_new_from_data(contents, content_length,
+            (contents != cover_page) ? g_free : NULL);
+    if (contents == cover_page) {
+        gchar *footer = NULL;
+
+        if (error_str) {
+            footer = g_strdup_printf(footer_on_error, error_str);
+            footer_length = strlen(footer);
+            g_memory_input_stream_add_data((GMemoryInputStream *)stream,
+                    footer, footer_length, g_free);
+        }
+        else {
+            footer_length = strlen(footer_on_ok);
+            g_memory_input_stream_add_data((GMemoryInputStream *)stream,
+                    footer_on_ok, footer_length, NULL);
+        }
+    }
+
+    webkit_uri_scheme_request_finish(request, stream,
+            content_length + footer_length,
             content_type ? content_type : "application/octet-stream");
     g_object_unref(stream);
 
 failed:
+    if (error_str)
+        free(error_str);
     if (error)
         g_error_free(error);
     if (group)
