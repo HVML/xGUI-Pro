@@ -126,6 +126,7 @@ static void finish_response(purcmc_session* sess, const char *request_id,
         if (endpoint) {
             pcrdr_msg response;
             response.type = PCRDR_MSG_TYPE_RESPONSE;
+            response.sourceURI = PURC_VARIANT_INVALID;
             response.requestId =
                 purc_variant_make_string_static(request_id, false);
             response.retCode = ret_code;
