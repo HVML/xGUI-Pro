@@ -674,7 +674,6 @@ request_ready_callback(GObject* obj, GAsyncResult* result, gpointer user_data)
     message = webkit_web_view_send_message_to_page_finish(web_view, result, NULL);
 
     if (message) {
-        const char *name = webkit_user_message_get_name(message);
         GVariant *param = webkit_user_message_get_parameters(message);
 
         const char* type = g_variant_get_type_string(param);
@@ -683,7 +682,8 @@ request_ready_callback(GObject* obj, GAsyncResult* result, gpointer user_data)
             const char *str = g_variant_get_string(param, &len);
             handle_response_from_webpage(sess, str, len);
             LOG_DEBUG("The parameter of message named (%s): %s\n",
-                    name, g_variant_get_string(param, NULL));
+                    webkit_user_message_get_name(message),
+                    g_variant_get_string(param, NULL));
         }
         else {
             LOG_DEBUG("Not supported parameter type: %s\n", type);
