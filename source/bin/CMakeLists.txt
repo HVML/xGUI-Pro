@@ -31,6 +31,7 @@ XGUIPRO_EXECUTABLE(xguipro)
 
 set(xguipro_PLATFORM_INDEPENDENT_DIRS
     "purcmc"
+    "layouter"
 )
 
 APPEND_ALL_SOURCE_FILES_IN_DIRLIST(xguipro_SOURCES "${xguipro_PLATFORM_INDEPENDENT_DIRS}")
@@ -42,6 +43,7 @@ set(xguipro_LIBRARIES
     xGUIPro::xGUIPro
     WebKit::JSC
     WebKit::WebKit
+    DOMRuler::DOMRuler
     PurC::PurC
     pthread
 )
