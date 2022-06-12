@@ -45,7 +45,10 @@ struct ws_layouter {
 
     struct sorted_array *sa_widget;
 
-    ws_layouter_changed_fn cb_changed;
+    void *ws_ctxt;
+    wsltr_create_widget_fn cb_create_widget;
+    wsltr_destroy_widget_fn cb_destroy_widget;
+    wsltr_change_widget_fn cb_change_widget;
 };
 
 static pchtml_action_t
@@ -109,8 +112,10 @@ static void append_css_in_style_element(ws_layouter *layouter)
 
 /* Create a new layouter */
 ws_layouter *ws_layouter_new(ws_metrics *metrics,
-        const char *html_contents, size_t sz_html_contents,
-        ws_layouter_changed_fn cb_changed)
+        const char *html_contents, size_t sz_html_contents, void *ws_ctxt,
+        wsltr_create_widget_fn cb_create_widget,
+        wsltr_destroy_widget_fn cb_destroy_widget,
+        wsltr_change_widget_fn cb_change_widget)
 {
     struct ws_layouter *layouter = calloc(1, sizeof(*layouter));
     if (layouter == NULL)
@@ -149,6 +154,10 @@ ws_layouter *ws_layouter_new(ws_metrics *metrics,
 
     append_css_in_style_element(layouter);
 
+    layouter->ws_ctxt = ws_ctxt;
+    layouter->cb_create_widget = cb_create_widget;
+    layouter->cb_destroy_widget = cb_destroy_widget;
+    layouter->cb_change_widget = cb_change_widget;
     return layouter;
 
 failed:
@@ -233,11 +242,11 @@ find_page_element(pcdom_document_t *dom_doc,
 }
 
 #define HTML_FRAG_PLAINWINDOW  \
-    "<article id='%s-%s' class='plainwindow'></article>"
+    "<article id='%s-%s'></article>"
 
 /* Add a plain window into a group */
 bool ws_layouter_add_plain_window(ws_layouter *layouter,
-        const char *window_name, const char *group_id, void *widget)
+        const char *window_name, const char *group_id)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
@@ -255,9 +264,16 @@ bool ws_layouter_add_plain_window(ws_layouter *layouter,
         if (subtree) {
             dom_append_subtree_to_element(dom_doc, element, subtree);
 
+            /* TODO: re-layout */
+            struct ws_widget_style widget_style = { 0, 0, 0, 0 };
+
+            /* create widget */
             pcdom_element_t *article = find_page_element(dom_doc,
                     group_id, window_name);
             assert(article);
+
+            void *widget = layouter->cb_create_widget(layouter->ws_ctxt,
+                    WS_WIDGET_TYPE_PLAINWINDOW, NULL, &widget_style);
 
             pcdom_node_t *node = pcdom_interface_node(article);
             node->user = widget;
@@ -265,9 +281,6 @@ bool ws_layouter_add_plain_window(ws_layouter *layouter,
             if (sorted_array_add(layouter->sa_widget,
                         PTR2U64(widget), article)) {
                 purc_log_warn("Failed to store widget/element pair\n");
-            }
-            else {
-                /* TODO: re-layout */
             }
         }
     }
@@ -312,17 +325,17 @@ bool ws_layouter_remove_plain_window_by_widget(ws_layouter *layouter,
 }
 
 #define HTML_FRAG_PAGE  \
-    "<figure id='%s-%s'></figure>"
+    "<li id='%s-%s'></li>"
 
 bool ws_layouter_add_page(ws_layouter *layouter,
-        const char *page_name, const char *group_id, void *widget)
+        const char *page_name, const char *group_id)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
 
     pcdom_node_t *subtree = NULL;
     if (element) {
-        /* the element must be a `div` element */
+        /* the element must be a `ol` or `ul` element */
 
         gchar *html_fragment = g_strdup_printf(HTML_FRAG_PAGE,
                 group_id, page_name);
@@ -333,19 +346,22 @@ bool ws_layouter_add_page(ws_layouter *layouter,
         if (subtree) {
             dom_append_subtree_to_element(dom_doc, element, subtree);
 
-            pcdom_element_t *figure = find_page_element(dom_doc,
-                    group_id, page_name);
-            assert(figure);
+            /* TODO: re-layout */
+            struct ws_widget_style widget_style = { 0, 0, 0, 0 };
 
-            pcdom_node_t *node = pcdom_interface_node(figure);
+            void *widget = layouter->cb_create_widget(layouter->ws_ctxt,
+                    WS_WIDGET_TYPE_PLAINWINDOW, NULL, &widget_style);
+
+            pcdom_element_t *li = find_page_element(dom_doc,
+                    group_id, page_name);
+            assert(li);
+
+            pcdom_node_t *node = pcdom_interface_node(li);
             node->user = widget;
 
             if (sorted_array_add(layouter->sa_widget,
-                        PTR2U64(widget), figure)) {
+                        PTR2U64(widget), li)) {
                 purc_log_warn("Failed to store widget/element pair\n");
-            }
-            else {
-                /* TODO: re-layout */
             }
         }
     }
