@@ -259,6 +259,9 @@ bool ws_layouter_add_plain_window(ws_layouter *layouter,
                     group_id, window_name);
             assert(article);
 
+            pcdom_node_t *node = pcdom_interface_node(article);
+            node->user = widget;
+
             if (sorted_array_add(layouter->sa_widget,
                         PTR2U64(widget), article)) {
                 purc_log_warn("Failed to store widget/element pair\n");
@@ -333,6 +336,9 @@ bool ws_layouter_add_page(ws_layouter *layouter,
             pcdom_element_t *figure = find_page_element(dom_doc,
                     group_id, page_name);
             assert(figure);
+
+            pcdom_node_t *node = pcdom_interface_node(figure);
+            node->user = widget;
 
             if (sorted_array_add(layouter->sa_widget,
                         PTR2U64(widget), figure)) {
