@@ -29,6 +29,10 @@
 #define NF_UNFOLDED         0x0001
 #define NF_DIRTY            0x0002
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 bool dom_prepare_user_data(pcdom_document_t *dom_doc);
 
 bool dom_cleanup_user_data(pcdom_document_t *dom_doc);
@@ -66,7 +70,23 @@ bool dom_update_element(pcdom_document_t *dom_doc, pcdom_element_t *element,
 bool dom_remove_element_attr(pcdom_document_t *dom_doc,
         pcdom_element_t *element, const char* property);
 
-/*** inline functions */
+#ifdef __cplusplus
+}
+#endif
+
+static inline
+void set_element_user_data(pcdom_element_t *element, void *data)
+{
+    pcdom_node_t *node = pcdom_interface_node(element);
+    node->user = data;
+}
+
+static inline
+void *get_element_user_data(pcdom_element_t *element)
+{
+    pcdom_node_t *node = pcdom_interface_node(element);
+    return node->user;
+}
 
 #endif /* XGUIPRO_LAYOUTER_DOM_OPS_H */
 

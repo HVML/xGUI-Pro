@@ -25,6 +25,8 @@
 
 #include <purc/purc-variant.h>
 
+#define DEF_LAYOUT_CSS  "assets/workspace-layouter.css"
+
 /* The layouter object; `ws` means workspace */
 struct ws_layouter;
 

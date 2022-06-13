@@ -58,7 +58,11 @@ struct purcmc_plainwin {
 struct purcmc_workspace {
     /* ungrouped plain windows */
     struct kvlist       ug_wins;
+
+    /* manager of grouped plain windows and pages */
     struct ws_layouter *layouter;
+
+    purcmc_session     *sess;
 };
 
 struct purcmc_session {
@@ -361,6 +365,8 @@ purcmc_session *gtk_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
 
     kvlist_init(&sess->pending_responses, NULL);
     kvlist_init(&sess->workspace.ug_wins, NULL);
+    sess->workspace.layouter = NULL;
+    sess->workspace.sess = sess;
     return sess;
 }
 

@@ -138,7 +138,7 @@ struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
 
     layouter->def_css =
         load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
-            "assets/workspace-layouter.css", &layouter->len_def_css);
+                DEF_LAYOUT_CSS, &layouter->len_def_css);
     if (layouter->def_css) {
         domruler_append_css(layouter->ruler,
                 layouter->def_css, layouter->len_def_css);
@@ -257,7 +257,7 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
     void *widget = NULL;
     if (element) {
         pcdom_node_t *subtree;
-        /* the element must be a `section` element */
+        /* the element must be a `div` or `section` element */
 
         gchar *html_fragment = g_strdup_printf(HTML_FRAG_PLAINWINDOW,
                 group_id, window_name, class_name);
@@ -272,18 +272,17 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
             struct ws_widget_style widget_style = { 0, 0, 0, 0 };
 
             /* create widget */
-            pcdom_element_t *article = find_page_element(dom_doc,
+            pcdom_element_t *figure = find_page_element(dom_doc,
                     group_id, window_name);
-            assert(article);
+            assert(figure);
 
             widget = layouter->cb_create_widget(layouter->ws_ctxt,
                     WS_WIDGET_TYPE_PLAINWINDOW, NULL, &widget_style);
 
-            pcdom_node_t *node = pcdom_interface_node(article);
-            node->user = widget;
+            set_element_user_data(figure, widget);
 
             if (sorted_array_add(layouter->sa_widget,
-                        PTR2U64(widget), article)) {
+                        PTR2U64(widget), figure)) {
                 purc_log_warn("Failed to store widget/element pair\n");
             }
         }
