@@ -23,8 +23,7 @@
 #ifndef XGUIPRO_LAYOUTER_LAYOUTER_H
 #define XGUIPRO_LAYOUTER_LAYOUTER_H
 
-#include <stddef.h>
-#include <stdbool.h>
+#include <purc/purc-variant.h>
 
 /* The layouter object; `ws` means workspace */
 struct ws_layouter;
@@ -50,12 +49,14 @@ typedef enum {
 } ws_widget_type_t;
 
 #define WSWS_FLAG_TITLE     0x00000001
-#define WSWS_FLAG_POSITION  0x00000002
+#define WSWS_FLAG_CLASS     0x00000002
+#define WSWS_FLAG_POSITION  0x00000004
 
 struct ws_widget_style {
     unsigned int flags;
 
     const char *title;
+    const char *class_name;
     int x, y, w, h;
 };
 
@@ -92,7 +93,8 @@ bool ws_layouter_remove_page_group(struct ws_layouter *layouter,
 /* Add a plain window into a group */
 void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         const char *group_id, const char *window_name,
-        const char *title, const char *style, int *retv);
+        const char *class_name, const char *title, purc_variant_t style,
+        int *retv);
 
 /* Remove a plain window by identifier */
 bool ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
@@ -105,7 +107,8 @@ bool ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
 /* Add a page into a group */
 void *ws_layouter_add_page(struct ws_layouter *layouter,
         const char *group_id, const char *page_name,
-        const char *title, const char *style, int *retv);
+        const char *class_name, const char *title, purc_variant_t style,
+        int *retv);
 
 /* Remove a page by identifier */
 bool ws_layouter_remove_page_by_id(struct ws_layouter *layouter,
@@ -117,7 +120,7 @@ bool ws_layouter_remove_page_by_widget(struct ws_layouter *layouter,
 
 /* Update a widget */
 int ws_layouter_update_widget(struct ws_layouter *layouter,
-        void *widget, const char *property, const char *value);
+        void *widget, const char *property, purc_variant_t value);
 
 /* Retrieve a widget */
 ws_widget_type_t ws_layouter_retrieve_widget(struct ws_layouter *layouter,

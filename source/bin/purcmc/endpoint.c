@@ -861,8 +861,9 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     const char* gid = NULL;
     const char* name = NULL;
+    const char* class = NULL;
     const char* title = NULL;
-    const char* style = NULL;
+    purc_variant_t style;
 
     if (msg->target == PCRDR_MSG_TARGET_WORKSPACE) {
         workspace = (void *)(uintptr_t)msg->targetValue;
@@ -897,17 +898,19 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "class"))) {
+        class = purc_variant_get_string_const(tmp);
+    }
+
     if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {
         title = purc_variant_get_string_const(tmp);
     }
 
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "style"))) {
-        style = purc_variant_get_string_const(tmp);
-    }
+    style = purc_variant_object_get_by_ckey(msg->data, "style");
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
     win = srv->cbs.create_plainwin(endpoint->session, workspace,
-            request_id, gid, name, title, style, &retv);
+            request_id, gid, name, class, title, style, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -964,13 +967,13 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
     property = purc_variant_get_string_const(msg->property);
     if (property == NULL ||
             !purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME) ||
-            msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
+            msg->dataType == PCRDR_MSG_DATA_TYPE_VOID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
 
     retv = srv->cbs.update_plainwin(endpoint->session, workspace, win,
-            property, purc_variant_get_string_const(msg->data));
+            property, msg->data);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -1081,19 +1084,10 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     const char* name = NULL;
+    const char* class = NULL;
     const char* title = NULL;
-    const char* style = NULL;
+    purc_variant_t style;
     purc_variant_t tmp;
-#if 0
-    const char* type = NULL;
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "type"))) {
-        type = purc_variant_get_string_const(tmp);
-        if (type == NULL) {
-            retv = PCRDR_SC_BAD_REQUEST;
-            goto failed;
-        }
-    }
-#endif
 
     if ((tmp = purc_variant_object_get_by_ckey(msg->data, "name"))) {
         name = purc_variant_get_string_const(tmp);
@@ -1103,17 +1097,19 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
         }
     }
 
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "class"))) {
+        class = purc_variant_get_string_const(tmp);
+    }
+
     if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {
         title = purc_variant_get_string_const(tmp);
     }
 
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "style"))) {
-        style = purc_variant_get_string_const(tmp);
-    }
+    style = purc_variant_object_get_by_ckey(msg->data, "style");
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
     page = srv->cbs.create_page(endpoint->session, workspace,
-            request_id, gid, name, title, style, &retv);
+            request_id, gid, name, class, title, style, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -1175,13 +1171,13 @@ static int on_update_page(purcmc_server* srv, purcmc_endpoint* endpoint,
     property = purc_variant_get_string_const(msg->property);
     if (property == NULL ||
             !purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME) ||
-            msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
+            msg->dataType == PCRDR_MSG_DATA_TYPE_VOID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
 
     retv = srv->cbs.update_page(endpoint->session, workspace,
-            page, property, purc_variant_get_string_const(msg->data));
+            page, property, msg->data);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),

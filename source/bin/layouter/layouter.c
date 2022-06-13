@@ -244,11 +244,12 @@ find_page_element(pcdom_document_t *dom_doc,
 }
 
 #define HTML_FRAG_PLAINWINDOW  \
-    "<figure id='%s-%s'></figure>"
+    "<figure id='%s-%s' class='%s'></figure>"
 
 void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         const char *group_id, const char *window_name,
-        const char *title, const char *style, int *retv)
+        const char *class_name, const char *title, purc_variant_t style,
+        int *retv)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
@@ -259,7 +260,7 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         /* the element must be a `section` element */
 
         gchar *html_fragment = g_strdup_printf(HTML_FRAG_PLAINWINDOW,
-                group_id, window_name);
+                group_id, window_name, class_name);
         subtree = dom_parse_fragment(dom_doc, element,
             html_fragment, strlen(html_fragment));
         g_free(html_fragment);
@@ -335,11 +336,12 @@ bool ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
 }
 
 #define HTML_FRAG_PAGE  \
-    "<li id='%s-%s'></li>"
+    "<li id='%s-%s' class='%s'></li>"
 
 void *ws_layouter_add_page(struct ws_layouter *layouter,
         const char *group_id, const char *page_name,
-        const char *title, const char *style, int *retv)
+        const char *class_name, const char *title, purc_variant_t style,
+        int *retv)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
@@ -351,7 +353,7 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
 
         pcdom_node_t *subtree;
         gchar *html_fragment = g_strdup_printf(HTML_FRAG_PAGE,
-                group_id, page_name);
+                group_id, page_name, class_name);
         subtree = dom_parse_fragment(dom_doc, element,
             html_fragment, strlen(html_fragment));
         g_free(html_fragment);
@@ -425,18 +427,25 @@ bool ws_layouter_remove_page_by_widget(struct ws_layouter *layouter,
 }
 
 int ws_layouter_update_widget(struct ws_layouter *layouter,
-        void *widget, const char *property, const char *value)
+        void *widget, const char *property, purc_variant_t value)
 {
     struct ws_widget_style style = { 0 };
 
     if (strcasecmp(property, "name") == 0) {
         return PCRDR_SC_FORBIDDEN;
     }
+    else if (strcasecmp(property, "class") == 0) {
+        if ((style.class_name = purc_variant_get_string_const(value))) {
+            style.flags |= WSWS_FLAG_CLASS;
+            layouter->cb_update_widget(layouter->ws_ctxt, widget, &style);
+        }
+        return PCRDR_SC_FORBIDDEN;
+    }
     else if (strcasecmp(property, "title") == 0) {
-        style.flags |= WSWS_FLAG_TITLE;
-        style.title = value;
-
-        layouter->cb_update_widget(layouter->ws_ctxt, widget, &style);
+        if ((style.title = purc_variant_get_string_const(value))) {
+            style.flags |= WSWS_FLAG_TITLE;
+            layouter->cb_update_widget(layouter->ws_ctxt, widget, &style);
+        }
     }
     else if (strcasecmp(property, "style") == 0) {
         return PCRDR_SC_NOT_IMPLEMENTED; /* TODO */

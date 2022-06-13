@@ -464,8 +464,8 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
 purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace,
         const char *request_id, const char *gid,
-        const char *name, const char *title, const char *style,
-        int *retv)
+        const char *name, const char *class_name, const char *title,
+        purc_variant_t window_style, int *retv)
 {
     purcmc_plainwin * plain_win = NULL;
 
@@ -591,10 +591,19 @@ failed:
 }
 
 int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
-        purcmc_plainwin *plain_win, const char *property, const char *value)
+        purcmc_plainwin *plain_win, const char *property, purc_variant_t value)
 {
     void *data;
     if (!sorted_array_find(sess->all_handles, PTR2U64(plain_win), &data)) {
+
+        if (workspace->layouter) {
+            if (ws_layouter_retrieve_widget(workspace->layouter, plain_win) ==
+                    WS_WIDGET_TYPE_PLAINWINDOW) {
+                return ws_layouter_update_widget(workspace->layouter,
+                        plain_win, property, value);
+            }
+        }
+
         return PCRDR_SC_NOT_FOUND;
     }
 
@@ -606,10 +615,23 @@ int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         /* Forbid to change name of a plain window */
         return PCRDR_SC_FORBIDDEN;
     }
+    else if (strcmp(property, "class") == 0) {
+        /* Not acceptable to change class of a plain window */
+        return PCRDR_SC_NOT_ACCEPTABLE;
+    }
     else if (strcmp(property, "title") == 0) {
         if (plain_win->title)
             free(plain_win->title);
-        plain_win->title = strdup(value);
+        const char *title = purc_variant_get_string_const(value);
+        if (title) {
+            plain_win->title = strdup(title);
+        }
+        else {
+            return PCRDR_SC_BAD_REQUEST;
+        }
+    }
+    else if (strcmp(property, "style") == 0) {
+        /* TODO */
     }
 
     return PCRDR_SC_OK;
@@ -1037,8 +1059,8 @@ int gtk_remove_page_group(purcmc_session *sess, purcmc_workspace *workspace,
 
 purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
             const char *request_id, const char *gid,
-            const char *name, const char *title, const char *style,
-            int *retv)
+            const char *name, const char *class_name, const char *title,
+            purc_variant_t style, int *retv)
 {
     purcmc_page *page = NULL;
 
@@ -1047,14 +1069,14 @@ purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
     }
     else {
         page = ws_layouter_add_page(workspace->layouter,
-                    gid, name, title, style, retv);
+                    gid, name, class_name, title, style, retv);
     }
 
     return page;
 }
 
 int gtk_update_page(purcmc_session *sess, purcmc_workspace *workspace,
-            purcmc_page *page, const char *property, const char *value)
+            purcmc_page *page, const char *property, purc_variant_t value)
 {
     int retv;
 

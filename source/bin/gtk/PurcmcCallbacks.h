@@ -34,10 +34,10 @@ int gtk_remove_session(purcmc_session *);
 
 purcmc_plainwin *gtk_create_plainwin(purcmc_session *, purcmc_workspace *,
         const char *request_id, const char *gid,
-        const char *name, const char *title, const char *style,
-        int *retv);
+        const char *name, const char *class_name, const char *title,
+        purc_variant_t style, int *retv);
 int gtk_update_plainwin(purcmc_session *, purcmc_workspace *,
-        purcmc_plainwin *win, const char *property, const char *value);
+        purcmc_plainwin *win, const char *property, purc_variant_t value);
 int gtk_destroy_plainwin(purcmc_session *, purcmc_workspace *,
         purcmc_plainwin *win);
 purcmc_page *gtk_get_plainwin_page(purcmc_session *,
@@ -49,12 +49,13 @@ int gtk_add_page_groups(purcmc_session *, purcmc_workspace *,
         const char *content, size_t length);
 int gtk_remove_page_group(purcmc_session *, purcmc_workspace *,
         const char* gid);
+
 purcmc_page *gtk_create_page(purcmc_session *, purcmc_workspace *,
             const char *request_id, const char *gid,
-            const char *name, const char *title,  const char *style,
-            int *retv);
+            const char *name, const char *class_name, const char *title,
+            purc_variant_t style, int *retv);
 int gtk_update_page(purcmc_session *, purcmc_workspace *,
-            purcmc_page *page, const char *property, const char *value);
+            purcmc_page *page, const char *property, purc_variant_t value);
 int gtk_destroy_page(purcmc_session *, purcmc_workspace *,
             purcmc_page *page);
 
