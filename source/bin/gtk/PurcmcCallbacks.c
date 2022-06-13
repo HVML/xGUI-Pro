@@ -28,6 +28,7 @@
 #include "HVMLURISchema.h"
 
 #include "purcmc/purcmc.h"
+#include "layouter/layouter.h"
 
 #include "utils/list.h"
 #include "utils/kvlist.h"
@@ -57,6 +58,7 @@ struct purcmc_plainwin {
 struct purcmc_workspace {
     /* ungrouped plain windows */
     struct kvlist       ug_wins;
+    struct ws_layouter *layouter;
 };
 
 struct purcmc_session {
@@ -462,7 +464,7 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
 purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace,
         const char *request_id, const char *gid,
-        const char *name, const char *title, purc_variant_t properties,
+        const char *name, const char *title, const char *style,
         int *retv)
 {
     purcmc_plainwin * plain_win = NULL;
@@ -498,6 +500,7 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         gtk_application_add_window(GTK_APPLICATION(application),
                 GTK_WINDOW(main_win));
 
+#if 0
         purc_variant_t tmp;
         if ((tmp = purc_variant_object_get_by_ckey(properties, "darkMode")) &&
                 purc_variant_is_true(tmp)) {
@@ -518,6 +521,7 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
                 browser_window_set_background_color(main_win, &rgba);
             }
         }
+#endif
 
         WebKitWebsitePolicies *website_policies;
         website_policies = g_object_get_data(G_OBJECT(sess->webkit_settings),
@@ -953,4 +957,149 @@ gtk_set_property_in_dom(purcmc_session *sess, const char *request_id,
     return PURC_VARIANT_INVALID;
 }
 
+static void *gtk_create_widget(void *ws_ctxt, ws_widget_type_t type,
+        void *parent, const struct ws_widget_style *style)
+{
+    return NULL;
+}
+
+static void gtk_destroy_widget(void *ws_ctxt, void *widget)
+{
+}
+
+static void gtk_update_widget(void *ws_ctxt,
+        void *widget, const struct ws_widget_style *style)
+{
+}
+
+int gtk_reset_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
+        const char *content, size_t length)
+{
+    int retv;
+
+    if (workspace->layouter == NULL) {
+        struct ws_metrics metrics = { 1024, 768, 120, 10 }; /* TODO */
+
+        workspace->layouter = ws_layouter_new(&metrics, content, length,
+                workspace, gtk_create_widget, gtk_destroy_widget,
+                gtk_update_widget, &retv);
+        if (workspace->layouter == NULL)
+            return retv;
+    }
+    else {
+        /* TODO: */
+        retv = PCRDR_SC_NOT_IMPLEMENTED;
+    }
+
+    return retv;
+}
+
+int gtk_add_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
+        const char *content, size_t length)
+{
+    int retv;
+
+    if (workspace->layouter == NULL) {
+        retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
+    else {
+        if (ws_layouter_add_page_groups(workspace->layouter,
+                    content, length)) {
+            retv = PCRDR_SC_OK;
+        }
+        else {
+            retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
+        }
+    }
+
+    return retv;
+}
+
+int gtk_remove_page_group(purcmc_session *sess, purcmc_workspace *workspace,
+        const char* gid)
+{
+    int retv;
+
+    if (workspace->layouter == NULL) {
+        retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
+    else {
+        if (ws_layouter_remove_page_group(workspace->layouter, gid)) {
+            retv = PCRDR_SC_OK;
+        }
+        else {
+            retv = PCRDR_SC_NOT_FOUND;
+        }
+    }
+
+    return retv;
+}
+
+purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
+            const char *request_id, const char *gid,
+            const char *name, const char *title, const char *style,
+            int *retv)
+{
+    purcmc_page *page = NULL;
+
+    if (workspace->layouter == NULL) {
+        *retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
+    else {
+        page = ws_layouter_add_page(workspace->layouter,
+                    gid, name, title, style, retv);
+    }
+
+    return page;
+}
+
+int gtk_update_page(purcmc_session *sess, purcmc_workspace *workspace,
+            purcmc_page *page, const char *property, const char *value)
+{
+    int retv;
+
+    if (workspace->layouter == NULL) {
+        retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
+    else {
+        ws_widget_type_t type =
+            ws_layouter_retrieve_widget(workspace->layouter, page);
+        if (type == WS_WIDGET_TYPE_PLAINPAGE ||
+                type == WS_WIDGET_TYPE_TABPAGE) {
+            retv = ws_layouter_update_widget(workspace->layouter, page,
+                    property, value);
+        }
+        else {
+            retv = PCRDR_SC_BAD_REQUEST;
+        }
+    }
+
+    return retv;
+}
+
+int gtk_destroy_page(purcmc_session *sess, purcmc_workspace *workspace,
+            purcmc_page *page)
+{
+    int retv;
+
+    if (workspace->layouter == NULL) {
+        retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
+    else {
+        ws_widget_type_t type =
+            ws_layouter_retrieve_widget(workspace->layouter, page);
+        if (type == WS_WIDGET_TYPE_PLAINPAGE ||
+                type == WS_WIDGET_TYPE_TABPAGE) {
+            if (ws_layouter_remove_page_by_widget(workspace->layouter, page))
+                retv = PCRDR_SC_OK;
+            else
+                retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
+        }
+        else {
+            retv = PCRDR_SC_BAD_REQUEST;
+        }
+    }
+
+    return retv;
+}
 

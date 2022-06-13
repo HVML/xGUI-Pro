@@ -28,7 +28,6 @@
 
 /* The layouter object; `ws` means workspace */
 struct ws_layouter;
-typedef struct ws_layouter ws_layouter;
 
 struct ws_metrics {
     unsigned int    width;
@@ -36,75 +35,92 @@ struct ws_metrics {
     unsigned int    dpi;
     unsigned int    density;
 };
-typedef struct ws_metrics ws_metrics;
 
 typedef enum {
-    WS_WIDGET_TYPE_PLAINWINDOW  = 0,
-    WS_WIDGET_TYPE_HEADER,
-    WS_WIDGET_TYPE_MENUBAR,
-    WS_WIDGET_TYPE_NAVBAR,
-    WS_WIDGET_TYPE_ASIDE,
-    WS_WIDGET_TYPE_FOOTER,
-    WS_WIDGET_TYPE_TABHOST,
+    WS_WIDGET_TYPE_NONE  = 0,       /* not-existing */
+    WS_WIDGET_TYPE_PLAINWINDOW,     /* a plain main window for a webview */
+    WS_WIDGET_TYPE_HEADER,  /* the renderer defiend header widget */
+    WS_WIDGET_TYPE_MENUBAR, /* the renderer defined menu bar widget */
+    WS_WIDGET_TYPE_NAVBAR,  /* the renderer defined tool bar widget */
+    WS_WIDGET_TYPE_SIDEBAR, /* the renderer defined aside widget */
+    WS_WIDGET_TYPE_FOOTER,  /* the renderer defiend footer widget */
+    WS_WIDGET_TYPE_TABHOST, /* the container widget of tabbed pages */
+    WS_WIDGET_TYPE_PLAINPAGE,   /* a plain page for a webview */
+    WS_WIDGET_TYPE_TABPAGE,     /* a tabbed page for a webview */
 } ws_widget_type_t;
 
+#define WSWS_FLAG_TITLE     0x00000001
+#define WSWS_FLAG_POSITION  0x00000002
+
 struct ws_widget_style {
+    unsigned int flags;
+
+    const char *title;
     int x, y, w, h;
 };
-typedef struct ws_widget_style ws_widget_style;
 
 typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt, ws_widget_type_t type,
-        void *parent, const ws_widget_style *style);
+        void *parent, const struct ws_widget_style *style);
 
 typedef void (*wsltr_destroy_widget_fn)(void *ws_ctxt, void *widget);
 
-typedef void (*wsltr_change_widget_fn)(void *ws_ctxt,
-        void *widget, const ws_widget_style *style);
+typedef void (*wsltr_update_widget_fn)(void *ws_ctxt,
+        void *widget, const struct ws_widget_style *style);
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Create a new layouter */
-ws_layouter *ws_layouter_new(ws_metrics *metrics,
+struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
         const char *html_contents, size_t sz_html_contents, void *ws_ctxt,
         wsltr_create_widget_fn cb_create_widget,
         wsltr_destroy_widget_fn cb_destroy_widget,
-        wsltr_change_widget_fn cb_change_widget);
+        wsltr_update_widget_fn cb_update_widget, int *retv);
 
 /* Destroy a layouter */
-void ws_layouter_delete(ws_layouter *layouter);
+void ws_layouter_delete(struct ws_layouter *layouter);
 
 /* Add new page groups */
-bool ws_layouter_add_page_groups(ws_layouter *layouter,
+bool ws_layouter_add_page_groups(struct ws_layouter *layouter,
         const char *html_fragment, size_t sz_html_fragment);
 
 /* Remove a page group */
-bool ws_layouter_remove_page_group(ws_layouter *layouter,
+bool ws_layouter_remove_page_group(struct ws_layouter *layouter,
         const char *group_id);
 
 /* Add a plain window into a group */
-bool ws_layouter_add_plain_window(ws_layouter *layouter,
-        const char *window_name, const char *group_id);
+void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
+        const char *group_id, const char *window_name,
+        const char *title, const char *style, int *retv);
 
 /* Remove a plain window by identifier */
-bool ws_layouter_remove_plain_window_by_id(ws_layouter *layouter,
-        const char *window_name, const char *group_id);
+bool ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
+        const char *group_id, const char *window_name);
 
 /* Remove a plain window by widget */
-bool ws_layouter_remove_plain_window_by_widget(ws_layouter *layouter,
+bool ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
         void *widget);
 
 /* Add a page into a group */
-bool ws_layouter_add_page(ws_layouter *layouter,
-        const char *page_name, const char *group_id);
+void *ws_layouter_add_page(struct ws_layouter *layouter,
+        const char *group_id, const char *page_name,
+        const char *title, const char *style, int *retv);
 
 /* Remove a page by identifier */
-bool ws_layouter_remove_page_by_id(ws_layouter *layouter,
-        const char *page_name, const char *group_id);
+bool ws_layouter_remove_page_by_id(struct ws_layouter *layouter,
+        const char *group_id, const char *page_name);
 
 /* Remove a page by widget */
-bool ws_layouter_remove_page_by_widget(ws_layouter *layouter,
+bool ws_layouter_remove_page_by_widget(struct ws_layouter *layouter,
+        void *widget);
+
+/* Update a widget */
+int ws_layouter_update_widget(struct ws_layouter *layouter,
+        void *widget, const char *property, const char *value);
+
+/* Retrieve a widget */
+ws_widget_type_t ws_layouter_retrieve_widget(struct ws_layouter *layouter,
         void *widget);
 
 #ifdef __cplusplus

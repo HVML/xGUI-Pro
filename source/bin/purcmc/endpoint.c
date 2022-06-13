@@ -862,6 +862,7 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char* gid = NULL;
     const char* name = NULL;
     const char* title = NULL;
+    const char* style = NULL;
 
     if (msg->target == PCRDR_MSG_TARGET_WORKSPACE) {
         workspace = (void *)(uintptr_t)msg->targetValue;
@@ -900,10 +901,13 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
         title = purc_variant_get_string_const(tmp);
     }
 
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "style"))) {
+        style = purc_variant_get_string_const(tmp);
+    }
+
     const char *request_id = purc_variant_get_string_const(msg->requestId);
     win = srv->cbs.create_plainwin(endpoint->session, workspace,
-            request_id, gid,
-            name, title, msg->data, &retv);
+            request_id, gid, name, title, style, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -1076,10 +1080,12 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    const char* type = NULL;
     const char* name = NULL;
     const char* title = NULL;
+    const char* style = NULL;
     purc_variant_t tmp;
+#if 0
+    const char* type = NULL;
     if ((tmp = purc_variant_object_get_by_ckey(msg->data, "type"))) {
         type = purc_variant_get_string_const(tmp);
         if (type == NULL) {
@@ -1087,6 +1093,7 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
             goto failed;
         }
     }
+#endif
 
     if ((tmp = purc_variant_object_get_by_ckey(msg->data, "name"))) {
         name = purc_variant_get_string_const(tmp);
@@ -1100,9 +1107,13 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
         title = purc_variant_get_string_const(tmp);
     }
 
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "style"))) {
+        style = purc_variant_get_string_const(tmp);
+    }
+
     const char *request_id = purc_variant_get_string_const(msg->requestId);
     page = srv->cbs.create_page(endpoint->session, workspace,
-            request_id, gid, type, name, title, msg->data, &retv);
+            request_id, gid, name, title, style, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
