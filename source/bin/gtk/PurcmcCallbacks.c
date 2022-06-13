@@ -500,20 +500,19 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         gtk_application_add_window(GTK_APPLICATION(application),
                 GTK_WINDOW(main_win));
 
-#if 0
         purc_variant_t tmp;
-        if ((tmp = purc_variant_object_get_by_ckey(properties, "darkMode")) &&
+        if ((tmp = purc_variant_object_get_by_ckey(window_style, "darkMode")) &&
                 purc_variant_is_true(tmp)) {
             g_object_set(gtk_widget_get_settings(GTK_WIDGET(main_win)),
                     "gtk-application-prefer-dark-theme", TRUE, NULL);
         }
 
-        if ((tmp = purc_variant_object_get_by_ckey(properties, "fullScreen")) &&
+        if ((tmp = purc_variant_object_get_by_ckey(window_style, "fullScreen")) &&
                 purc_variant_is_true(tmp)) {
             gtk_window_fullscreen(GTK_WINDOW(main_win));
         }
 
-        if ((tmp = purc_variant_object_get_by_ckey(properties, "backgroundColor"))) {
+        if ((tmp = purc_variant_object_get_by_ckey(window_style, "backgroundColor"))) {
             const char *value = purc_variant_get_string_const(tmp);
 
             GdkRGBA rgba;
@@ -521,7 +520,6 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
                 browser_window_set_background_color(main_win, &rgba);
             }
         }
-#endif
 
         WebKitWebsitePolicies *website_policies;
         website_policies = g_object_get_data(G_OBJECT(sess->webkit_settings),
@@ -581,9 +579,13 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
 
         *retv = 0;  // pend the response
     }
+    else if (workspace->layouter == NULL) {
+        *retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
     else {
-        /* TODO: create a plain window in the specified group */
-        *retv = PCRDR_SC_NOT_IMPLEMENTED;
+        /* create a plain window in the specified group */
+        ws_layouter_add_plain_window(workspace->layouter, gid, name,
+                class_name, title, window_style, retv);
     }
 
 failed:

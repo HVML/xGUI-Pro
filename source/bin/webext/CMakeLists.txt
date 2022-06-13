@@ -10,6 +10,7 @@ set(assets_SOURCES
     "${xGUIPro_DERIVED_SOURCES_DIR}/webext/hvml.js"
     "${xGUIPro_DERIVED_SOURCES_DIR}/webext/about.html"
     "${XGUIPRO_BIN_DIR}/webext/assets/hvml.png"
+    "${XGUIPRO_BIN_DIR}/webext/assets/workspace-layouter.css"
 )
 
 set(bootstrap_DIRECTORY
