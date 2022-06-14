@@ -1033,13 +1033,8 @@ int gtk_add_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
         retv = PCRDR_SC_PRECONDITION_FAILED;
     }
     else {
-        if (ws_layouter_add_page_groups(workspace->layouter,
-                    content, length)) {
-            retv = PCRDR_SC_OK;
-        }
-        else {
-            retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
-        }
+        retv = ws_layouter_add_page_groups(workspace->layouter,
+                    content, length);
     }
 
     return retv;
@@ -1054,12 +1049,7 @@ int gtk_remove_page_group(purcmc_session *sess, purcmc_workspace *workspace,
         retv = PCRDR_SC_PRECONDITION_FAILED;
     }
     else {
-        if (ws_layouter_remove_page_group(workspace->layouter, gid)) {
-            retv = PCRDR_SC_OK;
-        }
-        else {
-            retv = PCRDR_SC_NOT_FOUND;
-        }
+        retv = ws_layouter_remove_page_group(workspace->layouter, gid);
     }
 
     return retv;

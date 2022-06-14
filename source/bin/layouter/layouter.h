@@ -50,15 +50,15 @@ typedef enum {
     WS_WIDGET_TYPE_TABPAGE,     /* a tabbed page for a webview */
 } ws_widget_type_t;
 
-#define WSWS_FLAG_TITLE     0x00000001
-#define WSWS_FLAG_CLASS     0x00000002
+#define WSWS_FLAG_NAME      0x00000001
+#define WSWS_FLAG_TITLE     0x00000002
 #define WSWS_FLAG_POSITION  0x00000004
 
 struct ws_widget_style {
     unsigned int flags;
 
+    const char *name;
     const char *title;
-    const char *class_name;
     int x, y, w, h;
 };
 
@@ -85,11 +85,11 @@ struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
 void ws_layouter_delete(struct ws_layouter *layouter);
 
 /* Add new page groups */
-bool ws_layouter_add_page_groups(struct ws_layouter *layouter,
+int ws_layouter_add_page_groups(struct ws_layouter *layouter,
         const char *html_fragment, size_t sz_html_fragment);
 
 /* Remove a page group */
-bool ws_layouter_remove_page_group(struct ws_layouter *layouter,
+int ws_layouter_remove_page_group(struct ws_layouter *layouter,
         const char *group_id);
 
 /* Add a plain window into a group */
@@ -99,7 +99,7 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         int *retv);
 
 /* Remove a plain window by identifier */
-bool ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
+int ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
         const char *group_id, const char *window_name);
 
 /* Remove a plain window by widget */

@@ -23,6 +23,8 @@
 #ifndef XGUIPRO_LAYOUTER_DOM_OPS_H
 #define XGUIPRO_LAYOUTER_DOM_OPS_H
 
+#include <strings.h>
+
 #include <purc/purc-dom.h>
 #include <purc/purc-html.h>
 
@@ -67,7 +69,7 @@ void dom_clear_element(pcdom_document_t *dom_doc, pcdom_element_t *element);
 bool dom_update_element(pcdom_document_t *dom_doc, pcdom_element_t *element,
         const char* property, const char* content, size_t sz_cnt);
 
-bool dom_remove_element_attr(pcdom_document_t *dom_doc,
+bool dom_remove_element_property(pcdom_document_t *dom_doc,
         pcdom_element_t *element, const char* property);
 
 #ifdef __cplusplus
@@ -86,6 +88,21 @@ void *get_element_user_data(pcdom_element_t *element)
 {
     pcdom_node_t *node = pcdom_interface_node(element);
     return node->user;
+}
+
+static inline bool
+is_an_element_with_tag(pcdom_node_t *node, const char *tag)
+{
+    if (node && node->type == PCDOM_NODE_TYPE_COMMENT) {
+        pcdom_element_t *element = pcdom_interface_element(node);
+        size_t len;
+        const char *tag_name;
+
+        tag_name = (const char *)pcdom_element_local_name(element, &len);
+        return strcasecmp(tag, tag_name) == 0;
+    }
+
+    return false;
 }
 
 #endif /* XGUIPRO_LAYOUTER_DOM_OPS_H */

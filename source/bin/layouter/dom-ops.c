@@ -426,7 +426,7 @@ dom_update_element(pcdom_document_t *dom_doc, pcdom_element_t *element,
 }
 
 bool
-dom_remove_element_attr(pcdom_document_t *dom_doc, pcdom_element_t *element,
+dom_remove_element_property(pcdom_document_t *dom_doc, pcdom_element_t *element,
         const char* property)
 {
     bool retv = false;

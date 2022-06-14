@@ -52,7 +52,7 @@ struct ws_layouter {
 };
 
 static pchtml_action_t
-my_head_walker(pcdom_node_t *node, void *ctx)
+append_style_walker(pcdom_node_t *node, void *ctxt)
 {
     switch (node->type) {
     case PCDOM_NODE_TYPE_DOCUMENT_TYPE:
@@ -70,7 +70,7 @@ my_head_walker(pcdom_node_t *node, void *ctx)
         element = pcdom_interface_element(node);
         name = (const char *)pcdom_element_local_name(element, &len);
         if (strncasecmp(name, "style", len) == 0) {
-            struct ws_layouter *layouter = ctx;
+            struct ws_layouter *layouter = ctxt;
 
             purc_log_info("got a style element\n");
 
@@ -83,6 +83,7 @@ my_head_walker(pcdom_node_t *node, void *ctx)
                     const char *css = (const char *)text->char_data.data.data;
                     domruler_append_css(layouter->ruler,
                             css, text->char_data.data.length);
+                    purc_log_debug("apply CSS: %s\n", css);
                 }
 
                 child = child->next;
@@ -107,7 +108,7 @@ static void append_css_in_style_element(struct ws_layouter *layouter)
     pcdom_element_t *head = pchtml_doc_get_head(layouter->dom_doc);
 
     pcdom_node_simple_walk(pcdom_interface_node(head),
-            my_head_walker, layouter);
+            append_style_walker, layouter);
 }
 
 struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
@@ -140,8 +141,12 @@ struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
         load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
                 DEF_LAYOUT_CSS, &layouter->len_def_css);
     if (layouter->def_css) {
+        purc_log_info("Default CSS: %s\n", layouter->def_css);
         domruler_append_css(layouter->ruler,
                 layouter->def_css, layouter->len_def_css);
+    }
+    else {
+        purc_log_warn("Failed to load default CSS from: %s\n", DEF_LAYOUT_CSS);
     }
 
     layouter->dom_doc = pchtml_html_document_create();
@@ -195,7 +200,7 @@ void ws_layouter_delete(struct ws_layouter *layouter)
     free(layouter);
 }
 
-bool ws_layouter_add_page_groups(struct ws_layouter *layouter,
+int ws_layouter_add_page_groups(struct ws_layouter *layouter,
         const char *html_fragment, size_t sz_html_fragment)
 {
     pcdom_element_t *body = pchtml_doc_get_body(layouter->dom_doc);
@@ -204,30 +209,200 @@ bool ws_layouter_add_page_groups(struct ws_layouter *layouter,
     pcdom_node_t *subtree = dom_parse_fragment(doc, body,
             html_fragment, sz_html_fragment);
 
-    if (subtree) {
-        dom_append_subtree_to_element(doc, body, subtree);
+    if (subtree && subtree->first_child) {
+        pcdom_node_t *section;
+        section = subtree->first_child->first_child;
 
-        /* TODO: re-layout */
-        return true;
+        if (is_an_element_with_tag(section, "SECTION")) {
+            purc_log_warn("not a `section` element\n");
+            dom_append_subtree_to_element(doc, body, subtree);
+            return PCRDR_SC_OK;
+        }
+        else {
+            return PCRDR_SC_BAD_REQUEST;
+        }
     }
 
-    return false;
+    return PCRDR_SC_INTERNAL_SERVER_ERROR;
 }
 
-bool ws_layouter_remove_page_group(struct ws_layouter *layouter,
+struct destroy_widget_ctxt {
+    unsigned nr_destroyed;
+    struct ws_layouter *layouter;
+};
+
+static pchtml_action_t
+destroy_widget_walker(pcdom_node_t *node, void *ctxt)
+{
+    switch (node->type) {
+    case PCDOM_NODE_TYPE_DOCUMENT_TYPE:
+        return PCHTML_ACTION_NEXT;
+
+    case PCDOM_NODE_TYPE_TEXT:
+    case PCDOM_NODE_TYPE_COMMENT:
+    case PCDOM_NODE_TYPE_CDATA_SECTION:
+        return PCHTML_ACTION_NEXT;
+
+    case PCDOM_NODE_TYPE_ELEMENT:
+        if (node->user) {
+            struct destroy_widget_ctxt *my_ctxt = ctxt;
+
+            my_ctxt->layouter->cb_destroy_widget(my_ctxt->layouter->ws_ctxt,
+                    node->user);
+            my_ctxt->nr_destroyed++;
+
+            node->user = NULL;
+        }
+
+        /* walk to the siblings. */
+        return PCHTML_ACTION_NEXT;
+
+    default:
+        /* ignore any unknown node types */
+        break;
+    }
+
+    return PCHTML_ACTION_NEXT;
+}
+
+static inline void
+fill_position(struct ws_widget_style *style, const HLBox *box)
+{
+    style->x = (int)(box->x + 0.5);
+    style->y = (int)(box->y + 0.5);
+
+    if (box->w == HL_AUTO) {
+        style->w = 0;
+    }
+    else {
+        style->w = (int)(box->w + 0.5);
+    }
+
+    if (box->h == HL_AUTO) {
+        style->h = 0;
+    }
+    else {
+        style->h = (int)(box->h + 0.5);
+    }
+}
+
+struct relayout_widget_ctxt {
+    unsigned nr_laid;
+    unsigned nr_ignored;
+    unsigned nr_error;
+
+    struct ws_layouter *layouter;
+};
+
+static pchtml_action_t
+layout_widget_walker(pcdom_node_t *node, void *ctxt)
+{
+    switch (node->type) {
+    case PCDOM_NODE_TYPE_DOCUMENT_TYPE:
+        return PCHTML_ACTION_NEXT;
+
+    case PCDOM_NODE_TYPE_TEXT:
+    case PCDOM_NODE_TYPE_COMMENT:
+    case PCDOM_NODE_TYPE_CDATA_SECTION:
+        return PCHTML_ACTION_NEXT;
+
+    case PCDOM_NODE_TYPE_ELEMENT:
+        if (node->user) {
+            struct relayout_widget_ctxt *my_ctxt = ctxt;
+
+            const HLBox *box;
+            box = domruler_get_element_bounding_box(my_ctxt->layouter->ruler,
+                    node);
+
+            if (box) {
+                struct ws_widget_style style = { 0 };
+
+                style.flags = WSWS_FLAG_POSITION;
+                fill_position(&style, box);
+                my_ctxt->layouter->cb_update_widget(my_ctxt->layouter->ws_ctxt,
+                        node->user, &style);
+                my_ctxt->nr_laid++;
+            }
+            else {
+                my_ctxt->nr_error++;
+            }
+        }
+
+        /* walk to the siblings. */
+        return PCHTML_ACTION_NEXT;
+
+    default:
+        /* ignore any unknown node types */
+        break;
+    }
+
+    return PCHTML_ACTION_NEXT;
+}
+
+static int
+relayout(struct ws_layouter *layouter, pcdom_element_t *subtree_root)
+{
+    pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
+    pcdom_element_t *root = dom_doc->element;
+
+    int ret = domruler_layout_pcdom_elements(layouter->ruler, root);
+    if (ret) {
+        purc_log_error("Failed to re-layout the widgets.\n");
+        return PCRDR_SC_INTERNAL_SERVER_ERROR;
+    }
+
+    if (subtree_root == NULL) {
+        subtree_root = root;
+    }
+
+    struct relayout_widget_ctxt ctxt = { 0, 0, 0, layouter };
+    pcdom_node_t *node = pcdom_interface_node(subtree_root);
+    pcdom_node_simple_walk(node, layout_widget_walker, &ctxt);
+    return PCRDR_SC_OK;
+}
+
+static inline pcdom_element_t *
+find_section_ancestor(pcdom_element_t *element)
+{
+    pcdom_node_t *node = pcdom_interface_node(element);
+
+    pcdom_node_t *parent = node->parent;
+
+    while (parent && is_an_element_with_tag(node, "SECTION")) {
+        return pcdom_interface_element(parent);
+    }
+
+    return NULL;
+}
+
+int ws_layouter_remove_page_group(struct ws_layouter *layouter,
         const char *group_id)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
 
     if (element) {
+
+        struct destroy_widget_ctxt ctxt = { 0, layouter };
+        pcdom_node_t *node = pcdom_interface_node(element);
+        pcdom_node_simple_walk(node, destroy_widget_walker, &ctxt);
+
+        void *widget = get_element_user_data(element);
+        if (widget) {
+            ctxt.nr_destroyed++;
+            set_element_user_data(element, NULL);
+        }
+
+        purc_log_info("Widget destroyed: %u\n", ctxt.nr_destroyed);
+
         dom_erase_element(dom_doc, element);
 
-        /* TODO: re-layout */
-        return true;
+        pcdom_element_t *section = find_section_ancestor(element);
+        relayout(layouter, section);
+        return PCRDR_SC_OK;
     }
 
-    return false;
+    return PCRDR_SC_NOT_FOUND;
 }
 
 #define PAGE_ID "%s-%s"
@@ -257,7 +432,14 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
     void *widget = NULL;
     if (element) {
         pcdom_node_t *subtree;
-        /* the element must be a `div` or `section` element */
+        /* the element must be a descendant of a `section` element */
+        pcdom_element_t *section = find_section_ancestor(element);
+        if (section == NULL) {
+            purc_log_error("Cannot find the ancestor `section` element (%s)\n",
+                    group_id);
+            *retv = PCRDR_SC_BAD_REQUEST;
+            goto failed;
+        }
 
         gchar *html_fragment = g_strdup_printf(HTML_FRAG_PLAINWINDOW,
                 group_id, window_name, class_name);
@@ -268,16 +450,31 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         if (subtree) {
             dom_append_subtree_to_element(dom_doc, element, subtree);
 
-            /* TODO: re-layout */
-            struct ws_widget_style widget_style = { 0, 0, 0, 0 };
+            /* re-layout the exsiting widgets */
+            relayout(layouter, section);
 
             /* create widget */
             pcdom_element_t *figure = find_page_element(dom_doc,
                     group_id, window_name);
             assert(figure);
 
+            const HLBox *box;
+            box = domruler_get_element_bounding_box(layouter->ruler,
+                    pcdom_interface_node(figure));
+            if (box == NULL) {
+                *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
+                goto failed;
+            }
+
+            struct ws_widget_style style = { 0, 0, 0, 0 };
+            style.flags = WSWS_FLAG_NAME | WSWS_FLAG_TITLE |
+                WSWS_FLAG_POSITION;
+            style.name = window_name;
+            style.title = title;
+
+            fill_position(&style, box);
             widget = layouter->cb_create_widget(layouter->ws_ctxt,
-                    WS_WIDGET_TYPE_PLAINWINDOW, NULL, &widget_style);
+                    WS_WIDGET_TYPE_PLAINWINDOW, NULL, &style);
 
             set_element_user_data(figure, widget);
 
@@ -295,11 +492,13 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
     }
 
     *retv = PCRDR_SC_OK;
+
+failed:
     return widget;
 }
 
 /* Remove a plain window by identifier */
-bool ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
+int ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
         const char *group_id, const char *window_name)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
@@ -311,10 +510,10 @@ bool ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
         dom_erase_element(dom_doc, element);
 
         /* TODO: re-layout */
-        return true;
+        return PCRDR_SC_OK;
     }
 
-    return false;
+    return PCRDR_SC_NOT_FOUND;
 }
 
 bool ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
@@ -434,22 +633,52 @@ int ws_layouter_update_widget(struct ws_layouter *layouter,
         return PCRDR_SC_FORBIDDEN;
     }
     else if (strcasecmp(property, "class") == 0) {
-        if ((style.class_name = purc_variant_get_string_const(value))) {
-            style.flags |= WSWS_FLAG_CLASS;
-            layouter->cb_update_widget(layouter->ws_ctxt, widget, &style);
+        const char *class;
+        size_t len;
+
+        if ((class = purc_variant_get_string_const_ex(value, &len))) {
+            void *data;
+            pcdom_document_t *dom_doc =
+                pcdom_interface_document(layouter->dom_doc);
+
+            if (sorted_array_find(layouter->sa_widget,
+                        PTR2U64(widget), &data)) {
+                pcdom_element_t *element = data;
+
+                bool retb;
+                if (len > 0) {
+                    retb = dom_update_element(dom_doc, element,
+                            "attr.class", class, len);
+                }
+                else {
+                    retb = dom_remove_element_property(dom_doc, element,
+                            "attr.class");
+                }
+
+                if (retb) {
+                    pcdom_element_t *section = find_section_ancestor(element);
+                    relayout(layouter, section);
+                    goto done;
+                }
+            }
         }
-        return PCRDR_SC_FORBIDDEN;
+
+        return PCRDR_SC_BAD_REQUEST;
     }
     else if (strcasecmp(property, "title") == 0) {
         if ((style.title = purc_variant_get_string_const(value))) {
             style.flags |= WSWS_FLAG_TITLE;
             layouter->cb_update_widget(layouter->ws_ctxt, widget, &style);
+            goto done;
         }
+
+        return PCRDR_SC_BAD_REQUEST;
     }
     else if (strcasecmp(property, "style") == 0) {
         return PCRDR_SC_NOT_IMPLEMENTED; /* TODO */
     }
 
+done:
     return PCRDR_SC_OK;
 }
 
