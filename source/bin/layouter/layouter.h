@@ -40,11 +40,13 @@ struct ws_metrics {
 typedef enum {
     WS_WIDGET_TYPE_NONE  = 0,       /* not-existing */
     WS_WIDGET_TYPE_PLAINWINDOW,     /* a plain main window for a webview */
+    WS_WIDGET_TYPE_TABBEDWINDOW,    /* a tabbede main window for webviews */
     WS_WIDGET_TYPE_HEADER,  /* the renderer defiend header widget */
     WS_WIDGET_TYPE_MENUBAR, /* the renderer defined menu bar widget */
-    WS_WIDGET_TYPE_NAVBAR,  /* the renderer defined tool bar widget */
+    WS_WIDGET_TYPE_TOOLBAR, /* the renderer defined tool bar widget */
     WS_WIDGET_TYPE_SIDEBAR, /* the renderer defined aside widget */
     WS_WIDGET_TYPE_FOOTER,  /* the renderer defiend footer widget */
+    WS_WIDGET_TYPE_PANEL,   /* the container widget of plain pages */
     WS_WIDGET_TYPE_TABHOST, /* the container widget of tabbed pages */
     WS_WIDGET_TYPE_PLAINPAGE,   /* a plain page for a webview */
     WS_WIDGET_TYPE_TABPAGE,     /* a tabbed page for a webview */
@@ -103,7 +105,7 @@ int ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
         const char *group_id, const char *window_name);
 
 /* Remove a plain window by widget */
-bool ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
+int ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
         void *widget);
 
 /* Add a page into a group */
@@ -113,11 +115,11 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
         int *retv);
 
 /* Remove a page by identifier */
-bool ws_layouter_remove_page_by_id(struct ws_layouter *layouter,
+int ws_layouter_remove_page_by_id(struct ws_layouter *layouter,
         const char *group_id, const char *page_name);
 
 /* Remove a page by widget */
-bool ws_layouter_remove_page_by_widget(struct ws_layouter *layouter,
+int ws_layouter_remove_page_by_widget(struct ws_layouter *layouter,
         void *widget);
 
 /* Update a widget */

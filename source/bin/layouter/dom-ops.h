@@ -35,9 +35,9 @@
 extern "C" {
 #endif
 
-bool dom_prepare_user_data(pcdom_document_t *dom_doc);
+bool dom_prepare_id_map(pcdom_document_t *dom_doc);
 
-bool dom_cleanup_user_data(pcdom_document_t *dom_doc);
+bool dom_cleanup_id_map(pcdom_document_t *dom_doc);
 
 pcdom_element_t *dom_get_element_by_id(pcdom_document_t *dom_doc,
         const char *id);
@@ -91,15 +91,20 @@ void *get_element_user_data(pcdom_element_t *element)
 }
 
 static inline bool
+has_tag(pcdom_element_t *element, const char *tag)
+{
+    size_t len;
+    const char *tag_name;
+
+    tag_name = (const char *)pcdom_element_local_name(element, &len);
+    return strncasecmp(tag, tag_name, strlen(tag)) == 0;
+}
+
+static inline bool
 is_an_element_with_tag(pcdom_node_t *node, const char *tag)
 {
     if (node && node->type == PCDOM_NODE_TYPE_COMMENT) {
-        pcdom_element_t *element = pcdom_interface_element(node);
-        size_t len;
-        const char *tag_name;
-
-        tag_name = (const char *)pcdom_element_local_name(element, &len);
-        return strcasecmp(tag, tag_name) == 0;
+        return has_tag(pcdom_interface_element(node), tag);
     }
 
     return false;

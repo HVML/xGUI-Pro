@@ -156,7 +156,7 @@ dom_get_element_by_id(pcdom_document_t *dom_doc, const char *id)
     return NULL;
 }
 
-bool dom_prepare_user_data(pcdom_document_t *dom_doc)
+bool dom_prepare_id_map(pcdom_document_t *dom_doc)
 {
     if (dom_doc->user == NULL) {
         dom_build_id_element_map(dom_doc);
@@ -167,7 +167,7 @@ bool dom_prepare_user_data(pcdom_document_t *dom_doc)
     return dom_doc->user != NULL;
 }
 
-bool dom_cleanup_user_data(pcdom_document_t *dom_doc)
+bool dom_cleanup_id_map(pcdom_document_t *dom_doc)
 {
     if (dom_doc->user == NULL) {
         return false;
