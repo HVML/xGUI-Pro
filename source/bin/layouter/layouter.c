@@ -486,9 +486,10 @@ relayout(struct ws_layouter *layouter, pcdom_element_t *subtree_root)
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *root = dom_doc->element;
 
+    domruler_reset_elements(layouter->ruler);
     int ret = domruler_layout_pcdom_elements(layouter->ruler, root);
     if (ret) {
-        purc_log_error("Failed to re-layout the widgets.\n");
+        purc_log_error("Failed to re-layout the widgets: %d.\n", ret);
         return PCRDR_SC_INTERNAL_SERVER_ERROR;
     }
 
@@ -520,9 +521,10 @@ int ws_layouter_remove_page_group(struct ws_layouter *layouter,
 
         purc_log_info("Totatlly %u widget(s) destroyed.\n", ctxt.nr_destroyed);
 
+        pcdom_element_t *section = find_section_ancestor(element);
+
         dom_erase_element(dom_doc, element);
 
-        pcdom_element_t *section = find_section_ancestor(element);
         relayout(layouter, section);
         return PCRDR_SC_OK;
     }

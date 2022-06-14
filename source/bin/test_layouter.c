@@ -99,7 +99,6 @@ int main(int argc, char *argv[])
     element = dom_get_element_by_id(layouter->dom_doc, "viewerBody");
     assert(element && has_tag(element, "ARTICLE"));
 
-
     retv = ws_layouter_add_page_groups(layouter, new_page_groups,
             strlen(new_page_groups));
     assert(retv == PCRDR_SC_OK);
@@ -111,6 +110,9 @@ int main(int argc, char *argv[])
     element = dom_get_element_by_id(layouter->dom_doc, "theModals");
     assert(element);
     assert(has_tag(element, "SECTION"));
+
+    retv = ws_layouter_remove_page_group(layouter, "freeWindows");
+    assert(retv == PCRDR_SC_OK);
 
     ws_layouter_delete(layouter);
 
