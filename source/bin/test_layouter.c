@@ -27,10 +27,18 @@
 
 #include "utils/load-asset.h"
 #include "layouter/layouter.h"
+#include "layouter/dom-ops.h"
+
+#include <purc/purc.h>
 
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+
+struct ws_layouter {
+    struct DOMRulerCtxt *ruler;
+    pcdom_document_t *dom_doc;
+};
 
 struct test_ctxt {
 };
@@ -49,6 +57,12 @@ void my_update_widget(void *ws_ctxt,
         void *widget, const struct ws_widget_style *style)
 {
 }
+
+static const char *new_page_groups = ""
+    "<section id='freeWindows'>"
+    "</section>"
+    "<section id='theModals'>"
+    "</section>";
 
 int main(int argc, char *argv[])
 {
@@ -70,6 +84,33 @@ int main(int argc, char *argv[])
     if (layouter == NULL) {
         return retv;
     }
+
+    pcdom_element_t *element;
+
+    element = dom_get_element_by_id(layouter->dom_doc, "mainHeader");
+    assert(element && has_tag(element, "DIV"));
+
+    element = dom_get_element_by_id(layouter->dom_doc, "mainBody");
+    assert(element && has_tag(element, "DIV"));
+
+    element = dom_get_element_by_id(layouter->dom_doc, "mainFooter");
+    assert(element && has_tag(element, "DIV"));
+
+    element = dom_get_element_by_id(layouter->dom_doc, "viewerBody");
+    assert(element && has_tag(element, "ARTICLE"));
+
+
+    retv = ws_layouter_add_page_groups(layouter, new_page_groups,
+            strlen(new_page_groups));
+    assert(retv == PCRDR_SC_OK);
+
+    element = dom_get_element_by_id(layouter->dom_doc, "freeWindows");
+    assert(element);
+    assert(has_tag(element, "SECTION"));
+
+    element = dom_get_element_by_id(layouter->dom_doc, "theModals");
+    assert(element);
+    assert(has_tag(element, "SECTION"));
 
     ws_layouter_delete(layouter);
 

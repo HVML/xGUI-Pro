@@ -369,11 +369,11 @@ int ws_layouter_add_page_groups(struct ws_layouter *layouter,
         section = subtree->first_child->first_child;
 
         if (is_an_element_with_tag(section, "SECTION")) {
-            purc_log_warn("not a `section` element\n");
             dom_append_subtree_to_element(doc, body, subtree);
             return PCRDR_SC_OK;
         }
         else {
+            purc_log_warn("not a `section` element\n");
             return PCRDR_SC_BAD_REQUEST;
         }
     }
