@@ -34,7 +34,8 @@ set(xguipro_PLATFORM_INDEPENDENT_DIRS
     "layouter"
 )
 
-APPEND_ALL_SOURCE_FILES_IN_DIRLIST(xguipro_SOURCES "${xguipro_PLATFORM_INDEPENDENT_DIRS}")
+APPEND_ALL_SOURCE_FILES_IN_DIRLIST(xguipro_SOURCES
+        "${xguipro_PLATFORM_INDEPENDENT_DIRS}")
 
 list(APPEND xguipro_SOURCES
 )
@@ -54,4 +55,45 @@ XGUIPRO_COMPUTE_SOURCES(xguipro)
 XGUIPRO_FRAMEWORK(xguipro)
 
 install(TARGETS xguipro DESTINATION "${EXEC_INSTALL_DIR}/")
+
+XGUIPRO_EXECUTABLE_DECLARE(test_layouter)
+
+list(APPEND test_layouter_PRIVATE_INCLUDE_DIRECTORIES
+    "${CMAKE_BINARY_DIR}"
+    "${xGUIPro_DERIVED_SOURCES_DIR}"
+    "${XGUIPRO_LIB_DIR}"
+    "${XGUIPRO_BIN_DIR}"
+)
+
+list(APPEND test_layouter_SYSTEM_INCLUDE_DIRECTORIES
+    "${GLIB_INCLUDE_DIRS}"
+)
+
+list(APPEND test_layouter_DEFINITIONS
+)
+
+XGUIPRO_EXECUTABLE(test_layouter)
+
+set(test_layouter_PLATFORM_INDEPENDENT_DIRS
+    "layouter"
+)
+
+APPEND_ALL_SOURCE_FILES_IN_DIRLIST(test_layouter_SOURCES
+        "${test_layouter_PLATFORM_INDEPENDENT_DIRS}")
+
+list(APPEND test_layouter_SOURCES
+    "test_layouter.c"
+)
+
+set(test_layouter_LIBRARIES
+    xGUIPro::xGUIPro
+    DOMRuler::DOMRuler
+    PurC::PurC
+    pthread
+)
+
+file(COPY "test_layouter.html" DESTINATION "${CMAKE_BINARY_DIR}")
+
+XGUIPRO_COMPUTE_SOURCES(test_layouter)
+XGUIPRO_FRAMEWORK(test_layouter)
 

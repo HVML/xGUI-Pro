@@ -103,7 +103,7 @@ has_tag(pcdom_element_t *element, const char *tag)
 static inline bool
 is_an_element_with_tag(pcdom_node_t *node, const char *tag)
 {
-    if (node && node->type == PCDOM_NODE_TYPE_COMMENT) {
+    if (node && node->type == PCDOM_NODE_TYPE_ELEMENT) {
         return has_tag(pcdom_interface_element(node), tag);
     }
 

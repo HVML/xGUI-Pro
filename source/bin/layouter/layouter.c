@@ -217,18 +217,19 @@ append_style_walker(pcdom_node_t *node, void *ctxt)
         if (strncasecmp(name, "style", len) == 0) {
             struct ws_layouter *layouter = ctxt;
 
-            purc_log_info("got a style element\n");
+            purc_log_debug("Got a style element\n");
 
             pcdom_node_t *child = node->first_child;
             while (child) {
-                if (node->type == PCDOM_NODE_TYPE_TEXT) {
+                if (child->type == PCDOM_NODE_TYPE_TEXT) {
                     pcdom_text_t *text;
 
                     text = pcdom_interface_text(child);
                     const char *css = (const char *)text->char_data.data.data;
                     domruler_append_css(layouter->ruler,
                             css, text->char_data.data.length);
-                    purc_log_debug("apply CSS: %s\n", css);
+                    purc_log_debug("CSS totally %u bytes applied.\n",
+                            (unsigned)text->char_data.data.length);
                 }
 
                 child = child->next;
@@ -287,12 +288,13 @@ struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
     def_css = load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
                 DEF_LAYOUT_CSS, &len_def_css);
     if (def_css) {
-        purc_log_info("Default CSS: %s\n", def_css);
         domruler_append_css(layouter->ruler, def_css, len_def_css);
         free(def_css);
     }
     else {
         purc_log_warn("Failed to load default CSS from: %s\n", DEF_LAYOUT_CSS);
+        purc_log_warn("Please check your environment variable"
+                " `WEBKIT_WEBEXT_DIR`\n");
     }
 
     layouter->dom_doc = pchtml_html_document_create();
