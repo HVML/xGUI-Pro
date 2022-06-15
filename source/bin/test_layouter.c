@@ -148,7 +148,6 @@ void my_destroy_widget(void *ws_ctxt, void *widget)
             one = INT2PTR(sorted_array_get(ctxt->sa_widget, i, NULL));
             if (one->parent == w) {
                 my_destroy_widget(ctxt, one);
-                one->nr_children--;
             }
 
             n = sorted_array_count(ctxt->sa_widget);

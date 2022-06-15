@@ -172,6 +172,8 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
 
     void *widget = layouter->cb_create_widget(layouter->ws_ctxt,
             type, parent, &style);
+    if (name) free(name);
+    if (title) free(title);
     if (widget == NULL)
         return NULL;
 
