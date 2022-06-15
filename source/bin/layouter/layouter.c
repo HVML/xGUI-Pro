@@ -105,15 +105,37 @@ fill_position(struct ws_widget_style *style, const HLBox *box)
         style->w = 0;
     }
     else {
-        style->w = (int)(box->w + 0.5);
+        style->w = (unsigned)(box->w + 0.5);
     }
 
     if (box->h == HL_AUTO) {
         style->h = 0;
     }
     else {
-        style->h = (int)(box->h + 0.5);
+        style->h = (unsigned)(box->h + 0.5);
     }
+
+    style->ml = (int)(box->margin_left   + 0.5);
+    style->mt = (int)(box->margin_top    + 0.5);
+    style->mr = (int)(box->margin_right  + 0.5);
+    style->mb = (int)(box->margin_bottom + 0.5);
+
+    style->pl = (int)(box->padding_left   + 0.5);
+    style->pt = (int)(box->padding_top    + 0.5);
+    style->pr = (int)(box->padding_right  + 0.5);
+    style->pb = (int)(box->padding_bottom + 0.5);
+
+    style->bl = box->border_left;
+    style->bt = box->border_top;
+    style->br = box->border_right;
+    style->bb = box->border_bottom;
+
+    style->brlt = box->border_top_left_radius;
+    style->brtr = box->border_top_right_radius;
+    style->brrb = box->border_bottom_right_radius;
+    style->brbl = box->border_bottom_left_radius;
+
+    style->opacity = box->opacity;
 }
 
 static void get_element_name_title(pcdom_element_t *element,
@@ -428,11 +450,12 @@ destroy_widget_walker(pcdom_node_t *node, void *ctxt)
 }
 
 struct relayout_widget_ctxt {
+    struct ws_layouter *layouter;
+    void *parent;
+
     unsigned nr_laid;
     unsigned nr_ignored;
     unsigned nr_error;
-
-    struct ws_layouter *layouter;
 };
 
 static pchtml_action_t
@@ -448,8 +471,9 @@ layout_widget_walker(pcdom_node_t *node, void *ctxt)
         return PCHTML_ACTION_NEXT;
 
     case PCDOM_NODE_TYPE_ELEMENT:
+    {
+        struct relayout_widget_ctxt *my_ctxt = ctxt;
         if (node->user) {
-            struct relayout_widget_ctxt *my_ctxt = ctxt;
 
             const HLBox *box;
             box = domruler_get_node_bounding_box(my_ctxt->layouter->ruler,
@@ -470,11 +494,13 @@ layout_widget_walker(pcdom_node_t *node, void *ctxt)
         }
 
         if (node->first_child != NULL) {
+            my_ctxt->parent = node->user;
             return PCHTML_ACTION_OK;
         }
 
         /* walk to the siblings. */
         return PCHTML_ACTION_NEXT;
+    }
 
     default:
         /* ignore any unknown node types */
@@ -501,8 +527,8 @@ relayout(struct ws_layouter *layouter, pcdom_element_t *subtree_root)
         subtree_root = root;
     }
 
-    struct relayout_widget_ctxt ctxt = { 0, 0, 0, layouter };
     pcdom_node_t *node = pcdom_interface_node(subtree_root);
+    struct relayout_widget_ctxt ctxt = { layouter, node->user, 0, 0, 0, };
     pcdom_node_simple_walk(node, layout_widget_walker, &ctxt);
     return PCRDR_SC_OK;
 }
@@ -1009,5 +1035,20 @@ ws_widget_type_t ws_layouter_retrieve_widget(struct ws_layouter *layouter,
     }
 
     return type;
+}
+
+ws_widget_type_t
+ws_layouter_retrieve_widget_by_id(struct ws_layouter *layouter,
+        const char *group_id, const char *page_name)
+{
+    pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
+    pcdom_element_t *element = find_page_element(dom_doc, group_id, page_name);
+
+    if (element) {
+        return ws_layouter_retrieve_widget(layouter,
+                get_element_user_data(element));
+    }
+
+    return WS_WIDGET_TYPE_NONE;
 }
 

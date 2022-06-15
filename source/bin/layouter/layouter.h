@@ -63,6 +63,13 @@ struct ws_widget_style {
     const char *title;
     int         x, y;
     unsigned    w, h;
+
+    int         ml, mt, mr, mb; /* margins */
+    int         pl, pt, pr, pb; /* paddings */
+    float       bl, bt, br, bb; /* borders */
+    float       brlt, brtr, brrb, brbl; /* border radius */
+
+    float       opacity;
 };
 
 typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt, ws_widget_type_t type,
@@ -130,6 +137,11 @@ int ws_layouter_update_widget(struct ws_layouter *layouter,
 /* Retrieve a widget */
 ws_widget_type_t ws_layouter_retrieve_widget(struct ws_layouter *layouter,
         void *widget);
+
+/* Retrieve a widget by group identifier and page/window name */
+ws_widget_type_t
+ws_layouter_retrieve_widget_by_id(struct ws_layouter *layouter,
+        const char *group_id, const char *page_name);
 
 #ifdef __cplusplus
 }

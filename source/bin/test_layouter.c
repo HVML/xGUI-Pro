@@ -329,8 +329,18 @@ int main(int argc, char *argv[])
     assert(retv == PCRDR_SC_OK);
     assert(widget != NULL);
 
+    ws_widget_type_t type;
+    type = ws_layouter_retrieve_widget_by_id(layouter, "theModals", "test3");
+    assert(type == WS_WIDGET_TYPE_NONE);
+
     retv = ws_layouter_remove_page_by_id(layouter, "theModals", "test3");
     assert(retv == PCRDR_SC_NOT_FOUND);
+
+    type = ws_layouter_retrieve_widget_by_id(layouter, "viewerBodyPanels", "panel1");
+    assert(type == WS_WIDGET_TYPE_PLAINPAGE);
+
+    type = ws_layouter_retrieve_widget(layouter, widget);
+    assert(type == WS_WIDGET_TYPE_TABPAGE);
 
     retv = ws_layouter_remove_page_by_id(layouter, "viewerBodyPanels", "panel1");
     assert(retv == PCRDR_SC_OK);
@@ -349,6 +359,8 @@ int main(int argc, char *argv[])
         my_destroy_widget(&ctxt, widget);
     }
     sorted_array_destroy(ctxt.sa_widget);
+
+    purc_log_info("TEST DONE\n");
 
     return 0;
 }
