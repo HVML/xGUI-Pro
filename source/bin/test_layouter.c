@@ -36,6 +36,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#define SA_INITIAL_SIZE 16
+
 struct ws_layouter {
     struct DOMRulerCtxt *ruler;
     pcdom_document_t *dom_doc;
@@ -53,6 +55,24 @@ struct test_widget {
 
     int x, y;
     unsigned w, h;
+
+    ws_widget_type_t type;
+    unsigned nr_children;
+};
+
+static const char *widget_types[] = {
+    "NONE",
+    "PLAINWINDOW",
+    "TABBEDWINDOW",
+    "HEADER",
+    "MENUBAR",
+    "TOOLBAR",
+    "SIDEBAR",
+    "FOOTER",
+    "PANEL",
+    "TABHOST",
+    "PLAINPAGE",
+    "TABPAGE",
 };
 
 void *my_create_widget(void *ws_ctxt, ws_widget_type_t type,
@@ -60,12 +80,12 @@ void *my_create_widget(void *ws_ctxt, ws_widget_type_t type,
 {
     struct test_ctxt *ctxt = ws_ctxt;
 
-    purc_log_info("Creating a widget: postion (%d, %d), size (%u x %u)\n",
+    purc_log_info("Creating a `%s` widget (%s, %s) (%d, %d; %u x %u)\n",
+            widget_types[type], style->name, style->title,
             style->x, style->y, style->w, style->h);
 
     if (parent) {
-        void *data;
-        if (!sorted_array_find(ctxt->sa_widget, PTR2U64(parent), &data)) {
+        if (!sorted_array_find(ctxt->sa_widget, PTR2U64(parent), NULL)) {
             purc_log_warn("invalid parent: %p\n", parent);
             return NULL;
         }
@@ -80,7 +100,20 @@ void *my_create_widget(void *ws_ctxt, ws_widget_type_t type,
     widget->w = style->w;
     widget->h = style->h;
 
-    sorted_array_add(ctxt->sa_widget, PTR2U64(widget), NULL);
+    widget->type = type;
+    widget->nr_children = 0;
+
+    purc_log_info("Created widget (%p)\n", widget);
+
+    if (parent) {
+        struct test_widget *p = parent;
+        p->nr_children++;
+    }
+
+    if (sorted_array_add(ctxt->sa_widget, PTR2U64(widget), NULL) != 0) {
+        purc_log_warn("Failed to store the widget: %p\n", widget);
+    }
+
     return widget;
 }
 
@@ -89,10 +122,46 @@ void my_destroy_widget(void *ws_ctxt, void *widget)
     struct test_ctxt *ctxt = ws_ctxt;
 
     purc_log_info("Destroying a widget (%p)\n", widget);
-
     if (widget == NULL) {
         purc_log_warn("Invalid widget value (NULL)\n");
         return;
+    }
+
+    if (!sorted_array_find(ctxt->sa_widget, PTR2U64(widget), NULL)) {
+        purc_log_warn("Not existing widget (%p)\n", widget);
+        return;
+    }
+
+    struct test_widget *w = widget;
+    while (w->nr_children > 0) {
+        purc_log_info("Destroying children of widget (%s, %s): %u\n",
+                widget_types[w->type], w->name,
+                w->nr_children);
+
+        /* this is a container, destroy children recursively */
+        size_t n = sorted_array_count(ctxt->sa_widget);
+
+        for (size_t i = 0; i < n; i++) {
+            struct test_widget *one;
+            purc_log_info("checking slot %u/%u\n",
+                    (unsigned)i, (unsigned)n);
+            one = INT2PTR(sorted_array_get(ctxt->sa_widget, i, NULL));
+            if (one->parent == w) {
+                my_destroy_widget(ctxt, one);
+                one->nr_children--;
+            }
+
+            n = sorted_array_count(ctxt->sa_widget);
+        }
+
+        purc_log_info("# children of widget (%s, %s): %u\n",
+                widget_types[w->type], w->name,
+                w->nr_children);
+    }
+
+    if (w->parent) {
+        struct test_widget *p = w->parent;
+        p->nr_children--;
     }
 
     if (!sorted_array_remove(ctxt->sa_widget, PTR2U64(widget))) {
@@ -100,7 +169,6 @@ void my_destroy_widget(void *ws_ctxt, void *widget)
         return;
     }
 
-    struct test_widget *w = widget;
     free(w->name);
     free(w->title);
     free(w);
@@ -119,8 +187,7 @@ void my_update_widget(void *ws_ctxt,
         return;
     }
 
-    void *data;
-    if (!sorted_array_find(ctxt->sa_widget, PTR2U64(widget), &data)) {
+    if (!sorted_array_find(ctxt->sa_widget, PTR2U64(widget), NULL)) {
         purc_log_warn("Not existing widget (%p)\n", widget);
         return;
     }
@@ -145,6 +212,8 @@ void my_update_widget(void *ws_ctxt,
         w->y = style->y;
         w->w = style->w;
         w->h = style->h;
+        purc_log_info("Position of widget (%p) updated: (%d, %d; %u x %u)\n",
+                widget, w->x, w->y, w->w, w->h);
     }
 
     purc_log_info("Widget (%p) updated\n", widget);
@@ -162,6 +231,10 @@ int main(int argc, char *argv[])
     struct test_ctxt ctxt;
     struct ws_metrics metrics = { 1024, 768, 96, 1 };
 
+    ctxt.sa_widget = sorted_array_create(SAFLAG_DEFAULT,
+            SA_INITIAL_SIZE, NULL, NULL);
+    assert(ctxt.sa_widget);
+
     char *html;
     size_t len_html;
     html = load_asset_content(NULL, NULL,
@@ -172,9 +245,9 @@ int main(int argc, char *argv[])
     layouter = ws_layouter_new(&metrics, html, len_html, &ctxt,
         my_create_widget, my_destroy_widget, my_update_widget,
         &retv);
+    free(html);
 
     if (layouter == NULL) {
-        free(html);
         return retv;
     }
 
@@ -211,15 +284,73 @@ int main(int argc, char *argv[])
         "freeWindows", "test", NULL, NULL, PURC_VARIANT_INVALID, &retv);
     assert(retv == PCRDR_SC_NOT_FOUND);
 
-    ws_layouter_add_plain_window(layouter,
-        "theModals", "test", "hc", "this is a test plain window",
+    void *widget;
+    widget = ws_layouter_add_plain_window(layouter,
+        "theModals", "test1", "main", "this is a test plain window",
         PURC_VARIANT_INVALID, &retv);
+    assert(retv == PCRDR_SC_OK);
+    assert(widget != NULL);
 
+    element = dom_get_element_by_id(layouter->dom_doc, "theModals-test1");
+    assert(has_tag(element, "FIGURE"));
+
+    ws_layouter_add_plain_window(layouter,
+        "theModals", "test2", "main", "this is a test plain window",
+        PURC_VARIANT_INVALID, &retv);
+    element = dom_get_element_by_id(layouter->dom_doc, "theModals-test2");
+    assert(has_tag(element, "FIGURE"));
+
+    retv = ws_layouter_remove_plain_window_by_id(layouter, "theModals", "test3");
+    assert(retv == PCRDR_SC_NOT_FOUND);
+
+    retv = ws_layouter_remove_plain_window_by_id(layouter, "theModals", "test2");
+    assert(retv == PCRDR_SC_OK);
+
+    retv = ws_layouter_remove_plain_window_by_widget(layouter, widget);
+    assert(retv == PCRDR_SC_OK);
+
+    ws_layouter_add_page(layouter,
+        "viewerBody", "panel1",
+        "bar", NULL, PURC_VARIANT_INVALID, &retv);
+    assert(retv == PCRDR_SC_BAD_REQUEST);
+
+    ws_layouter_add_page(layouter,
+        "viewerBodyPanels", "panel1",
+        "bar", NULL, PURC_VARIANT_INVALID, &retv);
+    assert(retv == PCRDR_SC_OK);
+
+    ws_layouter_add_page(layouter,
+        "viewerBodyTabs", "tab1",
+        NULL, NULL, PURC_VARIANT_INVALID, &retv);
+    assert(retv == PCRDR_SC_OK);
+
+    widget = ws_layouter_add_page(layouter,
+        "viewerBodyTabs", "tab2",
+        NULL, NULL, PURC_VARIANT_INVALID, &retv);
+    assert(retv == PCRDR_SC_OK);
+    assert(widget != NULL);
+
+    retv = ws_layouter_remove_page_by_id(layouter, "theModals", "test3");
+    assert(retv == PCRDR_SC_NOT_FOUND);
+
+    retv = ws_layouter_remove_page_by_id(layouter, "viewerBodyPanels", "panel1");
+    assert(retv == PCRDR_SC_OK);
+
+    retv = ws_layouter_remove_page_by_widget(layouter, widget);
     assert(retv == PCRDR_SC_OK);
 
     ws_layouter_delete(layouter);
 
-    free(html);
+    purc_log_info("Cleaning up widgets (%u)\n",
+            (unsigned)sorted_array_count(ctxt.sa_widget));
+
+    while (sorted_array_count(ctxt.sa_widget) > 0) {
+        struct test_widget *widget;
+        widget = INT2PTR(sorted_array_get(ctxt.sa_widget, 0, NULL));
+        my_destroy_widget(&ctxt, widget);
+    }
+    sorted_array_destroy(ctxt.sa_widget);
 
     return 0;
 }
+

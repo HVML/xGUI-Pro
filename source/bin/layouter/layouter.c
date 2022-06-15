@@ -129,16 +129,19 @@ static void get_element_name_title(pcdom_element_t *element,
         const char *attr_name, *attr_value;
         size_t sz;
         attr_name = (const char *)pcdom_attr_local_name(attr, &sz);
+
         if (strncasecmp(attr_name, "name", sizeof("name")) == 0) {
             attr_value = (const char *)pcdom_attr_value(attr, &sz);
-            *name = strndup(attr_value, sz);
+            if (sz > 0)
+                *name = strndup(attr_value, sz);
         }
         else if (strncasecmp(attr_name, "title", sizeof("title")) == 0) {
             attr_value = (const char *)pcdom_attr_value(attr, &sz);
-            *title = strndup(attr_value, sz);
+            if (sz > 0)
+                *title = strndup(attr_value, sz);
         }
 
-        if (name && title)
+        if (*name && *title)
             break;
 
         attr = pcdom_element_next_attribute(attr);
@@ -152,7 +155,7 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
         pcdom_element_t *element, ws_widget_type_t type, void *parent)
 {
     const HLBox *box;
-    box = domruler_get_element_bounding_box(layouter->ruler,
+    box = domruler_get_node_bounding_box(layouter->ruler,
             pcdom_interface_node(element));
     if (box == NULL)
         return NULL;
@@ -173,9 +176,10 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
         return NULL;
 
     set_element_user_data(element, widget);
-    if (!sorted_array_add(layouter->sa_widget,
-                PTR2U64(widget), element)) {
-        purc_log_warn("Failed to store widget/element pair\n");
+    if (sorted_array_add(layouter->sa_widget,
+                PTR2U64(widget), element) != 0) {
+        purc_log_warn("Failed to store widget/element pair (%p, %p)\n",
+                widget, element);
     }
 
     return widget;
@@ -446,7 +450,7 @@ layout_widget_walker(pcdom_node_t *node, void *ctxt)
             struct relayout_widget_ctxt *my_ctxt = ctxt;
 
             const HLBox *box;
-            box = domruler_get_element_bounding_box(my_ctxt->layouter->ruler,
+            box = domruler_get_node_bounding_box(my_ctxt->layouter->ruler,
                     node);
 
             if (box) {
@@ -484,7 +488,7 @@ relayout(struct ws_layouter *layouter, pcdom_element_t *subtree_root)
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *root = dom_doc->element;
 
-    domruler_reset_elements(layouter->ruler);
+    domruler_reset_nodes(layouter->ruler);
     int ret = domruler_layout_pcdom_elements(layouter->ruler, root);
     if (ret) {
         purc_log_error("Failed to re-layout the widgets: %d.\n", ret);
@@ -539,7 +543,7 @@ find_page_element(pcdom_document_t *dom_doc,
         const char* group_id, const char *window_name)
 {
     gchar *page_id = g_strdup_printf(PAGE_ID, group_id, window_name);
-    pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
+    pcdom_element_t *element = dom_get_element_by_id(dom_doc, page_id);
     g_free(page_id);
 
     return element;
@@ -591,12 +595,13 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
             pcdom_element_t *figure = find_page_element(dom_doc,
                     group_id, window_name);
             assert(figure);
+            assert(has_tag(figure, "FIGURE"));
 
             /* re-layout the exsiting widgets */
             relayout(layouter, section);
 
-            if (create_widget_for_element(layouter, figure,
-                    WS_WIDGET_TYPE_PLAINWINDOW, NULL) == NULL) {
+            if ((widget = create_widget_for_element(layouter, figure,
+                    WS_WIDGET_TYPE_PLAINWINDOW, NULL)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }
@@ -805,9 +810,6 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
         if (subtree) {
             dom_append_subtree_to_element(dom_doc, element, subtree);
 
-            /* re-layout the exsiting widgets */
-            relayout(layouter, article);
-
             void *parent = get_element_user_data(element);
             if (parent == NULL) {
                 /* create the ancestor widgets */
@@ -821,12 +823,15 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
                 goto failed;
             }
 
+            /* re-layout the exsiting widgets */
+            relayout(layouter, article);
+
             pcdom_element_t *li = find_page_element(dom_doc,
                     group_id, page_name);
             assert(li);
 
-            if (create_widget_for_element(layouter, li,
-                        widget_type, parent) == NULL) {
+            if ((widget = create_widget_for_element(layouter, li,
+                        widget_type, parent)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }

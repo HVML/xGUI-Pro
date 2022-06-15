@@ -92,8 +92,19 @@ set(test_layouter_LIBRARIES
     pthread
 )
 
-file(COPY "test_layouter.html" DESTINATION "${CMAKE_BINARY_DIR}")
-
 XGUIPRO_COMPUTE_SOURCES(test_layouter)
 XGUIPRO_FRAMEWORK(test_layouter)
+
+set(test_files_FILES
+    "${CMAKE_BINARY_DIR}/test_layouter.html"
+)
+
+set(test_files_SOURCES
+    "test_layouter.html"
+)
+
+file(COPY ${test_files_SOURCES} DESTINATION "${CMAKE_BINARY_DIR}")
+
+add_custom_target(test_files DEPENDS ${test_files_FILES})
+add_dependencies(test_layouter test_files)
 
