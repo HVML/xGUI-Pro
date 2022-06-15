@@ -95,7 +95,7 @@ find_article_ancestor(pcdom_element_t *element)
     return NULL;
 }
 
-static inline void
+static void
 fill_position(struct ws_widget_style *style, const HLBox *box)
 {
     style->x = (int)(box->x + 0.5);
@@ -138,6 +138,37 @@ fill_position(struct ws_widget_style *style, const HLBox *box)
     style->opacity = box->opacity;
 }
 
+static void
+fill_toolkit_style(struct ws_widget_style *style, purc_variant_t toolkit_style)
+{
+    style->darkMode = false;
+    style->fullScreen = false;
+    style->backgroundColor = "white";
+
+    if (toolkit_style == PURC_VARIANT_INVALID)
+        return;
+
+    purc_variant_t tmp;
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "darkMode")) &&
+            purc_variant_is_true(tmp)) {
+        style->darkMode = true;
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "fullScreen")) &&
+            purc_variant_is_true(tmp)) {
+        style->fullScreen = true;
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "backgroundColor"))) {
+        const char *value = purc_variant_get_string_const(tmp);
+        if (value) {
+            style->backgroundColor = value;
+        }
+    }
+
+    style->flags |= WSWS_FLAG_TOOLKIT;
+}
+
 static void get_element_name_title(pcdom_element_t *element,
         char **name, char **title)
 {
@@ -174,7 +205,8 @@ static void get_element_name_title(pcdom_element_t *element,
 #define UNTITLED            "Untitled"
 
 static void *create_widget_for_element(struct ws_layouter *layouter,
-        pcdom_element_t *element, ws_widget_type_t type, void *parent)
+        pcdom_element_t *element, ws_widget_type_t type, void *parent,
+        purc_variant_t toolkit_style)
 {
     const HLBox *box;
     box = domruler_get_node_bounding_box(layouter->ruler,
@@ -191,6 +223,7 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
     style.name = name ? name : ANONYMOUS_NAME;
     style.title = title ? title: UNTITLED;
     fill_position(&style, box);
+    fill_toolkit_style(&style, toolkit_style);
 
     void *widget = layouter->cb_create_widget(layouter->ws_ctxt,
             type, parent, &style);
@@ -629,7 +662,7 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
             relayout(layouter, section);
 
             if ((widget = create_widget_for_element(layouter, figure,
-                    WS_WIDGET_TYPE_PLAINWINDOW, NULL)) == NULL) {
+                    WS_WIDGET_TYPE_PLAINWINDOW, NULL, style)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }
@@ -722,31 +755,38 @@ create_widget_walker(pcdom_node_t *node, void *ctxt)
         struct create_widget_ctxt *my_ctxt = ctxt;
         if (strcasecmp(name, "HEADER") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_HEADER, my_ctxt->tabbed_window);
+                    WS_WIDGET_TYPE_HEADER, my_ctxt->tabbed_window,
+                    PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "MENU") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_MENUBAR, my_ctxt->tabbed_window);
+                    WS_WIDGET_TYPE_MENUBAR, my_ctxt->tabbed_window,
+                    PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "NAV") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_TOOLBAR, my_ctxt->tabbed_window);
+                    WS_WIDGET_TYPE_TOOLBAR, my_ctxt->tabbed_window,
+                    PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "ASIDE") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_SIDEBAR, my_ctxt->tabbed_window);
+                    WS_WIDGET_TYPE_SIDEBAR, my_ctxt->tabbed_window,
+                    PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "FOOTER") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_FOOTER, my_ctxt->tabbed_window);
+                    WS_WIDGET_TYPE_FOOTER, my_ctxt->tabbed_window,
+                    PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "OL") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_PANEL, my_ctxt->tabbed_window);
+                    WS_WIDGET_TYPE_PANEL, my_ctxt->tabbed_window,
+                    PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "UL") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_TABHOST, my_ctxt->tabbed_window);
+                    WS_WIDGET_TYPE_TABHOST, my_ctxt->tabbed_window,
+                    PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "DIV") == 0) {
             if (node->first_child != NULL) {
@@ -775,7 +815,7 @@ static bool create_tabbed_window(struct ws_layouter *layouter,
     tabbed_window = get_element_user_data(article);
     if (tabbed_window == NULL) {
         tabbed_window = create_widget_for_element(layouter, article,
-                WS_WIDGET_TYPE_TABBEDWINDOW, NULL);
+                WS_WIDGET_TYPE_TABBEDWINDOW, NULL, PURC_VARIANT_INVALID);
     }
 
     if (tabbed_window == NULL)
@@ -859,7 +899,7 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
             assert(li);
 
             if ((widget = create_widget_for_element(layouter, li,
-                        widget_type, parent)) == NULL) {
+                        widget_type, parent, style)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }
@@ -974,7 +1014,13 @@ int ws_layouter_update_widget(struct ws_layouter *layouter,
         return PCRDR_SC_BAD_REQUEST;
     }
     else if (strcasecmp(property, "style") == 0) {
-        return PCRDR_SC_NOT_IMPLEMENTED; /* TODO */
+        fill_toolkit_style(&style, value);
+        if (style.flags & WSWS_FLAG_TOOLKIT) {
+            layouter->cb_update_widget(layouter->ws_ctxt, widget, &style);
+            goto done;
+        }
+
+        return PCRDR_SC_BAD_REQUEST;
     }
 
 done:

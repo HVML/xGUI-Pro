@@ -55,12 +55,19 @@ typedef enum {
 #define WSWS_FLAG_NAME      0x00000001
 #define WSWS_FLAG_TITLE     0x00000002
 #define WSWS_FLAG_POSITION  0x00000004
+#define WSWS_FLAG_TOOLKIT   0x00000008
 
 struct ws_widget_style {
     unsigned int flags;
 
     const char *name;
     const char *title;
+
+    /* other styles */
+    const char *backgroundColor;
+    bool        darkMode;
+    bool        fullScreen;
+
     int         x, y;
     unsigned    w, h;
 
