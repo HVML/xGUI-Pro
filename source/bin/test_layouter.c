@@ -174,6 +174,7 @@ int main(int argc, char *argv[])
         &retv);
 
     if (layouter == NULL) {
+        free(html);
         return retv;
     }
 
@@ -217,6 +218,8 @@ int main(int argc, char *argv[])
     assert(retv == PCRDR_SC_OK);
 
     ws_layouter_delete(layouter);
+
+    free(html);
 
     return 0;
 }
