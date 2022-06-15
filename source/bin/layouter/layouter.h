@@ -61,7 +61,8 @@ struct ws_widget_style {
 
     const char *name;
     const char *title;
-    int x, y, w, h;
+    int         x, y;
+    unsigned    w, h;
 };
 
 typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt, ws_widget_type_t type,

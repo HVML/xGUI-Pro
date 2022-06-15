@@ -20,6 +20,7 @@
 #ifndef __LIB_UTILS_SORTED_ARRAY_H
 #define __LIB_UTILS_SORTED_ARRAY_H
 
+#include <stdint.h>
 #include <stdbool.h>
 
 struct sorted_array;
@@ -32,6 +33,9 @@ typedef int  (*sacb_compare)(uint64_t sortv1, uint64_t sortv2);
 #define SAFLAG_DUPLCATE_SORTV       0x0002
 
 #define SAFLAG_DEFAULT              0x0000
+
+#define PTR2U64(p)                  ((uint64_t)(uintptr_t)(p))
+#define INT2PTR(i)                  ((void *)(uintptr_t)(i))
 
 #ifdef __cplusplus
 extern "C" {

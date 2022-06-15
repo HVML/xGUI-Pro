@@ -30,8 +30,6 @@
 
 #define SA_INITIAL_SIZE        8
 
-#define PTR2U64(p)      ((uint64_t)(uintptr_t)p)
-
 static const char *get_element_id(pcdom_element_t *element, size_t *sz)
 {
     pcdom_attr_t *attr_id = pcdom_element_id_attribute(element);

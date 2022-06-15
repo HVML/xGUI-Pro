@@ -84,9 +84,6 @@ struct purcmc_session {
     char *uri_prefix;
 };
 
-#define PTR2U64(x)     (uint64_t)(uintptr_t)(x)
-#define INT2PTR(x)     (void *)(uintptr_t)(x)
-
 /*
  * Use this function to retrieve the endpoint of a session.
  * the endpoint might be deleted earlier than session.

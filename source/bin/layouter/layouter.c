@@ -34,8 +34,6 @@
 
 #define SA_INITIAL_SIZE        16
 
-#define PTR2U64(p)              ((uint64_t)(uintptr_t)p)
-
 struct ws_layouter {
     struct DOMRulerCtxt *ruler;
 
@@ -525,7 +523,9 @@ int ws_layouter_remove_page_group(struct ws_layouter *layouter,
 
         dom_erase_element(dom_doc, element);
 
-        relayout(layouter, section);
+        if (ctxt.nr_destroyed > 0) {
+            relayout(layouter, section);
+        }
         return PCRDR_SC_OK;
     }
 
@@ -559,8 +559,17 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
     void *widget = NULL;
     if (element) {
         pcdom_node_t *subtree;
-        /* the element must be a descendant of a `section` element */
-        pcdom_element_t *section = find_section_ancestor(element);
+        /* the element must be a `section` element or
+           a descendant of a `section` element */
+        pcdom_element_t *section;
+
+        if (has_tag(element, "SECTION")) {
+            section = element;
+        }
+        else {
+            section = find_section_ancestor(element);
+        }
+
         if (section == NULL) {
             purc_log_error("Cannot find the ancestor `section` element (%s)\n",
                     group_id);
@@ -578,13 +587,13 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         if (subtree) {
             dom_append_subtree_to_element(dom_doc, element, subtree);
 
-            /* re-layout the exsiting widgets */
-            relayout(layouter, section);
-
             /* create widget */
             pcdom_element_t *figure = find_page_element(dom_doc,
                     group_id, window_name);
             assert(figure);
+
+            /* re-layout the exsiting widgets */
+            relayout(layouter, section);
 
             if (create_widget_for_element(layouter, figure,
                     WS_WIDGET_TYPE_PLAINWINDOW, NULL) == NULL) {

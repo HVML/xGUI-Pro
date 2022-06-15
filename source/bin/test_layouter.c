@@ -26,6 +26,7 @@
 #include "xguipro-features.h"
 
 #include "utils/load-asset.h"
+#include "utils/sorted-array.h"
 #include "layouter/layouter.h"
 #include "layouter/dom-ops.h"
 
@@ -41,21 +42,112 @@ struct ws_layouter {
 };
 
 struct test_ctxt {
+    struct sorted_array *sa_widget;
+};
+
+struct test_widget {
+    void *parent;
+
+    char *name;
+    char *title;
+
+    int x, y;
+    unsigned w, h;
 };
 
 void *my_create_widget(void *ws_ctxt, ws_widget_type_t type,
         void *parent, const struct ws_widget_style *style)
 {
-    return NULL;
+    struct test_ctxt *ctxt = ws_ctxt;
+
+    purc_log_info("Creating a widget: postion (%d, %d), size (%u x %u)\n",
+            style->x, style->y, style->w, style->h);
+
+    if (parent) {
+        void *data;
+        if (!sorted_array_find(ctxt->sa_widget, PTR2U64(parent), &data)) {
+            purc_log_warn("invalid parent: %p\n", parent);
+            return NULL;
+        }
+    }
+
+    struct test_widget *widget = calloc(1, sizeof(*widget));
+    widget->parent = parent;
+    widget->name = strdup(style->name);
+    widget->title = strdup(style->title);
+    widget->x = style->x;
+    widget->y = style->y;
+    widget->w = style->w;
+    widget->h = style->h;
+
+    sorted_array_add(ctxt->sa_widget, PTR2U64(widget), NULL);
+    return widget;
 }
 
 void my_destroy_widget(void *ws_ctxt, void *widget)
 {
+    struct test_ctxt *ctxt = ws_ctxt;
+
+    purc_log_info("Destroying a widget (%p)\n", widget);
+
+    if (widget == NULL) {
+        purc_log_warn("Invalid widget value (NULL)\n");
+        return;
+    }
+
+    if (!sorted_array_remove(ctxt->sa_widget, PTR2U64(widget))) {
+        purc_log_warn("Not existing widget (%p)\n", widget);
+        return;
+    }
+
+    struct test_widget *w = widget;
+    free(w->name);
+    free(w->title);
+    free(w);
+    purc_log_info("Widget (%p) destroyed\n", widget);
 }
 
 void my_update_widget(void *ws_ctxt,
         void *widget, const struct ws_widget_style *style)
 {
+    struct test_ctxt *ctxt = ws_ctxt;
+
+    purc_log_info("Updating a widget (%p)\n", widget);
+
+    if (widget == NULL) {
+        purc_log_warn("Invalid widget value (NULL)\n");
+        return;
+    }
+
+    void *data;
+    if (!sorted_array_find(ctxt->sa_widget, PTR2U64(widget), &data)) {
+        purc_log_warn("Not existing widget (%p)\n", widget);
+        return;
+    }
+
+    struct test_widget *w = widget;
+    if (style->flags & WSWS_FLAG_NAME) {
+        assert(style->name);
+
+        free(w->name);
+        w->name = strdup(style->name);
+    }
+
+    if (style->flags & WSWS_FLAG_TITLE) {
+        assert(style->title);
+
+        free(w->title);
+        w->title = strdup(style->title);
+    }
+
+    if (style->flags & WSWS_FLAG_POSITION) {
+        w->x = style->x;
+        w->y = style->y;
+        w->w = style->w;
+        w->h = style->h;
+    }
+
+    purc_log_info("Widget (%p) updated\n", widget);
 }
 
 static const char *new_page_groups = ""
@@ -112,6 +204,16 @@ int main(int argc, char *argv[])
     assert(has_tag(element, "SECTION"));
 
     retv = ws_layouter_remove_page_group(layouter, "freeWindows");
+    assert(retv == PCRDR_SC_OK);
+
+    ws_layouter_add_plain_window(layouter,
+        "freeWindows", "test", NULL, NULL, PURC_VARIANT_INVALID, &retv);
+    assert(retv == PCRDR_SC_NOT_FOUND);
+
+    ws_layouter_add_plain_window(layouter,
+        "theModals", "test", "hc", "this is a test plain window",
+        PURC_VARIANT_INVALID, &retv);
+
     assert(retv == PCRDR_SC_OK);
 
     ws_layouter_delete(layouter);
