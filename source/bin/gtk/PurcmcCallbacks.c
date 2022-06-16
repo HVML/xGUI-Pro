@@ -466,9 +466,9 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
 
 purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace,
-        const char *request_id, const char *gid,
-        const char *name, const char *class_name, const char *title,
-        purc_variant_t window_style, int *retv)
+        const char *request_id, const char *gid, const char *name,
+        const char *class_name, const char *title, const char *layout_style,
+        purc_variant_t widget_style, int *retv)
 {
     purcmc_plainwin * plain_win = NULL;
 
@@ -504,18 +504,18 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
                 GTK_WINDOW(main_win));
 
         purc_variant_t tmp;
-        if ((tmp = purc_variant_object_get_by_ckey(window_style, "darkMode")) &&
+        if ((tmp = purc_variant_object_get_by_ckey(widget_style, "darkMode")) &&
                 purc_variant_is_true(tmp)) {
             g_object_set(gtk_widget_get_settings(GTK_WIDGET(main_win)),
                     "gtk-application-prefer-dark-theme", TRUE, NULL);
         }
 
-        if ((tmp = purc_variant_object_get_by_ckey(window_style, "fullScreen")) &&
+        if ((tmp = purc_variant_object_get_by_ckey(widget_style, "fullScreen")) &&
                 purc_variant_is_true(tmp)) {
             gtk_window_fullscreen(GTK_WINDOW(main_win));
         }
 
-        if ((tmp = purc_variant_object_get_by_ckey(window_style, "backgroundColor"))) {
+        if ((tmp = purc_variant_object_get_by_ckey(widget_style, "backgroundColor"))) {
             const char *value = purc_variant_get_string_const(tmp);
 
             GdkRGBA rgba;
@@ -588,7 +588,7 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
     else {
         /* create a plain window in the specified group */
         ws_layouter_add_plain_window(workspace->layouter, gid, name,
-                class_name, title, window_style, retv);
+                class_name, title, layout_style, widget_style, retv);
     }
 
 failed:
@@ -635,7 +635,10 @@ int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
             return PCRDR_SC_BAD_REQUEST;
         }
     }
-    else if (strcmp(property, "style") == 0) {
+    else if (strcmp(property, "layoutStyle") == 0) {
+        /* TODO */
+    }
+    else if (strcmp(property, "widgetStyle") == 0) {
         /* TODO */
     }
 
@@ -1053,9 +1056,9 @@ int gtk_remove_page_group(purcmc_session *sess, purcmc_workspace *workspace,
 }
 
 purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
-            const char *request_id, const char *gid,
-            const char *name, const char *class_name, const char *title,
-            purc_variant_t style, int *retv)
+            const char *request_id, const char *gid, const char *name,
+            const char *class_name, const char *title, const char *layout_style,
+            purc_variant_t widget_style, int *retv)
 {
     purcmc_page *page = NULL;
 
@@ -1064,7 +1067,8 @@ purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
     }
     else {
         page = ws_layouter_add_page(workspace->layouter,
-                    gid, name, class_name, title, style, retv);
+                    gid, name, class_name, title,
+                    layout_style, widget_style, retv);
     }
 
     return page;

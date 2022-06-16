@@ -611,12 +611,12 @@ find_page_element(pcdom_document_t *dom_doc,
 }
 
 #define HTML_FRAG_PLAINWINDOW  \
-    "<figure id='%s-%s' class='%s' name='%s' title='%s'></figure>"
+    "<figure id='%s-%s' class='%s' name='%s' title='%s' style='%s'></figure>"
 
 void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         const char *group_id, const char *window_name,
-        const char *class_name, const char *title, purc_variant_t style,
-        int *retv)
+        const char *class_name, const char *title, const char *layout_style,
+        purc_variant_t widget_style, int *retv)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
@@ -644,7 +644,8 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
 
         gchar *html_fragment = g_strdup_printf(HTML_FRAG_PLAINWINDOW,
                 group_id, window_name, class_name ? class_name : "",
-                window_name, title ? title : "");
+                window_name, title ? title : "",
+                layout_style ? layout_style : "");
         subtree = dom_parse_fragment(dom_doc, element,
             html_fragment, strlen(html_fragment));
         g_free(html_fragment);
@@ -662,7 +663,7 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
             relayout(layouter, section);
 
             if ((widget = create_widget_for_element(layouter, figure,
-                    WS_WIDGET_TYPE_PLAINWINDOW, NULL, style)) == NULL) {
+                    WS_WIDGET_TYPE_PLAINWINDOW, NULL, widget_style)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }
@@ -828,12 +829,12 @@ static bool create_tabbed_window(struct ws_layouter *layouter,
 }
 
 #define HTML_FRAG_PAGE  \
-    "<li id='%s-%s' class='%s' name='%s' title='%s'></li>"
+    "<li id='%s-%s' class='%s' name='%s' title='%s' style='%s'></li>"
 
 void *ws_layouter_add_page(struct ws_layouter *layouter,
         const char *group_id, const char *page_name,
-        const char *class_name, const char *title, purc_variant_t style,
-        int *retv)
+        const char *class_name, const char *title, const char *layout_style,
+        purc_variant_t widget_style, int *retv)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
@@ -870,7 +871,8 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
         pcdom_node_t *subtree;
         gchar *html_fragment = g_strdup_printf(HTML_FRAG_PAGE,
                 group_id, page_name, class_name ? class_name : "",
-                page_name, title ? title : "");
+                page_name, title ? title : "",
+                layout_style ? layout_style : "");
         subtree = dom_parse_fragment(dom_doc, element,
             html_fragment, strlen(html_fragment));
         g_free(html_fragment);
@@ -899,7 +901,7 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
             assert(li);
 
             if ((widget = create_widget_for_element(layouter, li,
-                        widget_type, parent, style)) == NULL) {
+                        widget_type, parent, widget_style)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }

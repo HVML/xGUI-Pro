@@ -280,12 +280,12 @@ int main(int argc, char *argv[])
     assert(retv == PCRDR_SC_OK);
 
     ws_layouter_add_plain_window(layouter,
-        "freeWindows", "test", NULL, NULL, PURC_VARIANT_INVALID, &retv);
+        "freeWindows", "test", NULL, NULL, NULL, PURC_VARIANT_INVALID, &retv);
     assert(retv == PCRDR_SC_NOT_FOUND);
 
     void *widget;
     widget = ws_layouter_add_plain_window(layouter,
-        "theModals", "test1", "main", "this is a test plain window",
+        "theModals", "test1", "main", "this is a test plain window", NULL,
         PURC_VARIANT_INVALID, &retv);
     assert(retv == PCRDR_SC_OK);
     assert(widget != NULL);
@@ -294,7 +294,7 @@ int main(int argc, char *argv[])
     assert(has_tag(element, "FIGURE"));
 
     ws_layouter_add_plain_window(layouter,
-        "theModals", "test2", "main", "this is a test plain window",
+        "theModals", "test2", "main", "this is a test plain window", NULL,
         PURC_VARIANT_INVALID, &retv);
     element = dom_get_element_by_id(layouter->dom_doc, "theModals-test2");
     assert(has_tag(element, "FIGURE"));
@@ -309,23 +309,23 @@ int main(int argc, char *argv[])
     assert(retv == PCRDR_SC_OK);
 
     ws_layouter_add_page(layouter,
-        "viewerBody", "panel1",
-        "bar", NULL, PURC_VARIANT_INVALID, &retv);
+        "viewerBody", "panel1", "bar", NULL, NULL,
+        PURC_VARIANT_INVALID, &retv);
     assert(retv == PCRDR_SC_BAD_REQUEST);
 
     ws_layouter_add_page(layouter,
-        "viewerBodyPanels", "panel1",
-        "bar", NULL, PURC_VARIANT_INVALID, &retv);
+        "viewerBodyPanels", "panel1", "bar", NULL, NULL,
+        PURC_VARIANT_INVALID, &retv);
     assert(retv == PCRDR_SC_OK);
 
     ws_layouter_add_page(layouter,
-        "viewerBodyTabs", "tab1",
-        NULL, NULL, PURC_VARIANT_INVALID, &retv);
+        "viewerBodyTabs", "tab1", NULL, NULL, NULL,
+        PURC_VARIANT_INVALID, &retv);
     assert(retv == PCRDR_SC_OK);
 
     widget = ws_layouter_add_page(layouter,
-        "viewerBodyTabs", "tab2",
-        NULL, NULL, PURC_VARIANT_INVALID, &retv);
+        "viewerBodyTabs", "tab2", NULL, NULL, NULL,
+        PURC_VARIANT_INVALID, &retv);
     assert(retv == PCRDR_SC_OK);
     assert(widget != NULL);
 
