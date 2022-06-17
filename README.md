@@ -112,7 +112,7 @@ You can also run `purcsex` in PurC Midnigth Commander in another terminal:
 
 ```
 $ cd /path/to/purc-midnight-commander/build/
-$ source/bin/purcsex/purcsex --name=calculator
+$ source/bin/purcsex/purcsex --sample=calculator
 ```
 
 If encounter core dumps, use `gdb`:

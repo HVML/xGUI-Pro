@@ -127,7 +127,7 @@ static void finish_response(purcmc_session* sess, const char *request_id,
         purcmc_endpoint* endpoint;
         endpoint = get_endpoint_by_session(sess);
         if (endpoint) {
-            pcrdr_msg response;
+            pcrdr_msg response = { };
             response.type = PCRDR_MSG_TYPE_RESPONSE;
             response.sourceURI = PURC_VARIANT_INVALID;
             response.requestId =
@@ -235,7 +235,7 @@ user_message_received_callback(WebKitWebView *web_view,
             purcmc_endpoint* endpoint = get_endpoint_by_session(sess);
 
             if (len == 4 && endpoint) {
-                pcrdr_msg event;
+                pcrdr_msg event = { };
 
                 event.type = PCRDR_MSG_TYPE_EVENT;
                 event.target = PCRDR_MSG_TARGET_DOM;
@@ -423,7 +423,7 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
         purcmc_plainwin *plain_win = g_object_get_data(G_OBJECT(web_view),
                 "purcmc-plainwin");
 
-        pcrdr_msg event;
+        pcrdr_msg event = { };
         event.type = PCRDR_MSG_TYPE_EVENT;
         event.eventName = purc_variant_make_string_static("close", false);
         /* TODO: user URI for the sourceURI */
