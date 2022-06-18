@@ -685,7 +685,7 @@ failed:
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
 
-static int on_reset_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
+static int on_set_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
@@ -1898,7 +1898,7 @@ static struct request_handler {
     { PCRDR_OPERATION_LOAD, on_load },
     { PCRDR_OPERATION_PREPEND, on_prepend },
     { PCRDR_OPERATION_REMOVEPAGEGROUP, on_remove_page_group },
-    { PCRDR_OPERATION_RESETPAGEGROUPS, on_reset_page_groups },
+    { PCRDR_OPERATION_SETPAGEGROUPS, on_set_page_groups },
     { PCRDR_OPERATION_SETPROPERTY, on_set_property },
     { PCRDR_OPERATION_STARTSESSION, on_start_session },
     { PCRDR_OPERATION_UPDATE, on_update },
