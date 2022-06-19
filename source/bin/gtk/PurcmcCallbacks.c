@@ -349,8 +349,6 @@ int gtk_remove_session(purcmc_session *sess)
     LOG_DEBUG("destroy all ungrouped plain windows...\n");
     kvlist_for_each_safe(&sess->workspace.ug_wins, name, next, data) {
         plain_win = *(purcmc_plainwin **)data;
-
-        LOG_DEBUG("destroy plain window: %s (%p)\n", name, plain_win->web_view);
         webkit_web_view_try_close(plain_win->web_view);
     }
 
@@ -562,7 +560,6 @@ int gtk_destroy_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         return PCRDR_SC_BAD_REQUEST;
     }
 
-    LOG_DEBUG("try to close webview");
     webkit_web_view_try_close(plain_win->web_view);
     return PCRDR_SC_OK;
 }
