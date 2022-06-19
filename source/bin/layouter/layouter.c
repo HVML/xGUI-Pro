@@ -753,7 +753,7 @@ create_widget_walker(pcdom_node_t *node, void *ctxt)
         }
         else if (strcasecmp(name, "OL") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_PANEL, my_ctxt->tabbed_window,
+                    WS_WIDGET_TYPE_PANEHOST, my_ctxt->tabbed_window,
                     PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "UL") == 0) {
@@ -818,10 +818,10 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
 
         /* the element must be a `ol` or `ul` element */
         if (has_tag(element, "OL")) {
-            widget_type = WS_WIDGET_TYPE_PLAINPAGE;
+            widget_type = WS_WIDGET_TYPE_PANEDPAGE;
         }
         else if (has_tag(element, "UL")) {
-            widget_type = WS_WIDGET_TYPE_TABPAGE;
+            widget_type = WS_WIDGET_TYPE_TABBEDPAGE;
         }
 
         if (widget_type == WS_WIDGET_TYPE_NONE) {
@@ -1074,10 +1074,10 @@ ws_widget_type_t ws_layouter_retrieve_widget(struct ws_layouter *layouter,
 
             tag = (const char *)pcdom_element_local_name(parent, &len);
             if (strcasecmp(tag, "OL") == 0) {
-                type = WS_WIDGET_TYPE_PLAINPAGE;
+                type = WS_WIDGET_TYPE_PANEDPAGE;
             }
             else if (strcasecmp(tag, "UL") == 0) {
-                type = WS_WIDGET_TYPE_TABPAGE;
+                type = WS_WIDGET_TYPE_TABBEDPAGE;
             }
             else {
                 type = WS_WIDGET_TYPE_NONE;

@@ -46,10 +46,10 @@ typedef enum {
     WS_WIDGET_TYPE_TOOLBAR, /* the renderer defined tool bar widget */
     WS_WIDGET_TYPE_SIDEBAR, /* the renderer defined aside widget */
     WS_WIDGET_TYPE_FOOTER,  /* the renderer defiend footer widget */
-    WS_WIDGET_TYPE_PANEL,   /* the container widget of plain pages */
+    WS_WIDGET_TYPE_PANEHOST,   /* the container widget of plain pages */
     WS_WIDGET_TYPE_TABHOST, /* the container widget of tabbed pages */
-    WS_WIDGET_TYPE_PLAINPAGE,   /* a plain page for a webview */
-    WS_WIDGET_TYPE_TABPAGE,     /* a tabbed page for a webview */
+    WS_WIDGET_TYPE_PANEDPAGE,   /* a plain page for a webview */
+    WS_WIDGET_TYPE_TABBEDPAGE,     /* a tabbed page for a webview */
 } ws_widget_type_t;
 
 #define WSWS_FLAG_NAME      0x00000001

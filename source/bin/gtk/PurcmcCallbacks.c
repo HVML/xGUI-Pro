@@ -972,8 +972,8 @@ int gtk_update_page(purcmc_session *sess, purcmc_workspace *workspace,
     else {
         ws_widget_type_t type =
             ws_layouter_retrieve_widget(workspace->layouter, page);
-        if (type == WS_WIDGET_TYPE_PLAINPAGE ||
-                type == WS_WIDGET_TYPE_TABPAGE) {
+        if (type == WS_WIDGET_TYPE_PANEDPAGE ||
+                type == WS_WIDGET_TYPE_TABBEDPAGE) {
             retv = ws_layouter_update_widget(workspace->layouter, page,
                     property, value);
         }
@@ -996,8 +996,8 @@ int gtk_destroy_page(purcmc_session *sess, purcmc_workspace *workspace,
     else {
         ws_widget_type_t type =
             ws_layouter_retrieve_widget(workspace->layouter, page);
-        if (type == WS_WIDGET_TYPE_PLAINPAGE ||
-                type == WS_WIDGET_TYPE_TABPAGE) {
+        if (type == WS_WIDGET_TYPE_PANEDPAGE ||
+                type == WS_WIDGET_TYPE_TABBEDPAGE) {
             if (ws_layouter_remove_page_by_widget(workspace->layouter, page))
                 retv = PCRDR_SC_OK;
             else

@@ -344,10 +344,10 @@ int main(int argc, char *argv[])
     assert(retv == PCRDR_SC_NOT_FOUND);
 
     type = ws_layouter_retrieve_widget_by_id(layouter, "viewerBodyPanels", "panel1");
-    assert(type == WS_WIDGET_TYPE_PLAINPAGE);
+    assert(type == WS_WIDGET_TYPE_PANEDPAGE);
 
     type = ws_layouter_retrieve_widget(layouter, widget);
-    assert(type == WS_WIDGET_TYPE_TABPAGE);
+    assert(type == WS_WIDGET_TYPE_TABBEDPAGE);
 
     retv = ws_layouter_remove_page_by_id(layouter, "viewerBodyPanels", "panel1");
     assert(retv == PCRDR_SC_OK);
