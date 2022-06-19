@@ -26,6 +26,7 @@
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "HVMLURISchema.h"
+#include "LayouterWidgets.h"
 
 #include "purcmc/purcmc.h"
 #include "layouter/layouter.h"
@@ -985,21 +986,6 @@ gtk_set_property_in_dom(purcmc_session *sess, const char *request_id,
 
     *retv = 0;
     return PURC_VARIANT_INVALID;
-}
-
-static void *gtk_create_widget(void *ws_ctxt, ws_widget_type_t type,
-        void *parent, const struct ws_widget_style *style)
-{
-    return NULL;
-}
-
-static void gtk_destroy_widget(void *ws_ctxt, void *widget)
-{
-}
-
-static void gtk_update_widget(void *ws_ctxt,
-        void *widget, const struct ws_widget_style *style)
-{
 }
 
 int gtk_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,

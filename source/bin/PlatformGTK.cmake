@@ -29,6 +29,8 @@ list(APPEND xguipro_SOURCES
     gtk/PurcmcCallbacks.h
     gtk/HVMLURISchema.c
     gtk/HVMLURISchema.h
+    gtk/LayouterWidgets.c
+    gtk/LayouterWidgets.h
     gtk/main.c
 )
 
