@@ -692,7 +692,7 @@ static int on_set_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
     pcrdr_msg response = { };
     purcmc_workspace* workspace = NULL;
 
-    if (srv->cbs.reset_page_groups == NULL) {
+    if (srv->cbs.set_page_groups == NULL) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
         goto failed;
     }
@@ -719,7 +719,7 @@ static int on_set_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    retv = srv->cbs.reset_page_groups(endpoint->session, workspace,
+    retv = srv->cbs.set_page_groups(endpoint->session, workspace,
             content, length);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
@@ -747,7 +747,7 @@ static int on_add_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
     purcmc_workspace *workspace = NULL;
     pcrdr_msg response = { };
 
-    if (srv->cbs.reset_page_groups == NULL ||
+    if (srv->cbs.set_page_groups == NULL ||
             srv->cbs.add_page_groups == NULL) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
         goto failed;
@@ -804,7 +804,7 @@ static int on_remove_page_group(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char *gid;
     pcrdr_msg response = { };
 
-    if (srv->cbs.reset_page_groups == NULL ||
+    if (srv->cbs.set_page_groups == NULL ||
             srv->cbs.remove_page_group == NULL) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
         goto failed;

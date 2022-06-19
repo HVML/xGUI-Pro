@@ -1002,7 +1002,7 @@ static void gtk_update_widget(void *ws_ctxt,
 {
 }
 
-int gtk_reset_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
+int gtk_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
         const char *content, size_t length)
 {
     int retv;

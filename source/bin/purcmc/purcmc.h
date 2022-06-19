@@ -86,12 +86,12 @@ typedef struct purcmc_server_callbacks {
     int (*destroy_workspace)(purcmc_session *, purcmc_workspace *);
 
     /* nullable */
-    int (*reset_page_groups)(purcmc_session *, purcmc_workspace *,
+    int (*set_page_groups)(purcmc_session *, purcmc_workspace *,
             const char *content, size_t length);
-    /* null if reset_page_groups is null */
+    /* null if set_page_groups is null */
     int (*add_page_groups)(purcmc_session *, purcmc_workspace *,
             const char *content, size_t length);
-    /* null if reset_page_groups is null */
+    /* null if set_page_groups is null */
     int (*remove_page_group)(purcmc_session *, purcmc_workspace *,
             const char* gid);
 

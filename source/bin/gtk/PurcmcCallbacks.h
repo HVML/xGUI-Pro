@@ -43,7 +43,7 @@ int gtk_destroy_plainwin(purcmc_session *, purcmc_workspace *,
 purcmc_page *gtk_get_plainwin_page(purcmc_session *,
         purcmc_plainwin *win, int *retv);
 
-int gtk_reset_page_groups(purcmc_session *, purcmc_workspace *,
+int gtk_set_page_groups(purcmc_session *, purcmc_workspace *,
         const char *content, size_t length);
 int gtk_add_page_groups(purcmc_session *, purcmc_workspace *,
         const char *content, size_t length);
