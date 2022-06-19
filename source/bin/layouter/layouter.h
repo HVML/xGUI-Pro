@@ -79,6 +79,9 @@ struct ws_widget_style {
     float       opacity;
 };
 
+typedef void (*wsltr_convert_style_fn)(struct ws_widget_style *style,
+        purc_variant_t widget_style);
+
 typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt, ws_widget_type_t type,
         void *parent, const struct ws_widget_style *style);
 
@@ -94,6 +97,7 @@ extern "C" {
 /* Create a new layouter */
 struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
         const char *html_contents, size_t sz_html_contents, void *ws_ctxt,
+        wsltr_convert_style_fn cb_convert_style,
         wsltr_create_widget_fn cb_create_widget,
         wsltr_destroy_widget_fn cb_destroy_widget,
         wsltr_update_widget_fn cb_update_widget, int *retv);

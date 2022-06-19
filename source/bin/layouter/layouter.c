@@ -42,6 +42,7 @@ struct ws_layouter {
     struct sorted_array *sa_widget;
 
     void *ws_ctxt;
+    wsltr_convert_style_fn cb_convert_style;
     wsltr_create_widget_fn cb_create_widget;
     wsltr_destroy_widget_fn cb_destroy_widget;
     wsltr_update_widget_fn cb_update_widget;
@@ -138,37 +139,6 @@ fill_position(struct ws_widget_style *style, const HLBox *box)
     style->opacity = box->opacity;
 }
 
-static void
-fill_toolkit_style(struct ws_widget_style *style, purc_variant_t toolkit_style)
-{
-    style->darkMode = false;
-    style->fullScreen = false;
-    style->backgroundColor = "white";
-
-    if (toolkit_style == PURC_VARIANT_INVALID)
-        return;
-
-    purc_variant_t tmp;
-    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "darkMode")) &&
-            purc_variant_is_true(tmp)) {
-        style->darkMode = true;
-    }
-
-    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "fullScreen")) &&
-            purc_variant_is_true(tmp)) {
-        style->fullScreen = true;
-    }
-
-    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "backgroundColor"))) {
-        const char *value = purc_variant_get_string_const(tmp);
-        if (value) {
-            style->backgroundColor = value;
-        }
-    }
-
-    style->flags |= WSWS_FLAG_TOOLKIT;
-}
-
 static void get_element_name_title(pcdom_element_t *element,
         char **name, char **title)
 {
@@ -206,7 +176,7 @@ static void get_element_name_title(pcdom_element_t *element,
 
 static void *create_widget_for_element(struct ws_layouter *layouter,
         pcdom_element_t *element, ws_widget_type_t type, void *parent,
-        purc_variant_t toolkit_style)
+        purc_variant_t widget_style)
 {
     const HLBox *box;
     box = domruler_get_node_bounding_box(layouter->ruler,
@@ -223,7 +193,7 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
     style.name = name ? name : ANONYMOUS_NAME;
     style.title = title ? title: UNTITLED;
     fill_position(&style, box);
-    fill_toolkit_style(&style, toolkit_style);
+    layouter->cb_convert_style(&style, widget_style);
 
     void *widget = layouter->cb_create_widget(layouter->ws_ctxt,
             type, parent, &style);
@@ -318,6 +288,7 @@ static void append_css_in_style_element(struct ws_layouter *layouter)
 
 struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
         const char *html_contents, size_t sz_html_contents, void *ws_ctxt,
+        wsltr_convert_style_fn cb_convert_style,
         wsltr_create_widget_fn cb_create_widget,
         wsltr_destroy_widget_fn cb_destroy_widget,
         wsltr_update_widget_fn cb_update_widget, int *retv)
@@ -384,6 +355,7 @@ struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
     append_css_in_style_element(layouter);
 
     layouter->ws_ctxt = ws_ctxt;
+    layouter->cb_convert_style = cb_convert_style;
     layouter->cb_create_widget = cb_create_widget;
     layouter->cb_destroy_widget = cb_destroy_widget;
     layouter->cb_update_widget = cb_update_widget;
@@ -973,6 +945,15 @@ int ws_layouter_update_widget(struct ws_layouter *layouter,
     if (strcasecmp(property, "name") == 0) {
         return PCRDR_SC_FORBIDDEN;
     }
+    else if (strcasecmp(property, "title") == 0) {
+        if ((style.title = purc_variant_get_string_const(value))) {
+            style.flags |= WSWS_FLAG_TITLE;
+            layouter->cb_update_widget(layouter->ws_ctxt, widget, &style);
+            goto done;
+        }
+
+        return PCRDR_SC_BAD_REQUEST;
+    }
     else if (strcasecmp(property, "class") == 0) {
         const char *class;
         size_t len;
@@ -1006,17 +987,41 @@ int ws_layouter_update_widget(struct ws_layouter *layouter,
 
         return PCRDR_SC_BAD_REQUEST;
     }
-    else if (strcasecmp(property, "title") == 0) {
-        if ((style.title = purc_variant_get_string_const(value))) {
-            style.flags |= WSWS_FLAG_TITLE;
-            layouter->cb_update_widget(layouter->ws_ctxt, widget, &style);
-            goto done;
+    else if (strcasecmp(property, "layoutStyle") == 0) {
+        const char *style;
+        size_t len;
+
+        if ((style = purc_variant_get_string_const_ex(value, &len))) {
+            void *data;
+            pcdom_document_t *dom_doc =
+                pcdom_interface_document(layouter->dom_doc);
+
+            if (sorted_array_find(layouter->sa_widget,
+                        PTR2U64(widget), &data)) {
+                pcdom_element_t *element = data;
+
+                bool retb;
+                if (len > 0) {
+                    retb = dom_update_element(dom_doc, element,
+                            "attr.style", style, len);
+                }
+                else {
+                    retb = dom_remove_element_property(dom_doc, element,
+                            "attr.style");
+                }
+
+                if (retb) {
+                    pcdom_element_t *section = find_section_ancestor(element);
+                    relayout(layouter, section);
+                    goto done;
+                }
+            }
         }
 
         return PCRDR_SC_BAD_REQUEST;
     }
-    else if (strcasecmp(property, "style") == 0) {
-        fill_toolkit_style(&style, value);
+    else if (strcasecmp(property, "widgetStyle") == 0) {
+        layouter->cb_convert_style(&style, value);
         if (style.flags & WSWS_FLAG_TOOLKIT) {
             layouter->cb_update_widget(layouter->ws_ctxt, widget, &style);
             goto done;

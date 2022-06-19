@@ -75,6 +75,12 @@ static const char *widget_types[] = {
     "TABPAGE",
 };
 
+void my_convert_style(struct ws_widget_style *style,
+        purc_variant_t widget_style)
+{
+    // do nothing.
+}
+
 void *my_create_widget(void *ws_ctxt, ws_widget_type_t type,
         void *parent, const struct ws_widget_style *style)
 {
@@ -242,8 +248,9 @@ int main(int argc, char *argv[])
 
     struct ws_layouter *layouter;
     layouter = ws_layouter_new(&metrics, html, len_html, &ctxt,
-        my_create_widget, my_destroy_widget, my_update_widget,
-        &retv);
+            my_convert_style, my_create_widget, my_destroy_widget,
+            my_update_widget,
+            &retv);
     free(html);
 
     if (layouter == NULL) {
