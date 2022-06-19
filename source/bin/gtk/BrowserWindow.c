@@ -1210,7 +1210,7 @@ static void browserWindowSwitchTab(GtkNotebook *notebook, BrowserTab *tab, guint
         g_signal_handlers_disconnect_by_data(webView, window);
 
         /* We always want close to be connected even for not active tabs */
-        g_signal_connect(webView, "close", G_CALLBACK(webViewClose), window);
+        g_signal_connect_after(webView, "close", G_CALLBACK(webViewClose), window);
 
         WebKitBackForwardList *backForwardlist = webkit_web_view_get_back_forward_list(webView);
         g_signal_handlers_disconnect_by_data(backForwardlist, window);
@@ -1499,7 +1499,7 @@ void browser_window_append_view(BrowserWindow *window, WebKitWebView *webView)
     }
 
     /* We always want close to be connected even for not active tabs */
-    g_signal_connect(webView, "close", G_CALLBACK(webViewClose), window);
+    g_signal_connect_after(webView, "close", G_CALLBACK(webViewClose), window);
 
     GtkWidget *tab = browser_tab_new(webView);
 #if !GTK_CHECK_VERSION(3, 98, 0)

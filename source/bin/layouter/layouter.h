@@ -85,10 +85,11 @@ typedef void (*wsltr_convert_style_fn)(struct ws_widget_style *style,
 typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt, ws_widget_type_t type,
         void *parent, const struct ws_widget_style *style);
 
-typedef void (*wsltr_destroy_widget_fn)(void *ws_ctxt, void *widget);
+typedef void (*wsltr_destroy_widget_fn)(void *ws_ctxt, void *widget,
+        ws_widget_type_t type);
 
-typedef void (*wsltr_update_widget_fn)(void *ws_ctxt,
-        void *widget, const struct ws_widget_style *style);
+typedef void (*wsltr_update_widget_fn)(void *ws_ctxt, void *widget,
+        ws_widget_type_t type, const struct ws_widget_style *style);
 
 #ifdef __cplusplus
 extern "C" {

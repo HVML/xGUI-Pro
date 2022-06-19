@@ -41,7 +41,7 @@ void gtk_convert_style(struct ws_widget_style *style,
 {
     style->darkMode = false;
     style->fullScreen = false;
-    style->backgroundColor = "white";
+    style->backgroundColor = NULL;
     style->flags |= WSWS_FLAG_TOOLKIT;
 
     if (widget_style == PURC_VARIANT_INVALID)
@@ -222,14 +222,59 @@ gtk_create_widget(void *ws_ctxt, ws_widget_type_t type,
     return NULL;
 }
 
-void
-gtk_destroy_widget(void *ws_ctxt, void *widget)
+static void destroy_plainwin(purcmc_workspace *workspace,
+        purcmc_plainwin *plainwin)
 {
+    free(plainwin->name);
+    free(plainwin->title);
+    free(plainwin);
 }
 
 void
-gtk_update_widget(void *ws_ctxt,
-        void *widget, const struct ws_widget_style *style)
+gtk_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
+{
+    switch(type) {
+    case WS_WIDGET_TYPE_PLAINWINDOW:
+        return destroy_plainwin(ws_ctxt, widget);
+
+    case WS_WIDGET_TYPE_TABBEDWINDOW:
+        break;
+
+    case WS_WIDGET_TYPE_HEADER:
+        break;
+
+    case WS_WIDGET_TYPE_MENUBAR:
+        break;
+
+    case WS_WIDGET_TYPE_TOOLBAR:
+        break;
+
+    case WS_WIDGET_TYPE_SIDEBAR:
+        break;
+
+    case WS_WIDGET_TYPE_FOOTER:
+        break;
+
+    case WS_WIDGET_TYPE_PANEHOST:
+        break;
+
+    case WS_WIDGET_TYPE_TABHOST:
+        break;
+
+    case WS_WIDGET_TYPE_PANEDPAGE:
+        break;
+
+    case WS_WIDGET_TYPE_TABBEDPAGE:
+        break;
+
+    default:
+        break;
+    }
+}
+
+void
+gtk_update_widget(void *ws_ctxt, void *widget,
+        ws_widget_type_t type, const struct ws_widget_style *style)
 {
 }
 

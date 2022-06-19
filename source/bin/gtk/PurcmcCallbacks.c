@@ -349,6 +349,8 @@ int gtk_remove_session(purcmc_session *sess)
     LOG_DEBUG("destroy all ungrouped plain windows...\n");
     kvlist_for_each_safe(&sess->workspace.ug_wins, name, next, data) {
         plain_win = *(purcmc_plainwin **)data;
+
+        LOG_DEBUG("destroy plain window: %s (%p)\n", name, plain_win->web_view);
         webkit_web_view_try_close(plain_win->web_view);
     }
 
@@ -379,7 +381,7 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
         pcrdr_msg event = { };
         event.type = PCRDR_MSG_TYPE_EVENT;
         event.eventName = purc_variant_make_string_static("close", false);
-        /* TODO: user URI for the sourceURI */
+        /* TODO: use real URI for the sourceURI */
         event.sourceURI = purc_variant_make_string_static(PCRDR_APP_RENDERER,
                 false);
         event.elementType = PCRDR_MSG_ELEMENT_TYPE_VOID;
@@ -401,9 +403,8 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
 
             sorted_array_remove(sess->all_handles, PTR2U64(plain_win));
             kvlist_delete(&sess->workspace.ug_wins, plain_win->name);
-            free(plain_win->name);
-            free(plain_win->title);
-            free(plain_win);
+            gtk_destroy_widget(&sess->workspace, plain_win,
+                    WS_WIDGET_TYPE_PLAINWINDOW);
         }
         else {
             /* post close event for the page */
@@ -561,6 +562,7 @@ int gtk_destroy_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         return PCRDR_SC_BAD_REQUEST;
     }
 
+    LOG_DEBUG("try to close webview");
     webkit_web_view_try_close(plain_win->web_view);
     return PCRDR_SC_OK;
 }

@@ -212,13 +212,65 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
     return widget;
 }
 
+static ws_widget_type_t get_widget_type_from_element(pcdom_element_t *element)
+{
+    ws_widget_type_t type = WS_WIDGET_TYPE_NONE;
+
+    size_t len;
+    const char *tag;
+    tag = (const char *)pcdom_element_local_name(element, &len);
+    if (strcasecmp(tag, "FIGURE") == 0) {
+        type = WS_WIDGET_TYPE_PLAINWINDOW;
+    }
+    else if (strcasecmp(tag, "HEADER") == 0) {
+        type = WS_WIDGET_TYPE_HEADER;
+    }
+    else if (strcasecmp(tag, "MENU") == 0) {
+        type = WS_WIDGET_TYPE_MENUBAR;
+    }
+    else if (strcasecmp(tag, "NAV") == 0) {
+        type = WS_WIDGET_TYPE_TOOLBAR;
+    }
+    else if (strcasecmp(tag, "ASIDE") == 0) {
+        type = WS_WIDGET_TYPE_SIDEBAR;
+    }
+    else if (strcasecmp(tag, "FOOTER") == 0) {
+        type = WS_WIDGET_TYPE_FOOTER;
+    }
+    else if (strcasecmp(tag, "UL") == 0) {
+        type = WS_WIDGET_TYPE_TABHOST;
+    }
+    else if (strcasecmp(tag, "LI") == 0) {
+        pcdom_element_t *parent = pcdom_interface_element(
+                pcdom_interface_node(element)->parent);
+
+        tag = (const char *)pcdom_element_local_name(parent, &len);
+        if (strcasecmp(tag, "OL") == 0) {
+            type = WS_WIDGET_TYPE_PANEDPAGE;
+        }
+        else if (strcasecmp(tag, "UL") == 0) {
+            type = WS_WIDGET_TYPE_TABBEDPAGE;
+        }
+        else {
+            type = WS_WIDGET_TYPE_NONE;
+            purc_log_error("Parent of a LI is not a OL or UL (%s)\n",
+                    tag);
+        }
+    }
+
+    return type;
+}
+
 static bool destroy_widget_for_element(struct ws_layouter *layouter,
         pcdom_element_t *element)
 {
     void *widget = get_element_user_data(element);
     if (widget) {
         sorted_array_remove(layouter->sa_widget, PTR2U64(widget));
-        layouter->cb_destroy_widget(layouter->ws_ctxt, widget);
+
+        ws_widget_type_t type;
+        type = get_widget_type_from_element(element);
+        layouter->cb_destroy_widget(layouter->ws_ctxt, widget, type);
         return true;
     }
 
@@ -489,8 +541,13 @@ layout_widget_walker(pcdom_node_t *node, void *ctxt)
 
                 style.flags = WSWS_FLAG_POSITION;
                 fill_position(&style, box);
-                my_ctxt->layouter->cb_update_widget(my_ctxt->layouter->ws_ctxt,
-                        node->user, &style);
+
+                ws_widget_type_t type;
+                pcdom_element_t *element = pcdom_interface_element(node);
+                type = get_widget_type_from_element(element);
+
+                my_ctxt->layouter->cb_update_widget(
+                        my_ctxt->layouter->ws_ctxt, node->user, type, &style);
                 my_ctxt->nr_laid++;
             }
             else {
@@ -941,6 +998,10 @@ int ws_layouter_update_widget(struct ws_layouter *layouter,
         void *widget, const char *property, purc_variant_t value)
 {
     struct ws_widget_style style = { 0 };
+    ws_widget_type_t type;
+
+    type = ws_layouter_retrieve_widget(layouter, widget);
+    assert(type != WS_WIDGET_TYPE_NONE);
 
     if (strcasecmp(property, "name") == 0) {
         return PCRDR_SC_FORBIDDEN;
@@ -948,7 +1009,7 @@ int ws_layouter_update_widget(struct ws_layouter *layouter,
     else if (strcasecmp(property, "title") == 0) {
         if ((style.title = purc_variant_get_string_const(value))) {
             style.flags |= WSWS_FLAG_TITLE;
-            layouter->cb_update_widget(layouter->ws_ctxt, widget, &style);
+            layouter->cb_update_widget(layouter->ws_ctxt, widget, type, &style);
             goto done;
         }
 
@@ -1023,7 +1084,7 @@ int ws_layouter_update_widget(struct ws_layouter *layouter,
     else if (strcasecmp(property, "widgetStyle") == 0) {
         layouter->cb_convert_style(&style, value);
         if (style.flags & WSWS_FLAG_TOOLKIT) {
-            layouter->cb_update_widget(layouter->ws_ctxt, widget, &style);
+            layouter->cb_update_widget(layouter->ws_ctxt, widget, type, &style);
             goto done;
         }
 
@@ -1044,47 +1105,7 @@ ws_widget_type_t ws_layouter_retrieve_widget(struct ws_layouter *layouter,
     if (sorted_array_find(layouter->sa_widget, PTR2U64(widget), &data)) {
         pcdom_element_t *element = data;
 
-        size_t len;
-        const char *tag;
-        tag = (const char *)pcdom_element_local_name(element, &len);
-        if (strcasecmp(tag, "FIGURE") == 0) {
-            type = WS_WIDGET_TYPE_PLAINWINDOW;
-        }
-        else if (strcasecmp(tag, "HEADER") == 0) {
-            type = WS_WIDGET_TYPE_HEADER;
-        }
-        else if (strcasecmp(tag, "MENU") == 0) {
-            type = WS_WIDGET_TYPE_MENUBAR;
-        }
-        else if (strcasecmp(tag, "NAV") == 0) {
-            type = WS_WIDGET_TYPE_TOOLBAR;
-        }
-        else if (strcasecmp(tag, "ASIDE") == 0) {
-            type = WS_WIDGET_TYPE_SIDEBAR;
-        }
-        else if (strcasecmp(tag, "FOOTER") == 0) {
-            type = WS_WIDGET_TYPE_FOOTER;
-        }
-        else if (strcasecmp(tag, "UL") == 0) {
-            type = WS_WIDGET_TYPE_TABHOST;
-        }
-        else if (strcasecmp(tag, "LI") == 0) {
-            pcdom_element_t *parent = pcdom_interface_element(
-                    pcdom_interface_node(element)->parent);
-
-            tag = (const char *)pcdom_element_local_name(parent, &len);
-            if (strcasecmp(tag, "OL") == 0) {
-                type = WS_WIDGET_TYPE_PANEDPAGE;
-            }
-            else if (strcasecmp(tag, "UL") == 0) {
-                type = WS_WIDGET_TYPE_TABBEDPAGE;
-            }
-            else {
-                type = WS_WIDGET_TYPE_NONE;
-                purc_log_error("Parent of a LI is not a OL or UL (%s)\n",
-                        tag);
-            }
-        }
+        type = get_widget_type_from_element(element);
     }
 
     return type;

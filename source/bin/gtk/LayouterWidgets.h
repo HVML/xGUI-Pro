@@ -84,10 +84,11 @@ void gtk_convert_style(struct ws_widget_style *style,
 void *gtk_create_widget(void *ws_ctxt, ws_widget_type_t type,
         void *parent, const struct ws_widget_style *style);
 
-void gtk_destroy_widget(void *ws_ctxt, void *widget);
+void gtk_destroy_widget(void *ws_ctxt, void *widget,
+        ws_widget_type_t type);
 
-void gtk_update_widget(void *ws_ctxt,
-        void *widget, const struct ws_widget_style *style);
+void gtk_update_widget(void *ws_ctxt, void *widget,
+        ws_widget_type_t type, const struct ws_widget_style *style);
 
 #ifdef __cplusplus
 }

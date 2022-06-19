@@ -123,7 +123,7 @@ void *my_create_widget(void *ws_ctxt, ws_widget_type_t type,
     return widget;
 }
 
-void my_destroy_widget(void *ws_ctxt, void *widget)
+void my_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
 {
     struct test_ctxt *ctxt = ws_ctxt;
 
@@ -153,7 +153,7 @@ void my_destroy_widget(void *ws_ctxt, void *widget)
                     (unsigned)i, (unsigned)n);
             one = INT2PTR(sorted_array_get(ctxt->sa_widget, i, NULL));
             if (one->parent == w) {
-                my_destroy_widget(ctxt, one);
+                my_destroy_widget(ctxt, one, one->type);
             }
 
             n = sorted_array_count(ctxt->sa_widget);
@@ -180,8 +180,8 @@ void my_destroy_widget(void *ws_ctxt, void *widget)
     purc_log_info("Widget (%p) destroyed\n", widget);
 }
 
-void my_update_widget(void *ws_ctxt,
-        void *widget, const struct ws_widget_style *style)
+void my_update_widget(void *ws_ctxt, void *widget,
+        ws_widget_type_t type, const struct ws_widget_style *style)
 {
     struct test_ctxt *ctxt = ws_ctxt;
 
@@ -363,7 +363,7 @@ int main(int argc, char *argv[])
     while (sorted_array_count(ctxt.sa_widget) > 0) {
         struct test_widget *widget;
         widget = INT2PTR(sorted_array_get(ctxt.sa_widget, 0, NULL));
-        my_destroy_widget(&ctxt, widget);
+        my_destroy_widget(&ctxt, widget, widget->type);
     }
     sorted_array_destroy(ctxt.sa_widget);
 
