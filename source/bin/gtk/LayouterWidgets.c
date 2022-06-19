@@ -124,11 +124,11 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
                 "website-policies", website_policies,
                 NULL));
 
+#if 0
     g_object_unref(sess->web_context);
     if (uc_manager)
         g_object_unref(uc_manager);
 
-#if 0
     if (editorMode)
         webkit_web_view_set_editable(web_view, TRUE);
 #endif
