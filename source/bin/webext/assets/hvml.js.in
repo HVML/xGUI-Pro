@@ -306,7 +306,7 @@ function registerEventsListener(elems)
                         targetHandle: evt.target.hvmlHandleText,
                         targetId: evt.target.id,
                         targetClass: evt.target.className,
-                        targetValue: "" + evt.target.value,
+                        targetValue: evt.target.value,
                         timeStamp: evt.timeStamp,
                         details: evt};
 
