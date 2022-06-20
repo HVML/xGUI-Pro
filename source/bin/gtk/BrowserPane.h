@@ -38,18 +38,30 @@ G_BEGIN_DECLS
 typedef struct _BrowserPane        BrowserPane;
 typedef struct _BrowserPaneClass   BrowserPaneClass;
 
+/*
+ * BrowserPane only contains one webView and an overlay widget for messages.
+ * BrowserTab is derived from BrowserPane.
+ */
+struct _BrowserPane {
+    GtkBox parent;
+
+    WebKitWebView *webView;
+    GtkWidget *overlay;
+    GtkWidget *pointerLockMessageLabel;
+    gboolean inspectorIsVisible;
+    guint pointerLockMessageLabelId;
+};
+
+struct _BrowserPaneClass {
+    GtkBoxClass parent;
+};
+
 GType browser_pane_get_type(void);
 
 GtkWidget* browser_pane_new(WebKitWebView*);
 WebKitWebView* browser_pane_get_web_view(BrowserPane*);
 void browser_pane_load_uri(BrowserPane*, const char* uri);
-GtkWidget *browser_pane_get_title_widget(BrowserPane*);
-void browser_pane_set_status_text(BrowserPane*, const char* text);
 void browser_pane_toggle_inspector(BrowserPane*);
-void browser_pane_start_search(BrowserPane*);
-void browser_pane_stop_search(BrowserPane*);
-void browser_pane_enter_fullscreen(BrowserPane*);
-void browser_pane_leave_fullscreen(BrowserPane*);
 void browser_pane_set_background_color(BrowserPane*, GdkRGBA*);
 
 G_END_DECLS
