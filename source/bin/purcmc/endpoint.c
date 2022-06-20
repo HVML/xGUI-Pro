@@ -470,7 +470,7 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
 static int on_start_session(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
-    pcrdr_msg response;
+    pcrdr_msg response = { };
     purcmc_session *info = NULL;
 
     int retv = authenticate_endpoint(srv, endpoint, msg->data);
@@ -499,7 +499,7 @@ static int on_start_session(purcmc_server* srv, purcmc_endpoint* endpoint,
 static int on_end_session(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
-    pcrdr_msg response;
+    pcrdr_msg response = { };
 
     if (endpoint->session) {
         srv->cbs.remove_session(endpoint->session);
@@ -520,7 +520,7 @@ static int on_create_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
     purcmc_workspace* workspace = NULL;
 
     if (srv->cbs.create_workspace == NULL) {
@@ -576,7 +576,7 @@ static int on_update_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
 {
     int retv = PCRDR_SC_OK;
     purcmc_workspace *workspace;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
 
     if (srv->cbs.create_workspace == NULL || srv->cbs.update_workspace) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
@@ -638,7 +638,7 @@ static int on_destroy_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
 {
     int retv = PCRDR_SC_OK;
     purcmc_workspace *workspace;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
 
     if (srv->cbs.create_workspace == NULL || srv->cbs.destroy_workspace) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
@@ -685,14 +685,14 @@ failed:
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
 
-static int on_reset_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
+static int on_set_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
     purcmc_workspace* workspace = NULL;
 
-    if (srv->cbs.reset_page_groups == NULL) {
+    if (srv->cbs.set_page_groups == NULL) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
         goto failed;
     }
@@ -719,7 +719,7 @@ static int on_reset_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    retv = srv->cbs.reset_page_groups(endpoint->session, workspace,
+    retv = srv->cbs.set_page_groups(endpoint->session, workspace,
             content, length);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
@@ -745,9 +745,9 @@ static int on_add_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
 {
     int retv = PCRDR_SC_OK;
     purcmc_workspace *workspace = NULL;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
 
-    if (srv->cbs.reset_page_groups == NULL ||
+    if (srv->cbs.set_page_groups == NULL ||
             srv->cbs.add_page_groups == NULL) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
         goto failed;
@@ -802,9 +802,9 @@ static int on_remove_page_group(purcmc_server* srv, purcmc_endpoint* endpoint,
     int retv = PCRDR_SC_OK;
     purcmc_workspace *workspace = NULL;
     const char *gid;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
 
-    if (srv->cbs.reset_page_groups == NULL ||
+    if (srv->cbs.set_page_groups == NULL ||
             srv->cbs.remove_page_group == NULL) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
         goto failed;
@@ -854,14 +854,17 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
 
     purcmc_workspace* workspace = NULL;
     purcmc_plainwin* win = NULL;
 
     const char* gid = NULL;
     const char* name = NULL;
+    const char* class = NULL;
     const char* title = NULL;
+    const char* layout_style = NULL;
+    purc_variant_t widget_style;
 
     if (msg->target == PCRDR_MSG_TARGET_WORKSPACE) {
         workspace = (void *)(uintptr_t)msg->targetValue;
@@ -896,14 +899,24 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "class"))) {
+        class = purc_variant_get_string_const(tmp);
+    }
+
     if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {
         title = purc_variant_get_string_const(tmp);
     }
 
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "layoutStyle"))) {
+        layout_style = purc_variant_get_string_const(tmp);
+    }
+
+    widget_style = purc_variant_object_get_by_ckey(msg->data, "widgetStyle");
+
     const char *request_id = purc_variant_get_string_const(msg->requestId);
     win = srv->cbs.create_plainwin(endpoint->session, workspace,
-            request_id, gid,
-            name, title, msg->data, &retv);
+            request_id, gid, name, class, title, layout_style,
+            widget_style, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -929,7 +942,7 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
     int retv = PCRDR_SC_OK;
     purcmc_workspace *workspace = NULL;
     purcmc_plainwin *win = NULL;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
 
     if (msg->target == PCRDR_MSG_TARGET_WORKSPACE) {
         workspace = (void *)(uintptr_t)msg->targetValue;
@@ -960,13 +973,13 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
     property = purc_variant_get_string_const(msg->property);
     if (property == NULL ||
             !purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME) ||
-            msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
+            msg->dataType == PCRDR_MSG_DATA_TYPE_VOID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
 
     retv = srv->cbs.update_plainwin(endpoint->session, workspace, win,
-            property, purc_variant_get_string_const(msg->data));
+            property, msg->data);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -992,7 +1005,7 @@ static int on_destroy_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint
     int retv = PCRDR_SC_OK;
     purcmc_workspace *workspace = NULL;
     purcmc_plainwin *win = NULL;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
 
     if (msg->target == PCRDR_MSG_TARGET_WORKSPACE) {
         workspace = (void *)(uintptr_t)msg->targetValue;
@@ -1043,7 +1056,7 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
     purcmc_workspace* workspace = NULL;
     purcmc_page* page = NULL;
 
@@ -1076,17 +1089,12 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    const char* type = NULL;
     const char* name = NULL;
+    const char* class = NULL;
     const char* title = NULL;
+    const char* layout_style = NULL;
+    purc_variant_t widget_style;
     purc_variant_t tmp;
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "type"))) {
-        type = purc_variant_get_string_const(tmp);
-        if (type == NULL) {
-            retv = PCRDR_SC_BAD_REQUEST;
-            goto failed;
-        }
-    }
 
     if ((tmp = purc_variant_object_get_by_ckey(msg->data, "name"))) {
         name = purc_variant_get_string_const(tmp);
@@ -1096,13 +1104,24 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
         }
     }
 
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "class"))) {
+        class = purc_variant_get_string_const(tmp);
+    }
+
     if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {
         title = purc_variant_get_string_const(tmp);
     }
 
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "layoutStyle"))) {
+        layout_style = purc_variant_get_string_const(tmp);
+    }
+
+    widget_style = purc_variant_object_get_by_ckey(msg->data, "widgetStyle");
+
     const char *request_id = purc_variant_get_string_const(msg->requestId);
     page = srv->cbs.create_page(endpoint->session, workspace,
-            request_id, gid, type, name, title, msg->data, &retv);
+            request_id, gid, name, class, title, layout_style,
+            widget_style, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -1128,7 +1147,7 @@ static int on_update_page(purcmc_server* srv, purcmc_endpoint* endpoint,
     int retv = PCRDR_SC_OK;
     purcmc_workspace *workspace = NULL;
     purcmc_page *page = NULL;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
 
     if (srv->cbs.create_page == NULL || srv->cbs.update_page == NULL) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
@@ -1164,13 +1183,13 @@ static int on_update_page(purcmc_server* srv, purcmc_endpoint* endpoint,
     property = purc_variant_get_string_const(msg->property);
     if (property == NULL ||
             !purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME) ||
-            msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
+            msg->dataType == PCRDR_MSG_DATA_TYPE_VOID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
 
     retv = srv->cbs.update_page(endpoint->session, workspace,
-            page, property, purc_variant_get_string_const(msg->data));
+            page, property, msg->data);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -1196,7 +1215,7 @@ static int on_destroy_page(purcmc_server* srv, purcmc_endpoint* endpoint,
     int retv = PCRDR_SC_OK;
     purcmc_workspace *workspace = NULL;
     purcmc_page *page = NULL;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
 
     if (srv->cbs.create_page == NULL || srv->cbs.destroy_page == NULL) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
@@ -1251,7 +1270,7 @@ failed:
 static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
-    pcrdr_msg response;
+    pcrdr_msg response = { };
     int retv = PCRDR_SC_OK;
     const char *doc_text;
     size_t doc_len;
@@ -1312,7 +1331,7 @@ failed:
 static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
         int op, const char* op_name, const pcrdr_msg *msg)
 {
-    pcrdr_msg response;
+    pcrdr_msg response = { };
     int retv = PCRDR_SC_OK;
     const char *doc_text;
     size_t doc_len;
@@ -1401,7 +1420,7 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
 {
     int retv;
     purcmc_dom *dom = NULL;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
 
     if (msg->target == PCRDR_MSG_TARGET_DOM) {
         dom = (purcmc_dom *)(uintptr_t)msg->targetValue;
@@ -1552,7 +1571,7 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
     purc_variant_t result = PURC_VARIANT_INVALID;
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
@@ -1659,7 +1678,7 @@ static int on_get_property(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
     purc_variant_t result = PURC_VARIANT_INVALID;
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
@@ -1759,7 +1778,7 @@ static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    pcrdr_msg response;
+    pcrdr_msg response = { };
     purc_variant_t result = PURC_VARIANT_INVALID;
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
@@ -1879,7 +1898,7 @@ static struct request_handler {
     { PCRDR_OPERATION_LOAD, on_load },
     { PCRDR_OPERATION_PREPEND, on_prepend },
     { PCRDR_OPERATION_REMOVEPAGEGROUP, on_remove_page_group },
-    { PCRDR_OPERATION_RESETPAGEGROUPS, on_reset_page_groups },
+    { PCRDR_OPERATION_SETPAGEGROUPS, on_set_page_groups },
     { PCRDR_OPERATION_SETPROPERTY, on_set_property },
     { PCRDR_OPERATION_STARTSESSION, on_start_session },
     { PCRDR_OPERATION_UPDATE, on_update },
@@ -1939,7 +1958,7 @@ int on_got_message(purcmc_server* srv, purcmc_endpoint* endpoint, const pcrdr_ms
                 purc_variant_get_string_const(msg->operation), handler);
 
         if (handler == NOT_FOUND_HANDLER) {
-            pcrdr_msg response;
+            pcrdr_msg response = { };
             response.type = PCRDR_MSG_TYPE_RESPONSE;
             response.requestId = purc_variant_ref(msg->requestId);
             response.sourceURI = PURC_VARIANT_INVALID;
@@ -1953,7 +1972,7 @@ int on_got_message(purcmc_server* srv, purcmc_endpoint* endpoint, const pcrdr_ms
             return handler(srv, endpoint, msg);
         }
         else {
-            pcrdr_msg response;
+            pcrdr_msg response = { };
             response.type = PCRDR_MSG_TYPE_RESPONSE;
             response.requestId = purc_variant_ref(msg->requestId);
             response.sourceURI = PURC_VARIANT_INVALID;

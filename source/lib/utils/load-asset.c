@@ -33,12 +33,12 @@ char *load_asset_content(const char* env, const char *prefix,
 {
     char *buf = NULL;
 
-    const char *webext_dir = g_getenv(env);
+    const char *webext_dir = env ? g_getenv(env) : NULL;
     if (webext_dir == NULL) {
         webext_dir = prefix;
     }
 
-    gchar *path = g_strdup_printf("%s/%s", webext_dir, file);
+    gchar *path = g_strdup_printf("%s/%s", webext_dir ? webext_dir : ".", file);
 
     if (path) {
         FILE *f = fopen(path, "r");

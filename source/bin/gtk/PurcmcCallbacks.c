@@ -26,60 +26,16 @@
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "HVMLURISchema.h"
+#include "LayouterWidgets.h"
 
 #include "purcmc/purcmc.h"
-
-#include "utils/list.h"
-#include "utils/kvlist.h"
-#include "utils/sorted-array.h"
+#include "layouter/layouter.h"
 
 #include <errno.h>
 #include <assert.h>
 #include <gtk/gtk.h>
 #include <string.h>
 #include <webkit2/webkit2.h>
-
-/* handle types */
-enum {
-    HT_WORKSPACE = 0,
-    HT_PLAINWIN,
-    HT_WEBVIEW,
-};
-
-struct purcmc_plainwin {
-    char *name;
-    char *title;
-
-    BrowserWindow *main_win;
-    WebKitWebView *web_view;
-};
-
-struct purcmc_workspace {
-    /* ungrouped plain windows */
-    struct kvlist       ug_wins;
-};
-
-struct purcmc_session {
-    purcmc_server *srv;
-
-    WebKitSettings *webkit_settings;
-    WebKitWebContext *web_context;
-
-    /* the sorted array of all valid handles */
-    struct sorted_array *all_handles;
-
-    /* the pending requests */
-    struct kvlist pending_responses;
-
-    /* the only workspace */
-    purcmc_workspace workspace;
-
-    /* the URI prefix: hvml://<hostName>/<appName>/<runnerName>/ */
-    char *uri_prefix;
-};
-
-#define PTR2U64(x)     (uint64_t)(uintptr_t)(x)
-#define INT2PTR(x)     (void *)(uintptr_t)(x)
 
 /*
  * Use this function to retrieve the endpoint of a session.
@@ -124,7 +80,7 @@ static void finish_response(purcmc_session* sess, const char *request_id,
         purcmc_endpoint* endpoint;
         endpoint = get_endpoint_by_session(sess);
         if (endpoint) {
-            pcrdr_msg response;
+            pcrdr_msg response = { };
             response.type = PCRDR_MSG_TYPE_RESPONSE;
             response.sourceURI = PURC_VARIANT_INVALID;
             response.requestId =
@@ -232,7 +188,7 @@ user_message_received_callback(WebKitWebView *web_view,
             purcmc_endpoint* endpoint = get_endpoint_by_session(sess);
 
             if (len == 4 && endpoint) {
-                pcrdr_msg event;
+                pcrdr_msg event = { };
 
                 event.type = PCRDR_MSG_TYPE_EVENT;
                 event.target = PCRDR_MSG_TARGET_DOM;
@@ -359,6 +315,8 @@ purcmc_session *gtk_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
 
     kvlist_init(&sess->pending_responses, NULL);
     kvlist_init(&sess->workspace.ug_wins, NULL);
+    sess->workspace.layouter = NULL;
+    sess->workspace.sess = sess;
     return sess;
 }
 
@@ -418,10 +376,10 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
         purcmc_plainwin *plain_win = g_object_get_data(G_OBJECT(web_view),
                 "purcmc-plainwin");
 
-        pcrdr_msg event;
+        pcrdr_msg event = { };
         event.type = PCRDR_MSG_TYPE_EVENT;
         event.eventName = purc_variant_make_string_static("close", false);
-        /* TODO: user URI for the sourceURI */
+        /* TODO: use real URI for the sourceURI */
         event.sourceURI = purc_variant_make_string_static(PCRDR_APP_RENDERER,
                 false);
         event.elementType = PCRDR_MSG_ELEMENT_TYPE_VOID;
@@ -443,9 +401,8 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
 
             sorted_array_remove(sess->all_handles, PTR2U64(plain_win));
             kvlist_delete(&sess->workspace.ug_wins, plain_win->name);
-            free(plain_win->name);
-            free(plain_win->title);
-            free(plain_win);
+            gtk_destroy_widget(&sess->workspace, plain_win,
+                    WS_WIDGET_TYPE_PLAINWINDOW);
         }
         else {
             /* post close event for the page */
@@ -461,18 +418,13 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
 
 purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace,
-        const char *request_id, const char *gid,
-        const char *name, const char *title, purc_variant_t properties,
-        int *retv)
+        const char *request_id, const char *gid, const char *name,
+        const char *class_name, const char *title, const char *layout_style,
+        purc_variant_t widget_style, int *retv)
 {
-    purcmc_plainwin * plain_win = NULL;
+    purcmc_plainwin *plain_win = NULL;
 
     assert(workspace == NULL);
-
-    if ((plain_win = calloc(1, sizeof(*plain_win))) == NULL) {
-        *retv = PCRDR_SC_INSUFFICIENT_STORAGE;
-        goto failed;
-    }
 
     if (gid == NULL) {
         /* create a ungrouped plain window */
@@ -481,74 +433,28 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         if (kvlist_get(&sess->workspace.ug_wins, name)) {
             LOG_WARN("Duplicated ungrouped plain window: %s\n", name);
             *retv = PCRDR_SC_CONFLICT;
-            goto failed;
+            goto done;
         }
 
-        plain_win->name = strdup(name);
-        if (title)
-            plain_win->title = strdup(title);
+        struct ws_widget_style style = { };
+        style.flags = WSWS_FLAG_NAME | WSWS_FLAG_TITLE;
+        style.name = name;
+        style.title = title;
+        gtk_convert_style(&style, widget_style);
+        plain_win = gtk_create_widget(&sess->workspace,
+                WS_WIDGET_TYPE_PLAINWINDOW, NULL, &style);
 
-        BrowserWindow *main_win;
-        main_win = BROWSER_WINDOW(browser_window_new(NULL, sess->web_context));
-
-        GtkApplication *application;
-        application = g_object_get_data(G_OBJECT(sess->webkit_settings),
-                "gtk-application");
-
-        gtk_application_add_window(GTK_APPLICATION(application),
-                GTK_WINDOW(main_win));
-
-        purc_variant_t tmp;
-        if ((tmp = purc_variant_object_get_by_ckey(properties, "darkMode")) &&
-                purc_variant_is_true(tmp)) {
-            g_object_set(gtk_widget_get_settings(GTK_WIDGET(main_win)),
-                    "gtk-application-prefer-dark-theme", TRUE, NULL);
+        if (plain_win == NULL) {
+            LOG_ERROR("Failed to create a plain window: %s\n", name);
+            *retv = PCRDR_SC_INSUFFICIENT_STORAGE;
+            goto done;
         }
 
-        if ((tmp = purc_variant_object_get_by_ckey(properties, "fullScreen")) &&
-                purc_variant_is_true(tmp)) {
-            gtk_window_fullscreen(GTK_WINDOW(main_win));
-        }
-
-        if ((tmp = purc_variant_object_get_by_ckey(properties, "backgroundColor"))) {
-            const char *value = purc_variant_get_string_const(tmp);
-
-            GdkRGBA rgba;
-            if (gdk_rgba_parse(&rgba, value)) {
-                browser_window_set_background_color(main_win, &rgba);
-            }
-        }
-
-        WebKitWebsitePolicies *website_policies;
-        website_policies = g_object_get_data(G_OBJECT(sess->webkit_settings),
-                "default-website-policies");
-
-        WebKitUserContentManager *uc_manager;
-        uc_manager = g_object_get_data(G_OBJECT(sess->webkit_settings),
-                "default-user-content-manager");
-
-        WebKitWebView *web_view;
-        web_view = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-                    "web-context", sess->web_context,
-                    "settings", sess->webkit_settings,
-                    "user-content-manager", uc_manager,
-                    "is-controlled-by-automation", FALSE,
-                    "website-policies", website_policies,
-                    NULL));
-
-#if 0
-        if (editorMode)
-            webkit_web_view_set_editable(web_view, TRUE);
-#endif
-
-        g_object_set_data(G_OBJECT(web_view), "purcmc-plainwin", plain_win);
-        g_signal_connect(web_view, "close",
+        g_signal_connect(plain_win->web_view, "close",
                 G_CALLBACK(on_webview_close), sess);
-        g_signal_connect(web_view, "user-message-received",
+        g_signal_connect(plain_win->web_view, "user-message-received",
                 G_CALLBACK(user_message_received_callback),
                 sess);
-
-        browser_window_append_view(main_win, web_view);
 
         char uri[strlen(sess->uri_prefix) + strlen(name) +
             strlen(request_id) + 12];
@@ -557,40 +463,53 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         strcat(uri, name);
         strcat(uri, "?irId=");
         strcat(uri, request_id);
-        webkit_web_view_load_uri(web_view, uri);
+        webkit_web_view_load_uri(plain_win->web_view, uri);
 
-        g_object_unref(sess->web_context);
-        if (uc_manager)
-            g_object_unref(uc_manager);
-
-        gtk_widget_grab_focus(GTK_WIDGET(web_view));
-        gtk_widget_show(GTK_WIDGET(main_win));
-
-        plain_win->main_win = main_win;
-        plain_win->web_view = web_view;
+        gtk_widget_grab_focus(GTK_WIDGET(plain_win->web_view));
+        gtk_widget_show(GTK_WIDGET(plain_win->main_win));
 
         kvlist_set(&sess->workspace.ug_wins, name, &plain_win);
         sorted_array_add(sess->all_handles, PTR2U64(plain_win),
                 INT2PTR(HT_PLAINWIN));
-        sorted_array_add(sess->all_handles, PTR2U64(web_view),
+        sorted_array_add(sess->all_handles, PTR2U64(plain_win->web_view),
                 INT2PTR(HT_WEBVIEW));
 
         *retv = 0;  // pend the response
     }
+    else if (workspace->layouter == NULL) {
+        *retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
     else {
-        /* TODO: create a plain window in the specified group */
-        *retv = PCRDR_SC_NOT_IMPLEMENTED;
+        /* create a plain window in the specified group */
+        plain_win = ws_layouter_add_plain_window(workspace->layouter, gid,
+                name, class_name, title, layout_style, widget_style, retv);
+        if (plain_win == NULL) {
+            LOG_ERROR("Failed to create a plain window: %s\n", name);
+            *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
+            goto done;
+        }
+
+        retv = 0;
     }
 
-failed:
+done:
     return plain_win;
 }
 
 int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
-        purcmc_plainwin *plain_win, const char *property, const char *value)
+        purcmc_plainwin *plain_win, const char *property, purc_variant_t value)
 {
     void *data;
     if (!sorted_array_find(sess->all_handles, PTR2U64(plain_win), &data)) {
+
+        if (workspace->layouter) {
+            if (ws_layouter_retrieve_widget(workspace->layouter, plain_win) ==
+                    WS_WIDGET_TYPE_PLAINWINDOW) {
+                return ws_layouter_update_widget(workspace->layouter,
+                        plain_win, property, value);
+            }
+        }
+
         return PCRDR_SC_NOT_FOUND;
     }
 
@@ -602,10 +521,26 @@ int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         /* Forbid to change name of a plain window */
         return PCRDR_SC_FORBIDDEN;
     }
+    else if (strcmp(property, "class") == 0) {
+        /* Not acceptable to change class of a plain window */
+        return PCRDR_SC_NOT_ACCEPTABLE;
+    }
     else if (strcmp(property, "title") == 0) {
         if (plain_win->title)
             free(plain_win->title);
-        plain_win->title = strdup(value);
+        const char *title = purc_variant_get_string_const(value);
+        if (title) {
+            plain_win->title = strdup(title);
+        }
+        else {
+            return PCRDR_SC_BAD_REQUEST;
+        }
+    }
+    else if (strcmp(property, "layoutStyle") == 0) {
+        /* TODO */
+    }
+    else if (strcmp(property, "widgetStyle") == 0) {
+        /* TODO */
     }
 
     return PCRDR_SC_OK;
@@ -674,7 +609,6 @@ request_ready_callback(GObject* obj, GAsyncResult* result, gpointer user_data)
     message = webkit_web_view_send_message_to_page_finish(web_view, result, NULL);
 
     if (message) {
-        const char *name = webkit_user_message_get_name(message);
         GVariant *param = webkit_user_message_get_parameters(message);
 
         const char* type = g_variant_get_type_string(param);
@@ -683,7 +617,8 @@ request_ready_callback(GObject* obj, GAsyncResult* result, gpointer user_data)
             const char *str = g_variant_get_string(param, &len);
             handle_response_from_webpage(sess, str, len);
             LOG_DEBUG("The parameter of message named (%s): %s\n",
-                    name, g_variant_get_string(param, NULL));
+                    webkit_user_message_get_name(message),
+                    g_variant_get_string(param, NULL));
         }
         else {
             LOG_DEBUG("Not supported parameter type: %s\n", type);
@@ -953,4 +888,125 @@ gtk_set_property_in_dom(purcmc_session *sess, const char *request_id,
     return PURC_VARIANT_INVALID;
 }
 
+int gtk_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
+        const char *content, size_t length)
+{
+    int retv;
+
+    if (workspace->layouter == NULL) {
+        struct ws_metrics metrics = { 1024, 768, 120, 10 }; /* TODO */
+
+        workspace->layouter = ws_layouter_new(&metrics, content, length,
+                workspace, gtk_convert_style, gtk_create_widget,
+                gtk_destroy_widget, gtk_update_widget, &retv);
+        if (workspace->layouter == NULL)
+            return retv;
+    }
+    else {
+        /* TODO: */
+        retv = PCRDR_SC_NOT_IMPLEMENTED;
+    }
+
+    return retv;
+}
+
+int gtk_add_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
+        const char *content, size_t length)
+{
+    int retv;
+
+    if (workspace->layouter == NULL) {
+        retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
+    else {
+        retv = ws_layouter_add_page_groups(workspace->layouter,
+                    content, length);
+    }
+
+    return retv;
+}
+
+int gtk_remove_page_group(purcmc_session *sess, purcmc_workspace *workspace,
+        const char* gid)
+{
+    int retv;
+
+    if (workspace->layouter == NULL) {
+        retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
+    else {
+        retv = ws_layouter_remove_page_group(workspace->layouter, gid);
+    }
+
+    return retv;
+}
+
+purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
+            const char *request_id, const char *gid, const char *name,
+            const char *class_name, const char *title, const char *layout_style,
+            purc_variant_t widget_style, int *retv)
+{
+    purcmc_page *page = NULL;
+
+    if (workspace->layouter == NULL) {
+        *retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
+    else {
+        page = ws_layouter_add_page(workspace->layouter,
+                    gid, name, class_name, title,
+                    layout_style, widget_style, retv);
+    }
+
+    return page;
+}
+
+int gtk_update_page(purcmc_session *sess, purcmc_workspace *workspace,
+            purcmc_page *page, const char *property, purc_variant_t value)
+{
+    int retv;
+
+    if (workspace->layouter == NULL) {
+        retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
+    else {
+        ws_widget_type_t type =
+            ws_layouter_retrieve_widget(workspace->layouter, page);
+        if (type == WS_WIDGET_TYPE_PANEDPAGE ||
+                type == WS_WIDGET_TYPE_TABBEDPAGE) {
+            retv = ws_layouter_update_widget(workspace->layouter, page,
+                    property, value);
+        }
+        else {
+            retv = PCRDR_SC_BAD_REQUEST;
+        }
+    }
+
+    return retv;
+}
+
+int gtk_destroy_page(purcmc_session *sess, purcmc_workspace *workspace,
+            purcmc_page *page)
+{
+    int retv;
+
+    if (workspace->layouter == NULL) {
+        retv = PCRDR_SC_PRECONDITION_FAILED;
+    }
+    else {
+        ws_widget_type_t type =
+            ws_layouter_retrieve_widget(workspace->layouter, page);
+        if (type == WS_WIDGET_TYPE_PANEDPAGE ||
+                type == WS_WIDGET_TYPE_TABBEDPAGE) {
+            if (ws_layouter_remove_page_by_widget(workspace->layouter, page))
+                retv = PCRDR_SC_OK;
+            else
+                retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
+        }
+        else {
+            retv = PCRDR_SC_BAD_REQUEST;
+        }
+    }
+
+    return retv;
+}
 

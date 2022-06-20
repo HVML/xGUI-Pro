@@ -21,6 +21,8 @@
 #ifndef __LIB_UTILS_LOAD_ASSET_H
 #define __LIB_UTILS_LOAD_ASSET_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

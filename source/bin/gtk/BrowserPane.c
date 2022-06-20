@@ -1,37 +1,33 @@
 /*
- * Copyright (C) 2016 Igalia S.L.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE.
- */
+** BrowserPane.c -- The implementation of BrowserPane.
+**
+** Copyright (C) 2022 FMSoft <http://www.fmsoft.cn>
+**
+** Author: Vincent Wei <https://github.com/VincentWei>
+**
+** This file is part of xGUI Pro, an advanced HVML renderer.
+**
+** xGUI Pro is free software: you can redistribute it and/or modify
+** it under the terms of the GNU General Public License as published by
+** the Free Software Foundation, either version 3 of the License, or
+** (at your option) any later version.
+**
+** xGUI Pro is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANPANEILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+** You should have received a copy of the GNU General Public License
+** along with this program.  If not, see http://www.gnu.org/licenses/.
+*/
 
 #if defined(HAVE_CONFIG_H) && HAVE_CONFIG_H && defined(BUILDING_WITH_CMAKE)
 #include "cmakeconfig.h"
 #endif
 #include "main.h"
+#include "BrowserPane.h"
 
-#include "BrowserTab.h"
 #include "BrowserSearchBox.h"
 #include "BrowserWindow.h"
-
 #include <string.h>
 
 enum {
@@ -40,7 +36,7 @@ enum {
     PROP_VIEW
 };
 
-struct _BrowserTab {
+struct _BrowserPane {
     GtkBox parent;
 
     WebKitWebView *webView;
@@ -63,11 +59,11 @@ struct _BrowserTab {
 
 static GHashTable *userMediaPermissionGrantedOrigins;
 static GHashTable *mediaKeySystemPermissionGrantedOrigins;
-struct _BrowserTabClass {
+struct _BrowserPaneClass {
     GtkBoxClass parent;
 };
 
-G_DEFINE_TYPE(BrowserTab, browser_tab, GTK_TYPE_BOX)
+G_DEFINE_TYPE(BrowserPane, browser_pane, GTK_TYPE_BOX)
 
 typedef struct {
     WebKitPermissionRequest *request;
@@ -100,14 +96,14 @@ static gchar *getWebViewOrigin(WebKitWebView *webView)
     return originStr;
 }
 
-static void titleChanged(WebKitWebView *webView, GParamSpec *pspec, BrowserTab *tab)
+static void titleChanged(WebKitWebView *webView, GParamSpec *pspec, BrowserPane *tab)
 {
     const char *title = webkit_web_view_get_title(webView);
     if (title && *title)
         gtk_label_set_text(GTK_LABEL(tab->titleLabel), title);
 }
 
-static void isLoadingChanged(WebKitWebView *webView, GParamSpec *paramSpec, BrowserTab *tab)
+static void isLoadingChanged(WebKitWebView *webView, GParamSpec *paramSpec, BrowserPane *tab)
 {
     if (webkit_web_view_is_loading(webView)) {
         gtk_spinner_start(GTK_SPINNER(tab->titleSpinner));
@@ -118,7 +114,7 @@ static void isLoadingChanged(WebKitWebView *webView, GParamSpec *paramSpec, Brow
     }
 }
 
-static gboolean decidePolicy(WebKitWebView *webView, WebKitPolicyDecision *decision, WebKitPolicyDecisionType decisionType, BrowserTab *tab)
+static gboolean decidePolicy(WebKitWebView *webView, WebKitPolicyDecision *decision, WebKitPolicyDecisionType decisionType, BrowserPane *tab)
 {
     if (decisionType != WEBKIT_POLICY_DECISION_TYPE_RESPONSE)
         return FALSE;
@@ -145,7 +141,7 @@ static void removeChildIfInfoBar(GtkWidget *child, GtkContainer *tab)
 }
 #endif
 
-static void loadChanged(WebKitWebView *webView, WebKitLoadEvent loadEvent, BrowserTab *tab)
+static void loadChanged(WebKitWebView *webView, WebKitLoadEvent loadEvent, BrowserPane *tab)
 {
     if (loadEvent != WEBKIT_LOAD_STARTED)
         return;
@@ -216,7 +212,7 @@ static GtkWidget *createInfoBarQuestionMessage(const char *title, const char *te
     return dialog;
 }
 
-static void tlsErrorsDialogResponse(GtkWidget *dialog, gint response, BrowserTab *tab)
+static void tlsErrorsDialogResponse(GtkWidget *dialog, gint response, BrowserPane *tab)
 {
     if (response == GTK_RESPONSE_YES) {
         const char *failingURI = (const char *)g_object_get_data(G_OBJECT(dialog), "failingURI");
@@ -239,7 +235,7 @@ static void tlsErrorsDialogResponse(GtkWidget *dialog, gint response, BrowserTab
 #endif
 }
 
-static gboolean loadFailedWithTLSerrors(WebKitWebView *webView, const char *failingURI, GTlsCertificate *certificate, GTlsCertificateFlags errors, BrowserTab *tab)
+static gboolean loadFailedWithTLSerrors(WebKitWebView *webView, const char *failingURI, GTlsCertificate *certificate, GTlsCertificateFlags errors, BrowserPane *tab)
 {
     gchar *text = g_strdup_printf("Failed to load %s: Do you want to continue ignoring the TLS errors?", failingURI);
     GtkWidget *dialog = createInfoBarQuestionMessage("Invalid TLS Certificate", text);
@@ -260,7 +256,7 @@ static gboolean loadFailedWithTLSerrors(WebKitWebView *webView, const char *fail
     return TRUE;
 }
 
-static gboolean pointerLockMessageTimeoutCallback(BrowserTab *tab)
+static gboolean pointerLockMessageTimeoutCallback(BrowserPane *tab)
 {
     gtk_widget_hide(tab->pointerLockMessageLabel);
     tab->pointerLockMessageLabelId = 0;
@@ -296,7 +292,7 @@ static void permissionRequestDialogResponse(GtkWidget *dialog, gint response, Pe
     g_clear_pointer(&requestData, permissionRequestDataFree);
 }
 
-static gboolean decidePermissionRequest(WebKitWebView *webView, WebKitPermissionRequest *request, BrowserTab *tab)
+static gboolean decidePermissionRequest(WebKitWebView *webView, WebKitPermissionRequest *request, BrowserPane *tab)
 {
     const gchar *title = NULL;
     gchar *text = NULL;
@@ -410,7 +406,7 @@ static void colorChooserRequestFinished(WebKitColorChooserRequest *request, GtkW
 #endif
 }
 
-static gboolean runColorChooserCallback(WebKitWebView *webView, WebKitColorChooserRequest *request, BrowserTab *tab)
+static gboolean runColorChooserCallback(WebKitWebView *webView, WebKitColorChooserRequest *request, BrowserPane *tab)
 {
 #if GTK_CHECK_VERSION(3, 98, 5)
     GtkWidget *popover = gtk_popover_new();
@@ -481,7 +477,7 @@ static void certificateDialogResponse(GtkDialog *dialog, int response, WebKitAut
 #endif
 }
 
-static gboolean webViewAuthenticate(WebKitWebView *webView, WebKitAuthenticationRequest *request, BrowserTab *tab)
+static gboolean webViewAuthenticate(WebKitWebView *webView, WebKitAuthenticationRequest *request, BrowserPane *tab)
 {
     if (webkit_authentication_request_get_scheme(request) != WEBKIT_AUTHENTICATION_SCHEME_CLIENT_CERTIFICATE_REQUESTED)
         return FALSE;
@@ -504,13 +500,13 @@ static gboolean webViewAuthenticate(WebKitWebView *webView, WebKitAuthentication
     return TRUE;
 }
 
-static gboolean inspectorOpenedInWindow(WebKitWebInspector *inspector, BrowserTab *tab)
+static gboolean inspectorOpenedInWindow(WebKitWebInspector *inspector, BrowserPane *tab)
 {
     tab->inspectorIsVisible = TRUE;
     return FALSE;
 }
 
-static gboolean inspectorClosed(WebKitWebInspector *inspector, BrowserTab *tab)
+static gboolean inspectorClosed(WebKitWebInspector *inspector, BrowserPane *tab)
 {
     tab->inspectorIsVisible = FALSE;
     return FALSE;
@@ -518,7 +514,7 @@ static gboolean inspectorClosed(WebKitWebInspector *inspector, BrowserTab *tab)
 
 static void audioClicked(GtkButton *button, gpointer userData)
 {
-    BrowserTab *tab = BROWSER_TAB(userData);
+    BrowserPane *tab = BROWSER_PANE(userData);
     gboolean muted = webkit_web_view_get_is_muted(tab->webView);
 
     webkit_web_view_set_is_muted(tab->webView, !muted);
@@ -526,7 +522,7 @@ static void audioClicked(GtkButton *button, gpointer userData)
 
 static void audioMutedChanged(WebKitWebView *webView, GParamSpec *pspec, gpointer userData)
 {
-    BrowserTab *tab = BROWSER_TAB(userData);
+    BrowserPane *tab = BROWSER_PANE(userData);
     gboolean muted = webkit_web_view_get_is_muted(tab->webView);
 
 #if GTK_CHECK_VERSION(3, 98, 4)
@@ -537,7 +533,7 @@ static void audioMutedChanged(WebKitWebView *webView, GParamSpec *pspec, gpointe
 }
 
 #if GTK_CHECK_VERSION(3, 98, 5)
-static void tabCloseClicked(BrowserTab *tab)
+static void tabCloseClicked(BrowserPane *tab)
 {
     GtkWidget *parent = gtk_widget_get_parent(GTK_WIDGET(tab));
     while (parent && !GTK_IS_NOTEBOOK(parent))
@@ -548,9 +544,9 @@ static void tabCloseClicked(BrowserTab *tab)
 }
 #endif
 
-static void browserTabSetProperty(GObject *object, guint propId, const GValue *value, GParamSpec *pspec)
+static void browserPaneSetProperty(GObject *object, guint propId, const GValue *value, GParamSpec *pspec)
 {
-    BrowserTab *tab = BROWSER_TAB(object);
+    BrowserPane *tab = BROWSER_PANE(object);
 
     switch (propId) {
     case PROP_VIEW:
@@ -561,28 +557,28 @@ static void browserTabSetProperty(GObject *object, guint propId, const GValue *v
     }
 }
 
-static void browserTabFinalize(GObject *gObject)
+static void browserPaneFinalize(GObject *gObject)
 {
-    BrowserTab *tab = BROWSER_TAB(gObject);
+    BrowserPane *tab = BROWSER_PANE(gObject);
 
     if (tab->fullScreenMessageLabelId)
         g_source_remove(tab->fullScreenMessageLabelId);
     if (tab->pointerLockMessageLabelId)
         g_source_remove(tab->pointerLockMessageLabelId);
 
-    G_OBJECT_CLASS(browser_tab_parent_class)->finalize(gObject);
+    G_OBJECT_CLASS(browser_pane_parent_class)->finalize(gObject);
 }
 
-static void browser_tab_init(BrowserTab *tab)
+static void browser_pane_init(BrowserPane *tab)
 {
     gtk_orientable_set_orientation(GTK_ORIENTABLE(tab), GTK_ORIENTATION_VERTICAL);
 }
 
-static void browserTabConstructed(GObject *gObject)
+static void browserPaneConstructed(GObject *gObject)
 {
-    BrowserTab *tab = BROWSER_TAB(gObject);
+    BrowserPane *tab = BROWSER_PANE(gObject);
 
-    G_OBJECT_CLASS(browser_tab_parent_class)->constructed(gObject);
+    G_OBJECT_CLASS(browser_pane_parent_class)->constructed(gObject);
 
     tab->searchBar = gtk_search_bar_new();
     GtkWidget *searchBox = browser_search_box_new(tab->webView);
@@ -590,7 +586,7 @@ static void browserTabConstructed(GObject *gObject)
 #if GTK_CHECK_VERSION(3, 98, 5)
     gtk_search_bar_set_child(GTK_SEARCH_BAR(tab->searchBar), searchBox);
     gtk_search_bar_connect_entry(GTK_SEARCH_BAR(tab->searchBar),
-        GTK_EDITABLE(browser_search_box_get_entry(BROWSER_SEARCH_BOX(searchBox))));
+        GTK_EDIPANELE(browser_search_box_get_entry(BROWSER_SEARCH_BOX(searchBox))));
     gtk_box_append(GTK_BOX(tab), tab->searchBar);
 #else
     gtk_container_add(GTK_CONTAINER(tab->searchBar), searchBox);
@@ -727,12 +723,12 @@ static void browserTabConstructed(GObject *gObject)
         webkit_web_view_load_html(tab->webView, "<html></html>", "file:///");
 }
 
-static void browser_tab_class_init(BrowserTabClass *klass)
+static void browser_pane_class_init(BrowserPaneClass *klass)
 {
     GObjectClass *gobjectClass = G_OBJECT_CLASS(klass);
-    gobjectClass->constructed = browserTabConstructed;
-    gobjectClass->set_property = browserTabSetProperty;
-    gobjectClass->finalize = browserTabFinalize;
+    gobjectClass->constructed = browserPaneConstructed;
+    gobjectClass->set_property = browserPaneSetProperty;
+    gobjectClass->finalize = browserPaneFinalize;
 
     if (!userMediaPermissionGrantedOrigins)
         userMediaPermissionGrantedOrigins = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -764,23 +760,23 @@ static char *getInternalURI(const char *uri)
 }
 
 /* Public API. */
-GtkWidget *browser_tab_new(WebKitWebView *view)
+GtkWidget *browser_pane_new(WebKitWebView *view)
 {
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(view), NULL);
 
-    return GTK_WIDGET(g_object_new(BROWSER_TYPE_TAB, "view", view, NULL));
+    return GTK_WIDGET(g_object_new(BROWSER_TYPE_PANE, "view", view, NULL));
 }
 
-WebKitWebView *browser_tab_get_web_view(BrowserTab *tab)
+WebKitWebView *browser_pane_get_web_view(BrowserPane *tab)
 {
-    g_return_val_if_fail(BROWSER_IS_TAB(tab), NULL);
+    g_return_val_if_fail(BROWSER_IS_PANE(tab), NULL);
 
     return tab->webView;
 }
 
-void browser_tab_load_uri(BrowserTab *tab, const char *uri)
+void browser_pane_load_uri(BrowserPane *tab, const char *uri)
 {
-    g_return_if_fail(BROWSER_IS_TAB(tab));
+    g_return_if_fail(BROWSER_IS_PANE(tab));
     g_return_if_fail(uri);
 
     if (!g_str_has_prefix(uri, "javascript:")) {
@@ -793,24 +789,24 @@ void browser_tab_load_uri(BrowserTab *tab, const char *uri)
     webkit_web_view_run_javascript(tab->webView, strstr(uri, "javascript:"), NULL, NULL, NULL);
 }
 
-GtkWidget *browser_tab_get_title_widget(BrowserTab *tab)
+GtkWidget *browser_pane_get_title_widget(BrowserPane *tab)
 {
-    g_return_val_if_fail(BROWSER_IS_TAB(tab), NULL);
+    g_return_val_if_fail(BROWSER_IS_PANE(tab), NULL);
 
     return tab->titleBox;
 }
 
-void browser_tab_set_status_text(BrowserTab *tab, const char *text)
+void browser_pane_set_status_text(BrowserPane *tab, const char *text)
 {
-    g_return_if_fail(BROWSER_IS_TAB(tab));
+    g_return_if_fail(BROWSER_IS_PANE(tab));
 
     gtk_label_set_text(GTK_LABEL(tab->statusLabel), text);
     gtk_widget_set_visible(tab->statusLabel, !!text);
 }
 
-void browser_tab_toggle_inspector(BrowserTab *tab)
+void browser_pane_toggle_inspector(BrowserPane *tab)
 {
-    g_return_if_fail(BROWSER_IS_TAB(tab));
+    g_return_if_fail(BROWSER_IS_PANE(tab));
 
     WebKitWebInspector *inspector = webkit_web_view_get_inspector(tab->webView);
     if (!tab->inspectorIsVisible) {
@@ -820,7 +816,7 @@ void browser_tab_toggle_inspector(BrowserTab *tab)
         webkit_web_inspector_close(inspector);
 }
 
-static gboolean browserTabIsSearchBarOpen(BrowserTab *tab)
+static gboolean browserPaneIsSearchBarOpen(BrowserPane *tab)
 {
 #if GTK_CHECK_VERSION(3, 98, 5)
     GtkWidget *revealer = gtk_widget_get_first_child(tab->searchBar);
@@ -830,30 +826,30 @@ static gboolean browserTabIsSearchBarOpen(BrowserTab *tab)
     return gtk_revealer_get_reveal_child(GTK_REVEALER(revealer));
 }
 
-void browser_tab_start_search(BrowserTab *tab)
+void browser_pane_start_search(BrowserPane *tab)
 {
-    g_return_if_fail(BROWSER_IS_TAB(tab));
-    if (!browserTabIsSearchBarOpen(tab))
+    g_return_if_fail(BROWSER_IS_PANE(tab));
+    if (!browserPaneIsSearchBarOpen(tab))
         gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(tab->searchBar), TRUE);
 }
 
-void browser_tab_stop_search(BrowserTab *tab)
+void browser_pane_stop_search(BrowserPane *tab)
 {
-    g_return_if_fail(BROWSER_IS_TAB(tab));
-    if (browserTabIsSearchBarOpen(tab))
+    g_return_if_fail(BROWSER_IS_PANE(tab));
+    if (browserPaneIsSearchBarOpen(tab))
         gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(tab->searchBar), FALSE);
 }
 
-static gboolean fullScreenMessageTimeoutCallback(BrowserTab *tab)
+static gboolean fullScreenMessageTimeoutCallback(BrowserPane *tab)
 {
     gtk_widget_hide(tab->fullScreenMessageLabel);
     tab->fullScreenMessageLabelId = 0;
     return FALSE;
 }
 
-void browser_tab_enter_fullscreen(BrowserTab *tab)
+void browser_pane_enter_fullscreen(BrowserPane *tab)
 {
-    g_return_if_fail(BROWSER_IS_TAB(tab));
+    g_return_if_fail(BROWSER_IS_PANE(tab));
 
     const gchar *titleOrURI = webkit_web_view_get_title(tab->webView);
     if (!titleOrURI || !titleOrURI[0])
@@ -868,13 +864,13 @@ void browser_tab_enter_fullscreen(BrowserTab *tab)
     tab->fullScreenMessageLabelId = g_timeout_add_seconds(2, (GSourceFunc)fullScreenMessageTimeoutCallback, tab);
     g_source_set_name_by_id(tab->fullScreenMessageLabelId, "[WebKit] fullScreenMessageTimeoutCallback");
 
-    tab->wasSearchingWhenEnteredFullscreen = browserTabIsSearchBarOpen(tab);
-    browser_tab_stop_search(tab);
+    tab->wasSearchingWhenEnteredFullscreen = browserPaneIsSearchBarOpen(tab);
+    browser_pane_stop_search(tab);
 }
 
-void browser_tab_leave_fullscreen(BrowserTab *tab)
+void browser_pane_leave_fullscreen(BrowserPane *tab)
 {
-    g_return_if_fail(BROWSER_IS_TAB(tab));
+    g_return_if_fail(BROWSER_IS_PANE(tab));
 
     if (tab->fullScreenMessageLabelId) {
         g_source_remove(tab->fullScreenMessageLabelId);
@@ -893,14 +889,14 @@ void browser_tab_leave_fullscreen(BrowserTab *tab)
         GtkWindow *window = GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(tab)));
 #endif
         GtkWidget *focusWidget = gtk_window_get_focus(window);
-        browser_tab_start_search(tab);
+        browser_pane_start_search(tab);
         gtk_window_set_focus(window, focusWidget);
     }
 }
 
-void browser_tab_set_background_color(BrowserTab *tab, GdkRGBA *rgba)
+void browser_pane_set_background_color(BrowserPane *tab, GdkRGBA *rgba)
 {
-    g_return_if_fail(BROWSER_IS_TAB(tab));
+    g_return_if_fail(BROWSER_IS_PANE(tab));
     g_return_if_fail(rgba);
 
     GdkRGBA viewRGBA;

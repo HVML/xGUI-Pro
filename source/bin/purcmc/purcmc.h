@@ -86,21 +86,21 @@ typedef struct purcmc_server_callbacks {
     int (*destroy_workspace)(purcmc_session *, purcmc_workspace *);
 
     /* nullable */
-    int (*reset_page_groups)(purcmc_session *, purcmc_workspace *,
+    int (*set_page_groups)(purcmc_session *, purcmc_workspace *,
             const char *content, size_t length);
-    /* null if reset_page_groups is null */
+    /* null if set_page_groups is null */
     int (*add_page_groups)(purcmc_session *, purcmc_workspace *,
             const char *content, size_t length);
-    /* null if reset_page_groups is null */
+    /* null if set_page_groups is null */
     int (*remove_page_group)(purcmc_session *, purcmc_workspace *,
             const char* gid);
 
     purcmc_plainwin *(*create_plainwin)(purcmc_session *, purcmc_workspace *,
-            const char *request_id, const char *gid,
-            const char *name, const char *title, purc_variant_t properties,
-            int *retv);
+            const char *request_id, const char *gid, const char *name,
+            const char *class_name, const char *title, const char *layout_style,
+            purc_variant_t widget_style, int *retv);
     int (*update_plainwin)(purcmc_session *, purcmc_workspace *,
-            purcmc_plainwin *win, const char *property, const char *value);
+            purcmc_plainwin *win, const char *property, purc_variant_t value);
     int (*destroy_plainwin)(purcmc_session *, purcmc_workspace *,
             purcmc_plainwin *win);
 
@@ -109,12 +109,12 @@ typedef struct purcmc_server_callbacks {
 
     /* nullable */
     purcmc_page *(*create_page)(purcmc_session *, purcmc_workspace *,
-            const char *request_id, const char *gid, const char *type,
-            const char *name, const char *title, purc_variant_t properties,
-            int *retv);
+            const char *request_id, const char *gid, const char *name,
+            const char *class_name, const char *title, const char *layout_style,
+            purc_variant_t widget_style, int *retv);
     /* null if create_page is null */
     int (*update_page)(purcmc_session *, purcmc_workspace *,
-            purcmc_page *page, const char *property, const char *value);
+            purcmc_page *page, const char *property, purc_variant_t value);
     /* null if create_page is null */
     int (*destroy_page)(purcmc_session *, purcmc_workspace *,
             purcmc_page *page);
