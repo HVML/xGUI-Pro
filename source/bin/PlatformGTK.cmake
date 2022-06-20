@@ -23,8 +23,12 @@ list(APPEND xguipro_SOURCES
     gtk/BrowserSettingsDialog.h
     gtk/BrowserTab.c
     gtk/BrowserTab.h
+    gtk/BrowserPane.c
+    gtk/BrowserPane.h
     gtk/BrowserWindow.c
     gtk/BrowserWindow.h
+    gtk/BrowserPlainWindow.c
+    gtk/BrowserPlainWindow.h
     gtk/PurcmcCallbacks.c
     gtk/PurcmcCallbacks.h
     gtk/HVMLURISchema.c

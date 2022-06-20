@@ -27,8 +27,11 @@
 #include "xguipro-features.h"
 
 #include <purc/purc-helpers.h>
-
 #include <glib.h>
+
+#define BROWSER_DEFAULT_URL            "hvml://localhost/default"
+#define BROWSER_ABOUT_SCHEME           "xguipro"
+#define BROWSER_HVML_SCHEME            "hvml"
 
 typedef enum {
     XGUI_PRO_ERROR_INVALID_ABOUT_PATH,
