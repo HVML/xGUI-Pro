@@ -544,7 +544,7 @@ static void tabCloseClicked(BrowserPane *tab)
 }
 #endif
 
-static void browserTabSetProperty(GObject *object, guint propId, const GValue *value, GParamSpec *pspec)
+static void browserPaneSetProperty(GObject *object, guint propId, const GValue *value, GParamSpec *pspec)
 {
     BrowserPane *tab = BROWSER_PANE(object);
 
@@ -557,7 +557,7 @@ static void browserTabSetProperty(GObject *object, guint propId, const GValue *v
     }
 }
 
-static void browserTabFinalize(GObject *gObject)
+static void browserPaneFinalize(GObject *gObject)
 {
     BrowserPane *tab = BROWSER_PANE(gObject);
 
@@ -574,7 +574,7 @@ static void browser_pane_init(BrowserPane *tab)
     gtk_orientable_set_orientation(GTK_ORIENTABLE(tab), GTK_ORIENTATION_VERTICAL);
 }
 
-static void browserTabConstructed(GObject *gObject)
+static void browserPaneConstructed(GObject *gObject)
 {
     BrowserPane *tab = BROWSER_PANE(gObject);
 
@@ -726,9 +726,9 @@ static void browserTabConstructed(GObject *gObject)
 static void browser_pane_class_init(BrowserPaneClass *klass)
 {
     GObjectClass *gobjectClass = G_OBJECT_CLASS(klass);
-    gobjectClass->constructed = browserTabConstructed;
-    gobjectClass->set_property = browserTabSetProperty;
-    gobjectClass->finalize = browserTabFinalize;
+    gobjectClass->constructed = browserPaneConstructed;
+    gobjectClass->set_property = browserPaneSetProperty;
+    gobjectClass->finalize = browserPaneFinalize;
 
     if (!userMediaPermissionGrantedOrigins)
         userMediaPermissionGrantedOrigins = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -816,7 +816,7 @@ void browser_pane_toggle_inspector(BrowserPane *tab)
         webkit_web_inspector_close(inspector);
 }
 
-static gboolean browserTabIsSearchBarOpen(BrowserPane *tab)
+static gboolean browserPaneIsSearchBarOpen(BrowserPane *tab)
 {
 #if GTK_CHECK_VERSION(3, 98, 5)
     GtkWidget *revealer = gtk_widget_get_first_child(tab->searchBar);
@@ -829,14 +829,14 @@ static gboolean browserTabIsSearchBarOpen(BrowserPane *tab)
 void browser_pane_start_search(BrowserPane *tab)
 {
     g_return_if_fail(BROWSER_IS_PANE(tab));
-    if (!browserTabIsSearchBarOpen(tab))
+    if (!browserPaneIsSearchBarOpen(tab))
         gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(tab->searchBar), TRUE);
 }
 
 void browser_pane_stop_search(BrowserPane *tab)
 {
     g_return_if_fail(BROWSER_IS_PANE(tab));
-    if (browserTabIsSearchBarOpen(tab))
+    if (browserPaneIsSearchBarOpen(tab))
         gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(tab->searchBar), FALSE);
 }
 
@@ -864,7 +864,7 @@ void browser_pane_enter_fullscreen(BrowserPane *tab)
     tab->fullScreenMessageLabelId = g_timeout_add_seconds(2, (GSourceFunc)fullScreenMessageTimeoutCallback, tab);
     g_source_set_name_by_id(tab->fullScreenMessageLabelId, "[WebKit] fullScreenMessageTimeoutCallback");
 
-    tab->wasSearchingWhenEnteredFullscreen = browserTabIsSearchBarOpen(tab);
+    tab->wasSearchingWhenEnteredFullscreen = browserPaneIsSearchBarOpen(tab);
     browser_pane_stop_search(tab);
 }
 
