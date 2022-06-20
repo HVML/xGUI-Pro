@@ -44,6 +44,7 @@ typedef struct _BrowserTabClass   BrowserTabClass;
 GType browser_tab_get_type(void);
 
 GtkWidget* browser_tab_new(WebKitWebView*);
+GtkWidget *browser_tab_get_title_widget(BrowserTab*);
 
 static inline
 WebKitWebView* browser_tab_get_web_view(BrowserTab *tab)
@@ -69,12 +70,31 @@ browser_tab_set_background_color(BrowserTab* tab, GdkRGBA* rgba)
     browser_pane_set_background_color(BROWSER_PANE(tab), rgba);
 }
 
-GtkWidget *browser_tab_get_title_widget(BrowserTab*);
-void browser_tab_set_status_text(BrowserTab*, const char* text);
-void browser_tab_start_search(BrowserTab*);
-void browser_tab_stop_search(BrowserTab*);
-void browser_tab_enter_fullscreen(BrowserTab*);
-void browser_tab_leave_fullscreen(BrowserTab*);
+static inline void
+browser_tab_set_status_text(BrowserTab *tab, const char* text)
+{
+    browser_pane_set_status_text(BROWSER_PANE(tab), text);
+}
+
+static inline void browser_tab_start_search(BrowserTab* tab)
+{
+    browser_pane_start_search(BROWSER_PANE(tab));
+}
+
+static inline void browser_tab_stop_search(BrowserTab *tab)
+{
+    browser_pane_stop_search(BROWSER_PANE(tab));
+}
+
+static inline void browser_tab_enter_fullscreen(BrowserTab *tab)
+{
+    browser_pane_enter_fullscreen(BROWSER_PANE(tab));
+}
+
+static inline void browser_tab_leave_fullscreen(BrowserTab *tab)
+{
+    browser_pane_leave_fullscreen(BROWSER_PANE(tab));
+}
 
 G_END_DECLS
 

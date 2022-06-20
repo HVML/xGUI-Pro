@@ -532,6 +532,9 @@ static void browserPaneFinalize(GObject *gObject)
     if (pane->pointerLockMessageLabelId)
         g_source_remove(pane->pointerLockMessageLabelId);
 
+    if (pane->fullScreenMessageLabelId)
+        g_source_remove(pane->fullScreenMessageLabelId);
+
     G_OBJECT_CLASS(browser_pane_parent_class)->finalize(gObject);
 }
 
@@ -547,13 +550,39 @@ static void browserPaneConstructed(GObject *gObject)
 
     G_OBJECT_CLASS(browser_pane_parent_class)->constructed(gObject);
 
-    GtkWidget *overlay = pane->overlay = gtk_overlay_new();
+    pane->searchBar = gtk_search_bar_new();
+    GtkWidget *searchBox = browser_search_box_new(BROWSER_PANE(pane)->webView);
+    gtk_search_bar_set_show_close_button(GTK_SEARCH_BAR(pane->searchBar), TRUE);
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_search_bar_set_child(GTK_SEARCH_BAR(pane->searchBar), searchBox);
+    gtk_search_bar_connect_entry(GTK_SEARCH_BAR(pane->searchBar),
+        GTK_EDITABLE(browser_search_box_get_entry(BROWSER_SEARCH_BOX(searchBox))));
+    gtk_box_prepend(GTK_BOX(pane), pane->searchBar);
+#else
+    gtk_container_add(GTK_CONTAINER(pane->searchBar), searchBox);
+    gtk_widget_show(searchBox);
+    gtk_search_bar_connect_entry(GTK_SEARCH_BAR(pane->searchBar),
+        browser_search_box_get_entry(BROWSER_SEARCH_BOX(searchBox)));
+    gtk_container_add(GTK_CONTAINER(pane), pane->searchBar);
+    gtk_widget_show(pane->searchBar);
+#endif
+
+    GtkWidget *overlay = gtk_overlay_new();
 #if GTK_CHECK_VERSION(3, 98, 4)
     gtk_box_append(GTK_BOX(pane), overlay);
 #else
     gtk_container_add(GTK_CONTAINER(pane), overlay);
     gtk_widget_show(overlay);
 #endif
+
+    pane->statusLabel = gtk_label_new(NULL);
+    gtk_widget_set_halign(pane->statusLabel, GTK_ALIGN_START);
+    gtk_widget_set_valign(pane->statusLabel, GTK_ALIGN_END);
+    gtk_widget_set_margin_start(pane->statusLabel, 1);
+    gtk_widget_set_margin_end(pane->statusLabel, 1);
+    gtk_widget_set_margin_top(pane->statusLabel, 1);
+    gtk_widget_set_margin_bottom(pane->statusLabel, 1);
+    gtk_overlay_add_overlay(GTK_OVERLAY(overlay), pane->statusLabel);
 
     pane->pointerLockMessageLabel = gtk_label_new(NULL);
     gtk_widget_set_halign(pane->pointerLockMessageLabel, GTK_ALIGN_CENTER);
@@ -562,6 +591,14 @@ static void browserPaneConstructed(GObject *gObject)
     gtk_widget_set_no_show_all(pane->pointerLockMessageLabel, TRUE);
 #endif
     gtk_overlay_add_overlay(GTK_OVERLAY(overlay), pane->pointerLockMessageLabel);
+
+    pane->fullScreenMessageLabel = gtk_label_new(NULL);
+    gtk_widget_set_halign(pane->fullScreenMessageLabel, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(pane->fullScreenMessageLabel, GTK_ALIGN_CENTER);
+#if !GTK_CHECK_VERSION(3, 98, 0)
+    gtk_widget_set_no_show_all(pane->fullScreenMessageLabel, TRUE);
+#endif
+    gtk_overlay_add_overlay(GTK_OVERLAY(overlay), pane->fullScreenMessageLabel);
 
     gtk_widget_set_vexpand(GTK_WIDGET(pane->webView), TRUE);
 #if GTK_CHECK_VERSION(3, 98, 5)
@@ -656,6 +693,14 @@ void browser_pane_load_uri(BrowserPane *pane, const char *uri)
             strstr(uri, "javascript:"), NULL, NULL, NULL);
 }
 
+void browser_pane_set_status_text(BrowserPane *pane, const char *text)
+{
+    g_return_if_fail(BROWSER_IS_PANE(pane));
+
+    gtk_label_set_text(GTK_LABEL(pane->statusLabel), text);
+    gtk_widget_set_visible(pane->statusLabel, !!text);
+}
+
 void browser_pane_toggle_inspector(BrowserPane *pane)
 {
     g_return_if_fail(BROWSER_IS_PANE(pane));
@@ -679,5 +724,83 @@ void browser_pane_set_background_color(BrowserPane *pane, GdkRGBA *rgba)
         return;
 
     webkit_web_view_set_background_color(pane->webView, rgba);
+}
+
+static gboolean browserTabIsSearchBarOpen(BrowserPane *pane)
+{
+#if GTK_CHECK_VERSION(3, 98, 5)
+    GtkWidget *revealer = gtk_widget_get_first_child(pane->searchBar);
+#else
+    GtkWidget *revealer = gtk_bin_get_child(GTK_BIN(pane->searchBar));
+#endif
+    return gtk_revealer_get_reveal_child(GTK_REVEALER(revealer));
+}
+
+void browser_pane_start_search(BrowserPane *pane)
+{
+    g_return_if_fail(BROWSER_IS_PANE(pane));
+    if (!browserTabIsSearchBarOpen(pane))
+        gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(pane->searchBar), TRUE);
+}
+
+void browser_pane_stop_search(BrowserPane *pane)
+{
+    g_return_if_fail(BROWSER_IS_PANE(pane));
+    if (browserTabIsSearchBarOpen(pane))
+        gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(pane->searchBar), FALSE);
+}
+
+static gboolean fullScreenMessageTimeoutCallback(BrowserPane *pane)
+{
+    gtk_widget_hide(pane->fullScreenMessageLabel);
+    pane->fullScreenMessageLabelId = 0;
+    return FALSE;
+}
+
+void browser_pane_enter_fullscreen(BrowserPane *pane)
+{
+    g_return_if_fail(BROWSER_IS_PANE(pane));
+
+    const gchar *titleOrURI = webkit_web_view_get_title(BROWSER_PANE(pane)->webView);
+    if (!titleOrURI || !titleOrURI[0])
+        titleOrURI = webkit_web_view_get_uri(BROWSER_PANE(pane)->webView);
+
+    gchar *message = g_strdup_printf("%s is now full screen. Press ESC or f to exit.", titleOrURI);
+    gtk_label_set_text(GTK_LABEL(pane->fullScreenMessageLabel), message);
+    g_free(message);
+
+    gtk_widget_show(pane->fullScreenMessageLabel);
+
+    pane->fullScreenMessageLabelId = g_timeout_add_seconds(2, (GSourceFunc)fullScreenMessageTimeoutCallback, pane);
+    g_source_set_name_by_id(pane->fullScreenMessageLabelId, "[WebKit] fullScreenMessageTimeoutCallback");
+
+    pane->wasSearchingWhenEnteredFullscreen = browserTabIsSearchBarOpen(pane);
+    browser_pane_stop_search(pane);
+}
+
+void browser_pane_leave_fullscreen(BrowserPane *pane)
+{
+    g_return_if_fail(BROWSER_IS_PANE(pane));
+
+    if (pane->fullScreenMessageLabelId) {
+        g_source_remove(pane->fullScreenMessageLabelId);
+        pane->fullScreenMessageLabelId = 0;
+    }
+
+    gtk_widget_hide(pane->fullScreenMessageLabel);
+
+    if (pane->wasSearchingWhenEnteredFullscreen) {
+        /* Opening the search bar steals the focus. Usually, we want
+         * this but not when coming back from fullscreen.
+         */
+#if GTK_CHECK_VERSION(3, 98, 5)
+        GtkWindow *window = GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(pane)));
+#else
+        GtkWindow *window = GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(pane)));
+#endif
+        GtkWidget *focusWidget = gtk_window_get_focus(window);
+        browser_pane_start_search(pane);
+        gtk_window_set_focus(window, focusWidget);
+    }
 }
 

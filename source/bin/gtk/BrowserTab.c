@@ -44,12 +44,6 @@ enum {
 struct _BrowserTab {
     BrowserPane parent;
 
-    GtkWidget *searchBar;
-    GtkWidget *statusLabel;
-    gboolean wasSearchingWhenEnteredFullscreen;
-    GtkWidget *fullScreenMessageLabel;
-    guint fullScreenMessageLabelId;
-
     /* Tab Title */
     GtkWidget *titleBox;
     GtkWidget *titleLabel;
@@ -116,11 +110,6 @@ static void tabCloseClicked(BrowserTab *tab)
 
 static void browserTabFinalize(GObject *gObject)
 {
-    BrowserTab *tab = BROWSER_TAB(gObject);
-
-    if (tab->fullScreenMessageLabelId)
-        g_source_remove(tab->fullScreenMessageLabelId);
-
     G_OBJECT_CLASS(browser_tab_parent_class)->finalize(gObject);
 }
 
@@ -134,42 +123,6 @@ static void browserTabConstructed(GObject *gObject)
     BrowserTab *tab = BROWSER_TAB(gObject);
 
     G_OBJECT_CLASS(browser_tab_parent_class)->constructed(gObject);
-
-    tab->searchBar = gtk_search_bar_new();
-    GtkWidget *searchBox = browser_search_box_new(BROWSER_PANE(tab)->webView);
-    gtk_search_bar_set_show_close_button(GTK_SEARCH_BAR(tab->searchBar), TRUE);
-#if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_search_bar_set_child(GTK_SEARCH_BAR(tab->searchBar), searchBox);
-    gtk_search_bar_connect_entry(GTK_SEARCH_BAR(tab->searchBar),
-        GTK_EDITABLE(browser_search_box_get_entry(BROWSER_SEARCH_BOX(searchBox))));
-    gtk_box_prepend(GTK_BOX(tab), tab->searchBar);
-#else
-    gtk_container_add(GTK_CONTAINER(tab->searchBar), searchBox);
-    gtk_widget_show(searchBox);
-    gtk_search_bar_connect_entry(GTK_SEARCH_BAR(tab->searchBar),
-        browser_search_box_get_entry(BROWSER_SEARCH_BOX(searchBox)));
-    gtk_container_add(GTK_CONTAINER(tab), tab->searchBar);
-    gtk_widget_show(tab->searchBar);
-#endif
-
-    GtkWidget *overlay = BROWSER_PANE(tab)->overlay;
-
-    tab->statusLabel = gtk_label_new(NULL);
-    gtk_widget_set_halign(tab->statusLabel, GTK_ALIGN_START);
-    gtk_widget_set_valign(tab->statusLabel, GTK_ALIGN_END);
-    gtk_widget_set_margin_start(tab->statusLabel, 1);
-    gtk_widget_set_margin_end(tab->statusLabel, 1);
-    gtk_widget_set_margin_top(tab->statusLabel, 1);
-    gtk_widget_set_margin_bottom(tab->statusLabel, 1);
-    gtk_overlay_add_overlay(GTK_OVERLAY(overlay), tab->statusLabel);
-
-    tab->fullScreenMessageLabel = gtk_label_new(NULL);
-    gtk_widget_set_halign(tab->fullScreenMessageLabel, GTK_ALIGN_CENTER);
-    gtk_widget_set_valign(tab->fullScreenMessageLabel, GTK_ALIGN_CENTER);
-#if !GTK_CHECK_VERSION(3, 98, 0)
-    gtk_widget_set_no_show_all(tab->fullScreenMessageLabel, TRUE);
-#endif
-    gtk_overlay_add_overlay(GTK_OVERLAY(overlay), tab->fullScreenMessageLabel);
 
     tab->titleBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
 
@@ -262,91 +215,5 @@ GtkWidget *browser_tab_get_title_widget(BrowserTab *tab)
     g_return_val_if_fail(BROWSER_IS_TAB(tab), NULL);
 
     return tab->titleBox;
-}
-
-void browser_tab_set_status_text(BrowserTab *tab, const char *text)
-{
-    g_return_if_fail(BROWSER_IS_TAB(tab));
-
-    gtk_label_set_text(GTK_LABEL(tab->statusLabel), text);
-    gtk_widget_set_visible(tab->statusLabel, !!text);
-}
-
-static gboolean browserTabIsSearchBarOpen(BrowserTab *tab)
-{
-#if GTK_CHECK_VERSION(3, 98, 5)
-    GtkWidget *revealer = gtk_widget_get_first_child(tab->searchBar);
-#else
-    GtkWidget *revealer = gtk_bin_get_child(GTK_BIN(tab->searchBar));
-#endif
-    return gtk_revealer_get_reveal_child(GTK_REVEALER(revealer));
-}
-
-void browser_tab_start_search(BrowserTab *tab)
-{
-    g_return_if_fail(BROWSER_IS_TAB(tab));
-    if (!browserTabIsSearchBarOpen(tab))
-        gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(tab->searchBar), TRUE);
-}
-
-void browser_tab_stop_search(BrowserTab *tab)
-{
-    g_return_if_fail(BROWSER_IS_TAB(tab));
-    if (browserTabIsSearchBarOpen(tab))
-        gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(tab->searchBar), FALSE);
-}
-
-static gboolean fullScreenMessageTimeoutCallback(BrowserTab *tab)
-{
-    gtk_widget_hide(tab->fullScreenMessageLabel);
-    tab->fullScreenMessageLabelId = 0;
-    return FALSE;
-}
-
-void browser_tab_enter_fullscreen(BrowserTab *tab)
-{
-    g_return_if_fail(BROWSER_IS_TAB(tab));
-
-    const gchar *titleOrURI = webkit_web_view_get_title(BROWSER_PANE(tab)->webView);
-    if (!titleOrURI || !titleOrURI[0])
-        titleOrURI = webkit_web_view_get_uri(BROWSER_PANE(tab)->webView);
-
-    gchar *message = g_strdup_printf("%s is now full screen. Press ESC or f to exit.", titleOrURI);
-    gtk_label_set_text(GTK_LABEL(tab->fullScreenMessageLabel), message);
-    g_free(message);
-
-    gtk_widget_show(tab->fullScreenMessageLabel);
-
-    tab->fullScreenMessageLabelId = g_timeout_add_seconds(2, (GSourceFunc)fullScreenMessageTimeoutCallback, tab);
-    g_source_set_name_by_id(tab->fullScreenMessageLabelId, "[WebKit] fullScreenMessageTimeoutCallback");
-
-    tab->wasSearchingWhenEnteredFullscreen = browserTabIsSearchBarOpen(tab);
-    browser_tab_stop_search(tab);
-}
-
-void browser_tab_leave_fullscreen(BrowserTab *tab)
-{
-    g_return_if_fail(BROWSER_IS_TAB(tab));
-
-    if (tab->fullScreenMessageLabelId) {
-        g_source_remove(tab->fullScreenMessageLabelId);
-        tab->fullScreenMessageLabelId = 0;
-    }
-
-    gtk_widget_hide(tab->fullScreenMessageLabel);
-
-    if (tab->wasSearchingWhenEnteredFullscreen) {
-        /* Opening the search bar steals the focus. Usually, we want
-         * this but not when coming back from fullscreen.
-         */
-#if GTK_CHECK_VERSION(3, 98, 5)
-        GtkWindow *window = GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(tab)));
-#else
-        GtkWindow *window = GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(tab)));
-#endif
-        GtkWidget *focusWidget = gtk_window_get_focus(window);
-        browser_tab_start_search(tab);
-        gtk_window_set_focus(window, focusWidget);
-    }
 }
 
