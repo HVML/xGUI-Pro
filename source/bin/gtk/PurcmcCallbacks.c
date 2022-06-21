@@ -330,6 +330,10 @@ int gtk_remove_session(purcmc_session *sess)
 
     LOG_DEBUG("removing session (%p)...\n", sess);
 
+    LOG_DEBUG("deleting layouter ...\n");
+    if (sess->workspace.layouter)
+        ws_layouter_delete(sess->workspace.layouter);
+
     LOG_DEBUG("destroy all ungrouped plain windows...\n");
     kvlist_for_each_safe(&sess->workspace.ug_wins, name, next, data) {
         BrowserPlainWindow *plain_win = *(BrowserPlainWindow **)data;
@@ -473,6 +477,8 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
 
         gtk_widget_grab_focus(GTK_WIDGET(web_view));
         gtk_widget_show(GTK_WIDGET(plain_win));
+
+        gtk_window_resize(GTK_WINDOW(plain_win), 320, 240);
 
         sorted_array_add(sess->all_handles, PTR2U64(plain_win),
                 INT2PTR(HT_PLAINWIN));

@@ -1531,7 +1531,7 @@ static void browser_plain_window_init(BrowserPlainWindow *window)
     gtk_box_append(GTK_BOX(vbox), toolbar);
 #else
     gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
-    gtk_widget_show(toolbar);
+    // gtk_widget_show(toolbar);
 #endif
 
 #if GTK_CHECK_VERSION(3, 98, 5)

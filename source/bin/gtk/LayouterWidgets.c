@@ -85,18 +85,17 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
             GTK_WINDOW(plainwin));
 
     if (style->flags & WSWS_FLAG_GEOMETRY) {
-        LOG_INFO("the size of creating plainwin: %u x %u\n",
-                style->w, style->h);
-#if GTK_CHECK_VERSION(3, 99, 5)
-        if (style->w > 0 && style->h > 0)
+        LOG_DEBUG("the SIZE of creating plainwin: %d, %d; %u x %u\n",
+                style->x, style->y, style->w, style->h);
+
+        if (style->w > 0 && style->h > 0) {
             gtk_window_set_default_size(GTK_WINDOW(plainwin),
                     style->w, style->h);
-#else
+            gtk_window_resize(GTK_WINDOW(plainwin), style->w, style->h);
+        }
         if (style->x >= 0 && style->y >= 0)
             gtk_window_move(GTK_WINDOW(plainwin), style->x, style->y);
-        if (style->w > 0 && style->h > 0)
-            gtk_window_resize(GTK_WINDOW(plainwin), style->w, style->h);
-#endif
+
         gtk_window_set_resizable(GTK_WINDOW(plainwin), FALSE);
     }
 
