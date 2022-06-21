@@ -189,7 +189,7 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
 
     struct ws_widget_style style = { 0, 0, 0, 0 };
     style.flags = WSWS_FLAG_NAME | WSWS_FLAG_TITLE |
-        WSWS_FLAG_POSITION;
+        WSWS_FLAG_GEOMETRY;
     style.name = name ? name : ANONYMOUS_NAME;
     style.title = title ? title: UNTITLED;
     fill_position(&style, box);
@@ -539,7 +539,7 @@ layout_widget_walker(pcdom_node_t *node, void *ctxt)
             if (box) {
                 struct ws_widget_style style = { 0 };
 
-                style.flags = WSWS_FLAG_POSITION;
+                style.flags = WSWS_FLAG_GEOMETRY;
                 fill_position(&style, box);
 
                 ws_widget_type_t type;

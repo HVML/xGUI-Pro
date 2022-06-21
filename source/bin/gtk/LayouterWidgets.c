@@ -22,6 +22,7 @@
 
 #include "config.h"
 #include "main.h"
+#include "BrowserPlainWindow.h"
 #include "BrowserWindow.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
@@ -36,7 +37,7 @@
 #include <gtk/gtk.h>
 #include <webkit2/webkit2.h>
 
-void gtk_convert_style(struct ws_widget_style *style,
+void gtk_imp_convert_style(struct ws_widget_style *style,
         purc_variant_t widget_style)
 {
     style->darkMode = false;
@@ -70,40 +71,32 @@ void gtk_convert_style(struct ws_widget_style *style,
 static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
         const struct ws_widget_style *style)
 {
-    purcmc_plainwin *plain_win;
     purcmc_session *sess = workspace->sess;
 
-    if ((plain_win = calloc(1, sizeof(*plain_win))) == NULL) {
-        goto done;
-    }
-
-    plain_win->name = strdup(style->name);
-    if (style->title)
-        plain_win->title = strdup(style->title);
-
-    BrowserWindow *main_win;
-    main_win = BROWSER_WINDOW(browser_window_new(NULL, sess->web_context));
+    BrowserPlainWindow *plainwin;
+    plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(NULL,
+                sess->web_context, style->name, style->title));
 
     GtkApplication *application;
     application = g_object_get_data(G_OBJECT(sess->webkit_settings),
             "gtk-application");
 
     gtk_application_add_window(GTK_APPLICATION(application),
-            GTK_WINDOW(main_win));
+            GTK_WINDOW(plainwin));
 
     if (style->darkMode) {
-        g_object_set(gtk_widget_get_settings(GTK_WIDGET(main_win)),
+        g_object_set(gtk_widget_get_settings(GTK_WIDGET(plainwin)),
                 "gtk-application-prefer-dark-theme", TRUE, NULL);
     }
 
     if (style->fullScreen) {
-        gtk_window_fullscreen(GTK_WINDOW(main_win));
+        gtk_window_fullscreen(GTK_WINDOW(plainwin));
     }
 
     if (style->backgroundColor) {
         GdkRGBA rgba;
         if (gdk_rgba_parse(&rgba, style->backgroundColor)) {
-            browser_window_set_background_color(main_win, &rgba);
+            browser_plain_window_set_background_color(plainwin, &rgba);
         }
     }
 
@@ -125,22 +118,15 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
                 NULL));
 
 #if 0
-    g_object_unref(sess->web_context);
-    if (uc_manager)
-        g_object_unref(uc_manager);
-
     if (editorMode)
         webkit_web_view_set_editable(web_view, TRUE);
 #endif
 
-    g_object_set_data(G_OBJECT(web_view), "purcmc-plainwin", plain_win);
+    g_object_set_data(G_OBJECT(web_view), "purcmc-container", plainwin);
 
-    browser_window_append_view(main_win, web_view);
-    plain_win->main_win = main_win;
-    plain_win->web_view = web_view;
+    browser_plain_window_set_view(plainwin, web_view);
 
-done:
-    return plain_win;
+    return (struct purcmc_plainwin*)plainwin;
 }
 
 static BrowserWindow *create_tabbedwin(purcmc_workspace *workspace,
@@ -178,7 +164,7 @@ static BrowserWindow *create_tabbedwin(purcmc_workspace *workspace,
 }
 
 void *
-gtk_create_widget(void *ws_ctxt, ws_widget_type_t type,
+gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type,
         void *parent, const struct ws_widget_style *style)
 {
     switch(type) {
@@ -222,16 +208,27 @@ gtk_create_widget(void *ws_ctxt, ws_widget_type_t type,
     return NULL;
 }
 
-static void destroy_plainwin(purcmc_workspace *workspace,
-        purcmc_plainwin *plainwin)
+static int destroy_plainwin(purcmc_workspace *workspace,
+        purcmc_plainwin *plain_win)
 {
-    free(plainwin->name);
-    free(plainwin->title);
-    free(plainwin);
+    purcmc_session *sess = workspace->sess;
+
+    void *data;
+    if (!sorted_array_find(sess->all_handles, PTR2U64(plain_win), &data)) {
+        return PCRDR_SC_NOT_FOUND;
+    }
+
+    if ((uintptr_t)data != HT_PLAINWIN) {
+        return PCRDR_SC_BAD_REQUEST;
+    }
+
+    BrowserPlainWindow *gtkwin = BROWSER_PLAIN_WINDOW(plain_win);
+    webkit_web_view_try_close(browser_plain_window_get_view(gtkwin));
+    return PCRDR_SC_OK;
 }
 
-void
-gtk_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
+int
+gtk_imp_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
 {
     switch(type) {
     case WS_WIDGET_TYPE_PLAINWINDOW:
@@ -270,10 +267,12 @@ gtk_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
     default:
         break;
     }
+
+    return PCRDR_SC_OK;
 }
 
 void
-gtk_update_widget(void *ws_ctxt, void *widget,
+gtk_imp_update_widget(void *ws_ctxt, void *widget,
         ws_widget_type_t type, const struct ws_widget_style *style)
 {
 }

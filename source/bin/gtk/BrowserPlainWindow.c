@@ -52,10 +52,8 @@ struct _BrowserPlainWindow {
     GActionGroup *editActionGroup;
     gchar *sessionFile;
 
-#if 0
-    GtkWidget *notebook;
-    BrowserTab *browserPane;
-#endif
+    gchar *name;
+    gchar *title;
 
     gboolean fullScreenIsEnabled;
 #if GTK_CHECK_VERSION(3, 98, 0)
@@ -72,7 +70,6 @@ struct _BrowserPlainWindowClass {
     GtkApplicationWindowClass parent;
 };
 
-static const char *defaultWindowTitle = "xGUI Pro";
 static const gdouble minimumZoomLevel = 0.5;
 static const gdouble maximumZoomLevel = 3;
 static const gdouble defaultZoomLevel = 1;
@@ -172,7 +169,7 @@ static void webViewTitleChanged(WebKitWebView *webView,
 {
     const char *title = webkit_web_view_get_title(webView);
     if (!title)
-        title = defaultWindowTitle;
+        title = window->title ? window->title : BROWSER_DEFAULT_TITLE;
     char *privateTitle = NULL;
     if (webkit_web_view_is_controlled_by_automation(webView))
         privateTitle = g_strdup_printf("[Automation] %s", title);
@@ -478,7 +475,7 @@ static GtkWidget *webViewCreate(WebKitWebView *webView,
             webkit_web_view_get_settings(webView));
 
     GtkWidget *newWindow = browser_plain_window_new(GTK_WINDOW(window),
-            window->webContext);
+            window->webContext, NULL, NULL);
     gtk_window_set_application(GTK_WINDOW(newWindow),
             gtk_window_get_application(GTK_WINDOW(window)));
     browser_plain_window_set_view(BROWSER_PLAIN_WINDOW(newWindow), newWebView);
@@ -806,7 +803,7 @@ static void openPrivateWindow(GSimpleAction *action, GVariant *parameter, gpoint
         "is-controlled-by-automation", webkit_web_view_is_controlled_by_automation(webView),
         "website-policies", webkit_web_view_get_website_policies(webView),
         NULL));
-    GtkWidget *newWindow = browser_plain_window_new(GTK_WINDOW(window), window->webContext);
+    GtkWidget *newWindow = browser_plain_window_new(GTK_WINDOW(window), window->webContext, NULL, NULL);
     gtk_window_set_application(GTK_WINDOW(newWindow), gtk_window_get_application(GTK_WINDOW(window)));
     browser_plain_window_append_view(BROWSER_PLAIN_WINDOW(newWindow), newWebView);
     gtk_widget_grab_focus(GTK_WIDGET(newWebView));
@@ -883,21 +880,24 @@ static void printPage(GSimpleAction *action, GVariant *parameter, gpointer userD
     g_object_unref(printOperation);
 }
 
-static void editingActionCallback(GSimpleAction *action, GVariant *prameter, gpointer userData)
+static void editingActionCallback(GSimpleAction *action,
+        GVariant *prameter, gpointer userData)
 {
     BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(userData);
     WebKitWebView *webView = browser_pane_get_web_view(window->browserPane);
     webkit_web_view_execute_editing_command(webView, g_action_get_name(G_ACTION(action)));
 }
 
-static void insertImageDialogResponse(GtkDialog *dialog, int response, BrowserPlainWindow *window)
+static void insertImageDialogResponse(GtkDialog *dialog, int response,
+        BrowserPlainWindow *window)
 {
     if (response == GTK_RESPONSE_ACCEPT) {
         GFile *file = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(dialog));
         if (file) {
             char *uri = g_file_get_uri(file);
             WebKitWebView *webView = browser_pane_get_web_view(window->browserPane);
-            webkit_web_view_execute_editing_command_with_argument(webView, WEBKIT_EDITING_COMMAND_INSERT_IMAGE, uri);
+            webkit_web_view_execute_editing_command_with_argument(webView,
+                    WEBKIT_EDITING_COMMAND_INSERT_IMAGE, uri);
             g_free(uri);
             g_object_unref(file);
         }
@@ -1019,6 +1019,16 @@ static void browserPlainWindowFinalize(GObject *gObject)
     g_signal_handlers_disconnect_matched(window->webContext,
             G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, window);
     g_object_unref(window->webContext);
+
+    if (window->name) {
+        g_free(window->name);
+        window->name = NULL;
+    }
+
+    if (window->title) {
+        g_free(window->title);
+        window->title = NULL;
+    }
 
     if (window->favicon) {
         g_object_unref(window->favicon);
@@ -1433,7 +1443,8 @@ static void browser_plain_window_init(BrowserPlainWindow *window)
         window->backgroundColor.blue = 255;
     window->backgroundColor.alpha = 1;
 
-    gtk_window_set_title(GTK_WINDOW(window), defaultWindowTitle);
+    gtk_window_set_title(GTK_WINDOW(window),
+            window->title ? window->title : BROWSER_DEFAULT_TITLE);
     gtk_window_set_default_size(GTK_WINDOW(window), 1024, 768);
 
     g_action_map_add_action_entries(G_ACTION_MAP(window),
@@ -1573,7 +1584,8 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
 
 /* Public API. */
 GtkWidget *
-browser_plain_window_new(GtkWindow *parent, WebKitWebContext *webContext)
+browser_plain_window_new(GtkWindow *parent, WebKitWebContext *webContext,
+        const char *name, const char *title)
 {
     g_return_val_if_fail(WEBKIT_IS_WEB_CONTEXT(webContext), NULL);
 
@@ -1592,6 +1604,12 @@ browser_plain_window_new(GtkWindow *parent, WebKitWebContext *webContext)
         g_object_add_weak_pointer(G_OBJECT(parent),
                 (gpointer *)&window->parentWindow);
     }
+
+    if (name)
+        window->name = g_strdup(name);
+
+    if (title)
+        window->title = g_strdup(title);
 
     return GTK_WIDGET(window);
 }
@@ -1619,6 +1637,12 @@ void browser_plain_window_set_view(BrowserPlainWindow *window,
     g_signal_connect_after(webView, "close", G_CALLBACK(webViewClose), window);
 
     window->browserPane = (BrowserPane*)browser_pane_new(webView);
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_box_append(GTK_BOX(window->mainBox), window->browserPane);
+#else
+    gtk_box_pack_start(GTK_BOX(window->mainBox),
+            GTK_WIDGET(window->browserPane), TRUE, TRUE, 0);
+#endif
 #if !GTK_CHECK_VERSION(3, 98, 0)
     if (gtk_widget_get_app_paintable(GTK_WIDGET(window)))
 #endif
@@ -1722,6 +1746,28 @@ void browser_plain_window_load_session(BrowserPlainWindow *window,
 
     g_strfreev(groups);
     g_key_file_free(session);
+}
+
+const char* browser_plain_window_get_name(BrowserPlainWindow *window)
+{
+    g_return_val_if_fail(BROWSER_IS_PLAIN_WINDOW(window), NULL);
+
+    return window->name;
+}
+
+void browser_plain_window_set_title(BrowserPlainWindow *window,
+        const char *title)
+{
+    g_return_if_fail(BROWSER_IS_PLAIN_WINDOW(window));
+
+    if (window->title) {
+        g_free(window->title);
+        window->title = NULL;
+    }
+
+    if (title) {
+        window->title = g_strdup(title);
+    }
 }
 
 void browser_plain_window_set_background_color(BrowserPlainWindow *window,

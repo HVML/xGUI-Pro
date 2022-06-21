@@ -54,7 +54,7 @@ typedef enum {
 
 #define WSWS_FLAG_NAME      0x00000001
 #define WSWS_FLAG_TITLE     0x00000002
-#define WSWS_FLAG_POSITION  0x00000004
+#define WSWS_FLAG_GEOMETRY  0x00000004
 #define WSWS_FLAG_TOOLKIT   0x00000008
 
 struct ws_widget_style {
@@ -85,7 +85,7 @@ typedef void (*wsltr_convert_style_fn)(struct ws_widget_style *style,
 typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt, ws_widget_type_t type,
         void *parent, const struct ws_widget_style *style);
 
-typedef void (*wsltr_destroy_widget_fn)(void *ws_ctxt, void *widget,
+typedef int  (*wsltr_destroy_widget_fn)(void *ws_ctxt, void *widget,
         ws_widget_type_t type);
 
 typedef void (*wsltr_update_widget_fn)(void *ws_ctxt, void *widget,
