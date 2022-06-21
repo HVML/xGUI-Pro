@@ -84,6 +84,22 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
     gtk_application_add_window(GTK_APPLICATION(application),
             GTK_WINDOW(plainwin));
 
+    if (style->flags & WSWS_FLAG_GEOMETRY) {
+        LOG_INFO("the size of creating plainwin: %u x %u\n",
+                style->w, style->h);
+#if GTK_CHECK_VERSION(3, 99, 5)
+        if (style->w > 0 && style->h > 0)
+            gtk_window_set_default_size(GTK_WINDOW(plainwin),
+                    style->w, style->h);
+#else
+        if (style->x >= 0 && style->y >= 0)
+            gtk_window_move(GTK_WINDOW(plainwin), style->x, style->y);
+        if (style->w > 0 && style->h > 0)
+            gtk_window_resize(GTK_WINDOW(plainwin), style->w, style->h);
+#endif
+        gtk_window_set_resizable(GTK_WINDOW(plainwin), FALSE);
+    }
+
     if (style->darkMode) {
         g_object_set(gtk_widget_get_settings(GTK_WIDGET(plainwin)),
                 "gtk-application-prefer-dark-theme", TRUE, NULL);
@@ -126,7 +142,7 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
 
     browser_plain_window_set_view(plainwin, web_view);
 
-    return (struct purcmc_plainwin*)plainwin;
+    return (struct purcmc_plainwin *)plainwin;
 }
 
 static BrowserWindow *create_tabbedwin(purcmc_workspace *workspace,
