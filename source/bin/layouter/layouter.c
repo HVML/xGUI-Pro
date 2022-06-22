@@ -223,19 +223,25 @@ static ws_widget_type_t get_widget_type_from_element(pcdom_element_t *element)
         type = WS_WIDGET_TYPE_PLAINWINDOW;
     }
     else if (strcasecmp(tag, "HEADER") == 0) {
-        type = WS_WIDGET_TYPE_HEADER;
+        type = WS_WIDGET_TYPE_CONTAINER;
     }
     else if (strcasecmp(tag, "MENU") == 0) {
-        type = WS_WIDGET_TYPE_MENUBAR;
+        type = WS_WIDGET_TYPE_CONTAINER;
     }
     else if (strcasecmp(tag, "NAV") == 0) {
-        type = WS_WIDGET_TYPE_TOOLBAR;
+        type = WS_WIDGET_TYPE_CONTAINER;
     }
     else if (strcasecmp(tag, "ASIDE") == 0) {
-        type = WS_WIDGET_TYPE_SIDEBAR;
+        type = WS_WIDGET_TYPE_CONTAINER;
     }
     else if (strcasecmp(tag, "FOOTER") == 0) {
-        type = WS_WIDGET_TYPE_FOOTER;
+        type = WS_WIDGET_TYPE_CONTAINER;
+    }
+    else if (strcasecmp(tag, "DIV") == 0) {
+        type = WS_WIDGET_TYPE_CONTAINER;
+    }
+    else if (strcasecmp(tag, "OL") == 0) {
+        type = WS_WIDGET_TYPE_PANEDPAGE;
     }
     else if (strcasecmp(tag, "UL") == 0) {
         type = WS_WIDGET_TYPE_TABHOST;
@@ -256,6 +262,8 @@ static ws_widget_type_t get_widget_type_from_element(pcdom_element_t *element)
             purc_log_error("Parent of a LI is not a OL or UL (%s)\n",
                     tag);
         }
+    }
+    else {
     }
 
     return type;
@@ -817,27 +825,32 @@ create_widget_walker(pcdom_node_t *node, void *ctxt)
         struct create_widget_ctxt *my_ctxt = ctxt;
         if (strcasecmp(name, "HEADER") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_HEADER, my_ctxt->tabbed_window,
+                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
                     my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "MENU") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_MENUBAR, my_ctxt->tabbed_window,
+                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
                     my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "NAV") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_TOOLBAR, my_ctxt->tabbed_window,
+                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
                     my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "ASIDE") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_SIDEBAR, my_ctxt->tabbed_window,
+                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
                     my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "FOOTER") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_FOOTER, my_ctxt->tabbed_window,
+                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
+                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
+        }
+        else if (strcasecmp(name, "DIV") == 0) {
+            create_widget_for_element(my_ctxt->layouter, element,
+                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
                     my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "OL") == 0) {

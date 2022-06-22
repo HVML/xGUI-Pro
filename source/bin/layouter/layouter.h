@@ -41,11 +41,7 @@ typedef enum {
     WS_WIDGET_TYPE_NONE  = 0,       /* not-existing */
     WS_WIDGET_TYPE_PLAINWINDOW,     /* a plain main window for a webview */
     WS_WIDGET_TYPE_TABBEDWINDOW,    /* a tabbed main window for webviews */
-    WS_WIDGET_TYPE_TOOLBAR,         /* the renderer defined toolbar widget */
-    WS_WIDGET_TYPE_MENUBAR,         /* the renderer defined menubar widget */
-    WS_WIDGET_TYPE_HEADER,          /* a BrowserPane widget */
-    WS_WIDGET_TYPE_SIDEBAR,         /* a BrowserPane widget */
-    WS_WIDGET_TYPE_FOOTER,          /* a BrowserPane widget */
+    WS_WIDGET_TYPE_CONTAINER,       /* A layout container widget */
     WS_WIDGET_TYPE_PANEHOST,        /* the container of BrowserPane widgets */
     WS_WIDGET_TYPE_TABHOST,         /* the container of BrowserTab pages */
     WS_WIDGET_TYPE_PANEDPAGE,       /* a plain page for a webview */
@@ -62,11 +58,13 @@ struct ws_widget_style {
 
     const char *name;
     const char *title;
+    const char *klass;
 
     /* other styles */
     const char *backgroundColor;
     bool        darkMode;
     bool        fullScreen;
+    bool        withToolbar;
 
     int         x, y;
     unsigned    w, h;

@@ -172,19 +172,7 @@ gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type,
     case WS_WIDGET_TYPE_TABBEDWINDOW:
         return create_tabbedwin(ws_ctxt, init_arg, style);
 
-    case WS_WIDGET_TYPE_MENUBAR:
-        break;
-
-    case WS_WIDGET_TYPE_TOOLBAR:
-        break;
-
-    case WS_WIDGET_TYPE_HEADER:
-        break;
-
-    case WS_WIDGET_TYPE_SIDEBAR:
-        break;
-
-    case WS_WIDGET_TYPE_FOOTER:
+    case WS_WIDGET_TYPE_CONTAINER:
         break;
 
     case WS_WIDGET_TYPE_PANEHOST:
@@ -235,19 +223,7 @@ gtk_imp_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
     case WS_WIDGET_TYPE_TABBEDWINDOW:
         break;
 
-    case WS_WIDGET_TYPE_HEADER:
-        break;
-
-    case WS_WIDGET_TYPE_MENUBAR:
-        break;
-
-    case WS_WIDGET_TYPE_TOOLBAR:
-        break;
-
-    case WS_WIDGET_TYPE_SIDEBAR:
-        break;
-
-    case WS_WIDGET_TYPE_FOOTER:
+    case WS_WIDGET_TYPE_CONTAINER:
         break;
 
     case WS_WIDGET_TYPE_PANEHOST:
