@@ -123,19 +123,19 @@ void *my_create_widget(void *ws_ctxt, ws_widget_type_t type,
     return widget;
 }
 
-void my_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
+int my_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
 {
     struct test_ctxt *ctxt = ws_ctxt;
 
     purc_log_info("Destroying a widget (%p)\n", widget);
     if (widget == NULL) {
         purc_log_warn("Invalid widget value (NULL)\n");
-        return;
+        return PCRDR_SC_BAD_REQUEST;
     }
 
     if (!sorted_array_find(ctxt->sa_widget, PTR2U64(widget), NULL)) {
         purc_log_warn("Not existing widget (%p)\n", widget);
-        return;
+        return PCRDR_SC_BAD_REQUEST;
     }
 
     struct test_widget *w = widget;
@@ -171,13 +171,15 @@ void my_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
 
     if (!sorted_array_remove(ctxt->sa_widget, PTR2U64(widget))) {
         purc_log_warn("Not existing widget (%p)\n", widget);
-        return;
+        return PCRDR_SC_BAD_REQUEST;
     }
 
     free(w->name);
     free(w->title);
     free(w);
     purc_log_info("Widget (%p) destroyed\n", widget);
+
+    return PCRDR_SC_OK;
 }
 
 void my_update_widget(void *ws_ctxt, void *widget,
@@ -212,7 +214,7 @@ void my_update_widget(void *ws_ctxt, void *widget,
         w->title = strdup(style->title);
     }
 
-    if (style->flags & WSWS_FLAG_POSITION) {
+    if (style->flags & WSWS_FLAG_GEOMETRY) {
         w->x = style->x;
         w->y = style->y;
         w->w = style->w;

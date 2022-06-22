@@ -189,7 +189,7 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
 
     struct ws_widget_style style = { 0, 0, 0, 0 };
     style.flags = WSWS_FLAG_NAME | WSWS_FLAG_TITLE |
-        WSWS_FLAG_POSITION;
+        WSWS_FLAG_GEOMETRY;
     style.name = name ? name : ANONYMOUS_NAME;
     style.title = title ? title: UNTITLED;
     fill_position(&style, box);
@@ -261,11 +261,31 @@ static ws_widget_type_t get_widget_type_from_element(pcdom_element_t *element)
     return type;
 }
 
+static void *find_parent_of_widget(pcdom_element_t *element)
+{
+    pcdom_node_t *node = pcdom_interface_node(element);
+
+    node = node->parent;
+    while (node) {
+        if (is_an_element_with_tag(node, "BODY"))
+            break;
+
+        if (node->user)
+            return node->user;
+
+        node = node->parent;
+    }
+
+    return NULL;
+}
+
 static bool destroy_widget_for_element(struct ws_layouter *layouter,
         pcdom_element_t *element)
 {
     void *widget = get_element_user_data(element);
-    if (widget) {
+    void *parent = find_parent_of_widget(element);
+
+    if (widget && parent) {
         sorted_array_remove(layouter->sa_widget, PTR2U64(widget));
 
         ws_widget_type_t type;
@@ -428,8 +448,23 @@ failed:
     return NULL;
 }
 
+struct destroy_widget_ctxt {
+    unsigned nr_destroyed;
+    struct ws_layouter *layouter;
+};
+
+static pchtml_action_t
+destroy_widget_walker(pcdom_node_t *node, void *ctxt);
+
 void ws_layouter_delete(struct ws_layouter *layouter)
 {
+    pcdom_element_t *body = pchtml_doc_get_body(layouter->dom_doc);
+
+    struct destroy_widget_ctxt ctxt = { 0, layouter };
+    pcdom_node_t *node = pcdom_interface_node(body);
+    pcdom_node_simple_walk(node, destroy_widget_walker, &ctxt);
+    purc_log_info("destroyed windows: %u\n", ctxt.nr_destroyed);
+
     sorted_array_destroy(layouter->sa_widget);
     domruler_destroy(layouter->ruler);
     dom_cleanup_id_map(pcdom_interface_document(layouter->dom_doc));
@@ -463,11 +498,6 @@ int ws_layouter_add_page_groups(struct ws_layouter *layouter,
 
     return PCRDR_SC_INTERNAL_SERVER_ERROR;
 }
-
-struct destroy_widget_ctxt {
-    unsigned nr_destroyed;
-    struct ws_layouter *layouter;
-};
 
 static pchtml_action_t
 destroy_widget_walker(pcdom_node_t *node, void *ctxt)
@@ -539,7 +569,7 @@ layout_widget_walker(pcdom_node_t *node, void *ctxt)
             if (box) {
                 struct ws_widget_style style = { 0 };
 
-                style.flags = WSWS_FLAG_POSITION;
+                style.flags = WSWS_FLAG_GEOMETRY;
                 fill_position(&style, box);
 
                 ws_widget_type_t type;

@@ -37,14 +37,6 @@ enum {
     HT_WEBVIEW,
 };
 
-struct purcmc_plainwin {
-    char *name;
-    char *title;
-
-    BrowserWindow *main_win;
-    WebKitWebView *web_view;
-};
-
 struct purcmc_workspace {
     /* ungrouped plain windows */
     struct kvlist       ug_wins;
@@ -78,16 +70,16 @@ struct purcmc_session {
 extern "C" {
 #endif
 
-void gtk_convert_style(struct ws_widget_style *style,
+void gtk_imp_convert_style(struct ws_widget_style *style,
         purc_variant_t widget_style);
 
-void *gtk_create_widget(void *ws_ctxt, ws_widget_type_t type,
+void *gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type,
         void *parent, const struct ws_widget_style *style);
 
-void gtk_destroy_widget(void *ws_ctxt, void *widget,
+int  gtk_imp_destroy_widget(void *ws_ctxt, void *widget,
         ws_widget_type_t type);
 
-void gtk_update_widget(void *ws_ctxt, void *widget,
+void gtk_imp_update_widget(void *ws_ctxt, void *widget,
         ws_widget_type_t type, const struct ws_widget_style *style);
 
 #ifdef __cplusplus

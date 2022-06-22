@@ -1,5 +1,5 @@
 /*
-** BrowserPlainWindow.c -- The declaration of BrowserPlainWindow.
+** BrowserPlainWindow.h -- The declaration of BrowserPlainWindow.
 **
 ** Copyright (C) 2022 FMSoft <http://www.fmsoft.cn>
 **
@@ -40,9 +40,16 @@ typedef struct _BrowserPlainWindowClass   BrowserPlainWindowClass;
 
 GType browser_plain_window_get_type(void);
 
-GtkWidget* browser_plain_window_new(GtkWindow*, WebKitWebContext*);
+GtkWidget* browser_plain_window_new(GtkWindow*, WebKitWebContext*,
+        const char*, const char*);
 WebKitWebContext* browser_plain_window_get_web_context(BrowserPlainWindow*);
-void browser_plain_window_load_uri(BrowserPlainWindow*, const char *uri);
+void browser_plain_window_set_view(BrowserPlainWindow*, WebKitWebView*);
+WebKitWebView* browser_plain_window_get_view(BrowserPlainWindow*);
+const char* browser_plain_window_get_name(BrowserPlainWindow*);
+void browser_plain_window_set_title(BrowserPlainWindow*, const char*);
+
+void browser_plain_window_load_uri(BrowserPlainWindow*, const char *);
+void browser_plain_window_load_session(BrowserPlainWindow*, const char*);
 void browser_plain_window_set_background_color(BrowserPlainWindow*, GdkRGBA*);
 
 G_END_DECLS

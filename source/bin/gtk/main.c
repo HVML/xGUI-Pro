@@ -728,6 +728,14 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
         .destroy_plainwin = gtk_destroy_plainwin,
         .get_plainwin_page = gtk_get_plainwin_page,
 
+        .set_page_groups = gtk_set_page_groups,
+        .add_page_groups = gtk_add_page_groups,
+        .remove_page_group = gtk_remove_page_group,
+
+        .create_page = gtk_create_page,
+        .update_page = gtk_update_page,
+        .destroy_page = gtk_destroy_page,
+
         .load = gtk_load_or_write,
         .write = gtk_load_or_write,
 

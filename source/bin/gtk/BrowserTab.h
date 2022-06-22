@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Igalia S.L.
+** Copyright (C) 2022 FMSoft <http://www.fmsoft.cn>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +27,7 @@
 #ifndef BrowserTab_h
 #define BrowserTab_h
 
-#include <gtk/gtk.h>
-#include <webkit2/webkit2.h>
+#include "BrowserPane.h"
 
 G_BEGIN_DECLS
 
@@ -44,16 +44,57 @@ typedef struct _BrowserTabClass   BrowserTabClass;
 GType browser_tab_get_type(void);
 
 GtkWidget* browser_tab_new(WebKitWebView*);
-WebKitWebView* browser_tab_get_web_view(BrowserTab*);
-void browser_tab_load_uri(BrowserTab*, const char* uri);
 GtkWidget *browser_tab_get_title_widget(BrowserTab*);
-void browser_tab_set_status_text(BrowserTab*, const char* text);
-void browser_tab_toggle_inspector(BrowserTab*);
-void browser_tab_start_search(BrowserTab*);
-void browser_tab_stop_search(BrowserTab*);
-void browser_tab_enter_fullscreen(BrowserTab*);
-void browser_tab_leave_fullscreen(BrowserTab*);
-void browser_tab_set_background_color(BrowserTab*, GdkRGBA*);
+
+static inline
+WebKitWebView* browser_tab_get_web_view(BrowserTab *tab)
+{
+    return browser_pane_get_web_view(BROWSER_PANE(tab));
+}
+
+static inline void
+browser_tab_load_uri(BrowserTab *tab, const char* uri)
+{
+    browser_pane_load_uri(BROWSER_PANE(tab), uri);
+}
+
+static inline void
+browser_tab_toggle_inspector(BrowserTab *tab)
+{
+    browser_pane_toggle_inspector(BROWSER_PANE(tab));
+}
+
+static inline void
+browser_tab_set_background_color(BrowserTab* tab, GdkRGBA* rgba)
+{
+    browser_pane_set_background_color(BROWSER_PANE(tab), rgba);
+}
+
+static inline void
+browser_tab_set_status_text(BrowserTab *tab, const char* text)
+{
+    browser_pane_set_status_text(BROWSER_PANE(tab), text);
+}
+
+static inline void browser_tab_start_search(BrowserTab* tab)
+{
+    browser_pane_start_search(BROWSER_PANE(tab));
+}
+
+static inline void browser_tab_stop_search(BrowserTab *tab)
+{
+    browser_pane_stop_search(BROWSER_PANE(tab));
+}
+
+static inline void browser_tab_enter_fullscreen(BrowserTab *tab)
+{
+    browser_pane_enter_fullscreen(BROWSER_PANE(tab));
+}
+
+static inline void browser_tab_leave_fullscreen(BrowserTab *tab)
+{
+    browser_pane_leave_fullscreen(BROWSER_PANE(tab));
+}
 
 G_END_DECLS
 
