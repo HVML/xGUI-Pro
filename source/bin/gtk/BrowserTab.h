@@ -98,4 +98,6 @@ static inline void browser_tab_leave_fullscreen(BrowserTab *tab)
 
 G_END_DECLS
 
+#define BRW_TAB2VIEW(tab)  browser_tab_get_web_view((tab))
+
 #endif
