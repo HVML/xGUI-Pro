@@ -83,7 +83,7 @@ typedef void (*wsltr_convert_style_fn)(struct ws_widget_style *style,
         purc_variant_t widget_style);
 
 typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt, ws_widget_type_t type,
-        void *parent, const struct ws_widget_style *style);
+        void *parent, void *init_arg, const struct ws_widget_style *style);
 
 typedef int  (*wsltr_destroy_widget_fn)(void *ws_ctxt, void *widget,
         ws_widget_type_t type);
@@ -118,7 +118,7 @@ int ws_layouter_remove_page_group(struct ws_layouter *layouter,
 void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         const char *group_id, const char *window_name,
         const char *class_name, const char *title, const char *layout_style,
-        purc_variant_t widget_style, int *retv);
+        purc_variant_t widget_style, void *init_arg, int *retv);
 
 /* Remove a plain window by identifier */
 int ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
@@ -132,7 +132,7 @@ int ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
 void *ws_layouter_add_page(struct ws_layouter *layouter,
         const char *group_id, const char *page_name,
         const char *class_name, const char *title, const char *layout_style,
-        purc_variant_t widget_style, int *retv);
+        purc_variant_t widget_style, void *init_arg, int *retv);
 
 /* Remove a page by identifier */
 int ws_layouter_remove_page_by_id(struct ws_layouter *layouter,

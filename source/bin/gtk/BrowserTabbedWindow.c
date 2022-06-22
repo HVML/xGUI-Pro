@@ -461,68 +461,11 @@ webViewClose(WebKitWebView *webView, BrowserTabbedWindow *window)
     }
 }
 
-static void
-webViewRunAsModal(WebKitWebView *webView, BrowserTabbedWindow *window)
-{
-    gtk_window_set_modal(GTK_WINDOW(window), TRUE);
-    gtk_window_set_transient_for(GTK_WINDOW(window), window->parentWindow);
-}
-
-static void
-webViewReadyToShow(WebKitWebView *webView, BrowserTabbedWindow *window)
-{
-    WebKitWindowProperties *windowProperties =
-        webkit_web_view_get_window_properties(webView);
-
-    GdkRectangle geometry;
-    webkit_window_properties_get_geometry(windowProperties, &geometry);
-    if (geometry.width > 0 && geometry.height > 0) {
-        gtk_window_set_default_size(GTK_WINDOW(window),
-                geometry.width, geometry.height);
-        gtk_window_resize(GTK_WINDOW(window), geometry.width, geometry.height);
-    }
-    if (geometry.x >= 0 && geometry.y >= 0)
-        gtk_window_move(GTK_WINDOW(window), geometry.x, geometry.y);
-
-    if (!webkit_window_properties_get_toolbar_visible(windowProperties))
-        gtk_widget_hide(window->toolbar);
-    else if (!webkit_window_properties_get_locationbar_visible(windowProperties))
-        gtk_widget_hide(window->uriEntry);
-
-    if (!webkit_window_properties_get_resizable(windowProperties))
-        gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
-
-    gtk_widget_show(GTK_WIDGET(window));
-}
-
-static GtkWidget *
-webViewCreate(WebKitWebView *webView, WebKitNavigationAction *navigation,
-        BrowserTabbedWindow *window)
-{
-    WebKitWebView *newWebView =
-        WEBKIT_WEB_VIEW(webkit_web_view_new_with_related_view(webView));
-    webkit_web_view_set_settings(newWebView,
-            webkit_web_view_get_settings(webView));
-
-    GtkWidget *newWindow =
-        browser_window_new(GTK_WINDOW(window), window->webContext);
-    gtk_window_set_application(GTK_WINDOW(newWindow),
-            gtk_window_get_application(GTK_WINDOW(window)));
-    browser_tabbed_window_append_view(BROWSER_TABBED_WINDOW(newWindow),
-            newWebView);
-    gtk_widget_grab_focus(GTK_WIDGET(newWebView));
-
-    g_signal_connect(newWebView, "ready-to-show",
-            G_CALLBACK(webViewReadyToShow), newWindow);
-    g_signal_connect(newWebView, "run-as-modal",
-            G_CALLBACK(webViewRunAsModal), newWindow);
-    return GTK_WIDGET(newWebView);
-}
-
 static gboolean
 webViewEnterFullScreen(WebKitWebView *webView, BrowserTabbedWindow *window)
 {
-    gtk_widget_hide(window->toolbar);
+    if (window->toolbar)
+        gtk_widget_hide(window->toolbar);
     browser_tab_enter_fullscreen(window->activeTab);
     return FALSE;
 }
@@ -531,7 +474,8 @@ static gboolean
 webViewLeaveFullScreen(WebKitWebView *webView, BrowserTabbedWindow *window)
 {
     browser_tab_leave_fullscreen(window->activeTab);
-    gtk_widget_show(window->toolbar);
+    if (window->toolbar)
+        gtk_widget_show(window->toolbar);
     return FALSE;
 }
 
@@ -971,11 +915,13 @@ toggleFullScreen(GSimpleAction *action, GVariant *parameter, gpointer userData)
     BrowserTabbedWindow *window = BROWSER_TABBED_WINDOW(userData);
     if (!window->fullScreenIsEnabled) {
         gtk_window_fullscreen(GTK_WINDOW(window));
-        gtk_widget_hide(window->toolbar);
+        if (window->toolbar)
+            gtk_widget_hide(window->toolbar);
         window->fullScreenIsEnabled = TRUE;
     } else {
         gtk_window_unfullscreen(GTK_WINDOW(window));
-        gtk_widget_show(window->toolbar);
+        if (window->toolbar)
+            gtk_widget_show(window->toolbar);
         window->fullScreenIsEnabled = FALSE;
     }
 }
@@ -1146,7 +1092,7 @@ static void browserTabbedWindowSwitchTab(GtkNotebook *notebook,
     g_signal_connect(webView, "notify::is-loading",
             G_CALLBACK(webViewIsLoadingChanged), window);
     g_signal_connect(webView, "create",
-            G_CALLBACK(webViewCreate), window);
+            G_CALLBACK(browser_window_webview_create), window);
     g_signal_connect(webView, "load-failed",
             G_CALLBACK(webViewLoadFailed), window);
     g_signal_connect(webView, "decide-policy",
@@ -1272,106 +1218,12 @@ static void browser_tabbed_window_init(BrowserTabbedWindow *window)
     g_action_map_add_action_entries(G_ACTION_MAP(window),
             actions, G_N_ELEMENTS(actions), window);
 
-    GtkWidget *toolbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
-    window->toolbar = toolbar;
-    gtk_widget_set_margin_top(toolbar, 2);
-    gtk_widget_set_margin_bottom(toolbar, 2);
-    gtk_widget_set_margin_start(toolbar, 2);
-    gtk_widget_set_margin_end(toolbar, 2);
-
-    GtkWidget *navigationBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-#if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_widget_add_css_class(navigationBox, "linked");
-#else
-    gtk_style_context_add_class(gtk_widget_get_style_context(navigationBox),
-            GTK_STYLE_CLASS_LINKED);
-#endif
-
-    window->backItem = addToolbarButton(navigationBox,
-            TOOLBAR_BUTTON_NORMAL, "go-previous-symbolic", "win.go-back");
-    window->forwardItem = addToolbarButton(navigationBox,
-            TOOLBAR_BUTTON_NORMAL, "go-next-symbolic", "win.go-forward");
-#if GTK_CHECK_VERSION(3, 98, 5)
-    GtkGesture *gesture = gtk_gesture_click_new();
-    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(gesture),
-            GDK_BUTTON_SECONDARY);
-    g_signal_connect(gesture, "pressed",
-            G_CALLBACK(navigationButtonPressed), NULL);
-    gtk_widget_add_controller(window->backItem, GTK_EVENT_CONTROLLER(gesture));
-
-    gesture = gtk_gesture_click_new();
-    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(gesture),
-            GDK_BUTTON_SECONDARY);
-    g_signal_connect(gesture, "pressed",
-            G_CALLBACK(navigationButtonPressed), NULL);
-    gtk_widget_add_controller(window->forwardItem,
-            GTK_EVENT_CONTROLLER(gesture));
-#else
-    g_signal_connect(window->backItem, "button-press-event",
-            G_CALLBACK(navigationButtonPressCallback), window);
-    g_signal_connect(window->forwardItem, "button-press-event",
-            G_CALLBACK(navigationButtonPressCallback), window);
-#endif
-#if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_box_append(GTK_BOX(toolbar), navigationBox);
-#else
-    gtk_box_pack_start(GTK_BOX(toolbar), navigationBox, FALSE, FALSE, 0);
-    gtk_widget_show(navigationBox);
-#endif
-
-    addToolbarButton(toolbar, TOOLBAR_BUTTON_NORMAL,
-            "go-home-symbolic", "win.load-homepage");
-    addToolbarButton(toolbar, TOOLBAR_BUTTON_NORMAL,
-            "tab-new-symbolic", "win.new-tab");
-
-    window->uriEntry = gtk_entry_new();
-    gtk_widget_set_halign(window->uriEntry, GTK_ALIGN_FILL);
-    gtk_widget_set_hexpand(window->uriEntry, TRUE);
-    g_signal_connect_swapped(window->uriEntry, "activate",
-            G_CALLBACK(activateUriEntryCallback), (gpointer)window);
-    gtk_entry_set_icon_activatable(GTK_ENTRY(window->uriEntry),
-            GTK_ENTRY_ICON_PRIMARY, FALSE);
-    updateUriEntryIcon(window);
-#if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_box_append(GTK_BOX(toolbar), window->uriEntry);
-#else
-    gtk_container_add(GTK_CONTAINER(toolbar), window->uriEntry);
-    gtk_widget_show(window->uriEntry);
-#endif
-
-    window->reloadOrStopButton = addToolbarButton(toolbar,
-            TOOLBAR_BUTTON_NORMAL, "view-refresh-symbolic", "win.reload-stop");
-    addToolbarButton(toolbar, TOOLBAR_BUTTON_NORMAL,
-            "edit-find-symbolic", "win.find");
-    GtkWidget *button = addToolbarButton(toolbar, TOOLBAR_BUTTON_MENU,
-            "open-menu-symbolic", NULL);
-    browserTabbedWindowBuildPopoverMenu(window, button);
-
+    /* TODO: use FlowBox instead */
     GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     window->mainBox = vbox;
 #if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_box_append(GTK_BOX(vbox), toolbar);
-#else
-    gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
-    gtk_widget_show(toolbar);
-#endif
-
-    window->notebook = gtk_notebook_new();
-    g_signal_connect(window->notebook, "switch-page",
-            G_CALLBACK(browserTabbedWindowSwitchTab), window);
-    g_signal_connect(window->notebook, "page-added",
-            G_CALLBACK(browserTabbedWindowTabAddedOrRemoved), window);
-    g_signal_connect(window->notebook, "page-removed",
-            G_CALLBACK(browserTabbedWindowTabAddedOrRemoved), window);
-    gtk_notebook_set_show_tabs(GTK_NOTEBOOK(window->notebook), FALSE);
-    gtk_notebook_set_show_border(GTK_NOTEBOOK(window->notebook), FALSE);
-#if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_box_append(GTK_BOX(window->mainBox), window->notebook);
     gtk_window_set_child(GTK_WINDOW(window), vbox);
 #else
-    gtk_box_pack_start(GTK_BOX(window->mainBox), window->notebook,
-            TRUE, TRUE, 0);
-    gtk_widget_show(window->notebook);
     gtk_container_add(GTK_CONTAINER(window), vbox);
     gtk_widget_show(vbox);
 #endif
@@ -1474,8 +1326,93 @@ browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window,
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
-    /* TODO */
-    return NULL;
+    if (window->toolbar)
+        return window->toolbar;
+
+    GtkWidget *toolbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+    window->toolbar = toolbar;
+    gtk_widget_set_margin_top(toolbar, 2);
+    gtk_widget_set_margin_bottom(toolbar, 2);
+    gtk_widget_set_margin_start(toolbar, 2);
+    gtk_widget_set_margin_end(toolbar, 2);
+
+    GtkWidget *navigationBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_widget_add_css_class(navigationBox, "linked");
+#else
+    gtk_style_context_add_class(gtk_widget_get_style_context(navigationBox),
+            GTK_STYLE_CLASS_LINKED);
+#endif
+
+    window->backItem = addToolbarButton(navigationBox,
+            TOOLBAR_BUTTON_NORMAL, "go-previous-symbolic", "win.go-back");
+    window->forwardItem = addToolbarButton(navigationBox,
+            TOOLBAR_BUTTON_NORMAL, "go-next-symbolic", "win.go-forward");
+#if GTK_CHECK_VERSION(3, 98, 5)
+    GtkGesture *gesture = gtk_gesture_click_new();
+    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(gesture),
+            GDK_BUTTON_SECONDARY);
+    g_signal_connect(gesture, "pressed",
+            G_CALLBACK(navigationButtonPressed), NULL);
+    gtk_widget_add_controller(window->backItem, GTK_EVENT_CONTROLLER(gesture));
+
+    gesture = gtk_gesture_click_new();
+    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(gesture),
+            GDK_BUTTON_SECONDARY);
+    g_signal_connect(gesture, "pressed",
+            G_CALLBACK(navigationButtonPressed), NULL);
+    gtk_widget_add_controller(window->forwardItem,
+            GTK_EVENT_CONTROLLER(gesture));
+#else
+    g_signal_connect(window->backItem, "button-press-event",
+            G_CALLBACK(navigationButtonPressCallback), window);
+    g_signal_connect(window->forwardItem, "button-press-event",
+            G_CALLBACK(navigationButtonPressCallback), window);
+#endif
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_box_append(GTK_BOX(toolbar), navigationBox);
+#else
+    gtk_box_pack_start(GTK_BOX(toolbar), navigationBox, FALSE, FALSE, 0);
+    gtk_widget_show(navigationBox);
+#endif
+
+    addToolbarButton(toolbar, TOOLBAR_BUTTON_NORMAL,
+            "go-home-symbolic", "win.load-homepage");
+    addToolbarButton(toolbar, TOOLBAR_BUTTON_NORMAL,
+            "tab-new-symbolic", "win.new-tab");
+
+    window->uriEntry = gtk_entry_new();
+    gtk_widget_set_halign(window->uriEntry, GTK_ALIGN_FILL);
+    gtk_widget_set_hexpand(window->uriEntry, TRUE);
+    g_signal_connect_swapped(window->uriEntry, "activate",
+            G_CALLBACK(activateUriEntryCallback), (gpointer)window);
+    gtk_entry_set_icon_activatable(GTK_ENTRY(window->uriEntry),
+            GTK_ENTRY_ICON_PRIMARY, FALSE);
+    updateUriEntryIcon(window);
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_box_append(GTK_BOX(toolbar), window->uriEntry);
+#else
+    gtk_container_add(GTK_CONTAINER(toolbar), window->uriEntry);
+    gtk_widget_show(window->uriEntry);
+#endif
+
+    window->reloadOrStopButton = addToolbarButton(toolbar,
+            TOOLBAR_BUTTON_NORMAL, "view-refresh-symbolic", "win.reload-stop");
+    addToolbarButton(toolbar, TOOLBAR_BUTTON_NORMAL,
+            "edit-find-symbolic", "win.find");
+    GtkWidget *button = addToolbarButton(toolbar, TOOLBAR_BUTTON_MENU,
+            "open-menu-symbolic", NULL);
+    browserTabbedWindowBuildPopoverMenu(window, button);
+
+    GtkWidget *vbox = window->mainBox;
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_box_append(GTK_BOX(vbox), toolbar);
+#else
+    gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
+    gtk_widget_show(toolbar);
+#endif
+
+    return window->toolbar;
 }
 
 GtkWidget*
@@ -1484,17 +1421,45 @@ browser_tabbed_window_create_or_get_notebook(BrowserTabbedWindow *window,
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
-    /* TODO */
-    return NULL;
+    if (window->notebook)
+        return window->notebook;
+
+    window->notebook = gtk_notebook_new();
+    g_signal_connect(window->notebook, "switch-page",
+            G_CALLBACK(browserTabbedWindowSwitchTab), window);
+    g_signal_connect(window->notebook, "page-added",
+            G_CALLBACK(browserTabbedWindowTabAddedOrRemoved), window);
+    g_signal_connect(window->notebook, "page-removed",
+            G_CALLBACK(browserTabbedWindowTabAddedOrRemoved), window);
+    gtk_notebook_set_show_tabs(GTK_NOTEBOOK(window->notebook), FALSE);
+    gtk_notebook_set_show_border(GTK_NOTEBOOK(window->notebook), FALSE);
+
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_box_append(GTK_BOX(window->mainBox), window->notebook);
+#else
+    gtk_box_pack_start(GTK_BOX(window->mainBox), window->notebook,
+            TRUE, TRUE, 0);
+    gtk_widget_show(window->notebook);
+#endif
+
+    return window->notebook;
 }
 
 GtkWidget*
 browser_tabbed_window_create_pane(BrowserTabbedWindow *window,
-        const GdkRectangle *geometry)
+        WebKitWebView *webView, const GdkRectangle *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
+    g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), NULL);
 
-    /* TODO */
+    GtkWidget *pane = browser_pane_new(webView);
+
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_box_append(GTK_BOX(window->mainBox), pane);
+#else
+    gtk_box_pack_start(GTK_BOX(window->mainBox), pane, TRUE, TRUE, 0);
+    gtk_widget_show(pane);
+#endif
     return NULL;
 }
 
@@ -1504,19 +1469,28 @@ browser_tabbed_window_create_frame(BrowserTabbedWindow *window,
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
-    /* TODO */
+    GtkWidget *frame = gtk_flow_box_new();
+
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_box_append(GTK_BOX(window->mainBox), frame);
+#else
+    gtk_box_pack_start(GTK_BOX(window->mainBox), frame, TRUE, TRUE, 0);
+    gtk_widget_show(frame);
+#endif
     return NULL;
 }
 
 GtkWidget*
 browser_tabbed_window_create_pane_in_frame(BrowserTabbedWindow *window,
-        GtkWidget* frame, const GdkRectangle *geometry)
+        GtkWidget* frame, WebKitWebView *webView, const GdkRectangle *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
     g_return_if_fail(GTK_IS_FLOW_BOX(frame));
 
-    /* TODO */
-    return NULL;
+    GtkWidget *pane = browser_pane_new(webView);
+
+    gtk_flow_box_insert(GTK_FLOW_BOX(frame), pane, -1);
+    return pane;
 }
 
 void
@@ -1533,6 +1507,11 @@ browser_tabbed_window_append_view(BrowserTabbedWindow *window,
 {
     g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
     g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
+
+    if (window->notebook == NULL) {
+        g_warning("No notebook widget created");
+        return;
+    }
 
     if (window->activeTab &&
             webkit_web_view_is_editable(BRW_TAB2VIEW(window->activeTab))) {
@@ -1596,7 +1575,7 @@ void browser_tabbed_window_set_background_color(BrowserTabbedWindow *window,
     window->backgroundColor = *rgba;
 
 #if GTK_CHECK_VERSION(3, 98, 5)
-    /* FIXME: transparent colors don't work. In GTK4 there's no 
+    /* FIXME: transparent colors don't work. In GTK4 there's no
      * gtk_widget_set_app_paintable(),
      * what we can do instead is removing the background css class from
      * the window, but that

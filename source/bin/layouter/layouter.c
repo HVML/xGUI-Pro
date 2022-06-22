@@ -176,7 +176,7 @@ static void get_element_name_title(pcdom_element_t *element,
 
 static void *create_widget_for_element(struct ws_layouter *layouter,
         pcdom_element_t *element, ws_widget_type_t type, void *parent,
-        purc_variant_t widget_style)
+        void *init_arg, purc_variant_t widget_style)
 {
     const HLBox *box;
     box = domruler_get_node_bounding_box(layouter->ruler,
@@ -196,7 +196,7 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
     layouter->cb_convert_style(&style, widget_style);
 
     void *widget = layouter->cb_create_widget(layouter->ws_ctxt,
-            type, parent, &style);
+            type, parent, init_arg, &style);
     if (name) free(name);
     if (title) free(title);
     if (widget == NULL)
@@ -675,7 +675,7 @@ find_page_element(pcdom_document_t *dom_doc,
 void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         const char *group_id, const char *window_name,
         const char *class_name, const char *title, const char *layout_style,
-        purc_variant_t widget_style, int *retv)
+        purc_variant_t widget_style, void *init_arg, int *retv)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
@@ -722,7 +722,8 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
             relayout(layouter, section);
 
             if ((widget = create_widget_for_element(layouter, figure,
-                    WS_WIDGET_TYPE_PLAINWINDOW, NULL, widget_style)) == NULL) {
+                    WS_WIDGET_TYPE_PLAINWINDOW, NULL, init_arg,
+                    widget_style)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }
@@ -791,6 +792,7 @@ int ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
 struct create_widget_ctxt {
     struct ws_layouter *layouter;
     void *tabbed_window;
+    void *init_arg;
 };
 
 static pchtml_action_t
@@ -816,37 +818,37 @@ create_widget_walker(pcdom_node_t *node, void *ctxt)
         if (strcasecmp(name, "HEADER") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
                     WS_WIDGET_TYPE_HEADER, my_ctxt->tabbed_window,
-                    PURC_VARIANT_INVALID);
+                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "MENU") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
                     WS_WIDGET_TYPE_MENUBAR, my_ctxt->tabbed_window,
-                    PURC_VARIANT_INVALID);
+                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "NAV") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
                     WS_WIDGET_TYPE_TOOLBAR, my_ctxt->tabbed_window,
-                    PURC_VARIANT_INVALID);
+                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "ASIDE") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
                     WS_WIDGET_TYPE_SIDEBAR, my_ctxt->tabbed_window,
-                    PURC_VARIANT_INVALID);
+                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "FOOTER") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
                     WS_WIDGET_TYPE_FOOTER, my_ctxt->tabbed_window,
-                    PURC_VARIANT_INVALID);
+                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "OL") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
                     WS_WIDGET_TYPE_PANEHOST, my_ctxt->tabbed_window,
-                    PURC_VARIANT_INVALID);
+                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "UL") == 0) {
             create_widget_for_element(my_ctxt->layouter, element,
                     WS_WIDGET_TYPE_TABHOST, my_ctxt->tabbed_window,
-                    PURC_VARIANT_INVALID);
+                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
         }
         else if (strcasecmp(name, "DIV") == 0) {
             if (node->first_child != NULL) {
@@ -868,20 +870,20 @@ create_widget_walker(pcdom_node_t *node, void *ctxt)
 }
 
 static bool create_tabbed_window(struct ws_layouter *layouter,
-        pcdom_element_t *article)
+        pcdom_element_t *article, void *init_arg)
 {
     void *tabbed_window;
 
     tabbed_window = get_element_user_data(article);
     if (tabbed_window == NULL) {
         tabbed_window = create_widget_for_element(layouter, article,
-                WS_WIDGET_TYPE_TABBEDWINDOW, NULL, PURC_VARIANT_INVALID);
+                WS_WIDGET_TYPE_TABBEDWINDOW, NULL, NULL, PURC_VARIANT_INVALID);
     }
 
     if (tabbed_window == NULL)
         return false;
 
-    struct create_widget_ctxt ctxt = { layouter, tabbed_window };
+    struct create_widget_ctxt ctxt = { layouter, tabbed_window, init_arg };
     pcdom_node_simple_walk(pcdom_interface_node(article),
             create_widget_walker, &ctxt);
     return true;
@@ -893,7 +895,7 @@ static bool create_tabbed_window(struct ws_layouter *layouter,
 void *ws_layouter_add_page(struct ws_layouter *layouter,
         const char *group_id, const char *page_name,
         const char *class_name, const char *title, const char *layout_style,
-        purc_variant_t widget_style, int *retv)
+        purc_variant_t widget_style, void *init_arg, int *retv)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
@@ -942,7 +944,7 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
             void *parent = get_element_user_data(element);
             if (parent == NULL) {
                 /* create the ancestor widgets */
-                if (create_tabbed_window(layouter, article)) {
+                if (create_tabbed_window(layouter, article, init_arg)) {
                     parent = get_element_user_data(element);
                 }
             }
@@ -960,7 +962,7 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
             assert(li);
 
             if ((widget = create_widget_for_element(layouter, li,
-                        widget_type, parent, widget_style)) == NULL) {
+                        widget_type, parent, init_arg, widget_style)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }

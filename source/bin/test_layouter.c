@@ -82,7 +82,7 @@ void my_convert_style(struct ws_widget_style *style,
 }
 
 void *my_create_widget(void *ws_ctxt, ws_widget_type_t type,
-        void *parent, const struct ws_widget_style *style)
+        void *parent, void *init_arg, const struct ws_widget_style *style)
 {
     struct test_ctxt *ctxt = ws_ctxt;
 
@@ -289,13 +289,14 @@ int main(int argc, char *argv[])
     assert(retv == PCRDR_SC_OK);
 
     ws_layouter_add_plain_window(layouter,
-        "freeWindows", "test", NULL, NULL, NULL, PURC_VARIANT_INVALID, &retv);
+        "freeWindows", "test", NULL, NULL, NULL,
+        PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_NOT_FOUND);
 
     void *widget;
     widget = ws_layouter_add_plain_window(layouter,
         "theModals", "test1", "main", "this is a test plain window", NULL,
-        PURC_VARIANT_INVALID, &retv);
+        PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
     assert(widget != NULL);
 
@@ -304,7 +305,7 @@ int main(int argc, char *argv[])
 
     ws_layouter_add_plain_window(layouter,
         "theModals", "test2", "main", "this is a test plain window", NULL,
-        PURC_VARIANT_INVALID, &retv);
+        PURC_VARIANT_INVALID, NULL, &retv);
     element = dom_get_element_by_id(layouter->dom_doc, "theModals-test2");
     assert(has_tag(element, "FIGURE"));
 
@@ -319,22 +320,22 @@ int main(int argc, char *argv[])
 
     ws_layouter_add_page(layouter,
         "viewerBody", "panel1", "bar", NULL, NULL,
-        PURC_VARIANT_INVALID, &retv);
+        PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_BAD_REQUEST);
 
     ws_layouter_add_page(layouter,
         "viewerBodyPanels", "panel1", "bar", NULL, NULL,
-        PURC_VARIANT_INVALID, &retv);
+        PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
 
     ws_layouter_add_page(layouter,
         "viewerBodyTabs", "tab1", NULL, NULL, NULL,
-        PURC_VARIANT_INVALID, &retv);
+        PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
 
     widget = ws_layouter_add_page(layouter,
         "viewerBodyTabs", "tab2", NULL, NULL, NULL,
-        PURC_VARIANT_INVALID, &retv);
+        PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
     assert(widget != NULL);
 

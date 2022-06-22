@@ -69,7 +69,7 @@ void gtk_imp_convert_style(struct ws_widget_style *style,
 }
 
 static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
-        const struct ws_widget_style *style)
+        WebKitWebView *web_view, const struct ws_widget_style *style)
 {
     purcmc_session *sess = workspace->sess;
 
@@ -115,23 +115,6 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
         }
     }
 
-    WebKitWebsitePolicies *website_policies;
-    website_policies = g_object_get_data(G_OBJECT(sess->webkit_settings),
-            "default-website-policies");
-
-    WebKitUserContentManager *uc_manager;
-    uc_manager = g_object_get_data(G_OBJECT(sess->webkit_settings),
-            "default-user-content-manager");
-
-    WebKitWebView *web_view;
-    web_view = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-                "web-context", sess->web_context,
-                "settings", sess->webkit_settings,
-                "user-content-manager", uc_manager,
-                "is-controlled-by-automation", FALSE,
-                "website-policies", website_policies,
-                NULL));
-
 #if 0
     if (editorMode)
         webkit_web_view_set_editable(web_view, TRUE);
@@ -145,7 +128,7 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
 }
 
 static BrowserWindow *create_tabbedwin(purcmc_workspace *workspace,
-        const struct ws_widget_style *style)
+        void *init_arg, const struct ws_widget_style *style)
 {
     purcmc_session *sess = workspace->sess;
 
@@ -180,22 +163,22 @@ static BrowserWindow *create_tabbedwin(purcmc_workspace *workspace,
 
 void *
 gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type,
-        void *parent, const struct ws_widget_style *style)
+        void *parent, void *init_arg, const struct ws_widget_style *style)
 {
     switch(type) {
     case WS_WIDGET_TYPE_PLAINWINDOW:
-        return create_plainwin(ws_ctxt, style);
+        return create_plainwin(ws_ctxt, init_arg, style);
 
     case WS_WIDGET_TYPE_TABBEDWINDOW:
-        return create_tabbedwin(ws_ctxt, style);
-
-    case WS_WIDGET_TYPE_HEADER:
-        break;
+        return create_tabbedwin(ws_ctxt, init_arg, style);
 
     case WS_WIDGET_TYPE_MENUBAR:
         break;
 
     case WS_WIDGET_TYPE_TOOLBAR:
+        break;
+
+    case WS_WIDGET_TYPE_HEADER:
         break;
 
     case WS_WIDGET_TYPE_SIDEBAR:

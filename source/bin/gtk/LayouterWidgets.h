@@ -74,7 +74,7 @@ void gtk_imp_convert_style(struct ws_widget_style *style,
         purc_variant_t widget_style);
 
 void *gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type,
-        void *parent, const struct ws_widget_style *style);
+        void *parent, void *init_arg, const struct ws_widget_style *style);
 
 int  gtk_imp_destroy_widget(void *ws_ctxt, void *widget,
         ws_widget_type_t type);

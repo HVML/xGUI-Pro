@@ -60,7 +60,7 @@ GtkWidget* browser_tabbed_window_create_or_get_notebook(BrowserTabbedWindow*,
 
 /* Create a BrowserPane widget for header, footer, and aside. */
 GtkWidget* browser_tabbed_window_create_pane(BrowserTabbedWindow*,
-        const GdkRectangle*);
+        WebKitWebView*, const GdkRectangle*);
 
 /* Create the container (a frame) for BrowserPane widgets. */
 GtkWidget* browser_tabbed_window_create_frame(BrowserTabbedWindow*,
@@ -68,7 +68,7 @@ GtkWidget* browser_tabbed_window_create_frame(BrowserTabbedWindow*,
 
 /* Create a BrowserPane widget in the specific frame widget. */
 GtkWidget* browser_tabbed_window_create_pane_in_frame(BrowserTabbedWindow*,
-        GtkWidget*, const GdkRectangle*);
+        GtkWidget*, WebKitWebView*, const GdkRectangle*);
 
 /* Set webview of a BrowserPane widget */
 void browser_tabbed_window_set_view(BrowserTabbedWindow*, GtkWidget*,

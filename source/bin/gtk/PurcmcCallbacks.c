@@ -408,6 +408,25 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
     return FALSE;
 }
 
+static WebKitWebView *create_web_view(purcmc_session *sess)
+{
+    WebKitWebsitePolicies *website_policies;
+    website_policies = g_object_get_data(G_OBJECT(sess->webkit_settings),
+            "default-website-policies");
+
+    WebKitUserContentManager *uc_manager;
+    uc_manager = g_object_get_data(G_OBJECT(sess->webkit_settings),
+            "default-user-content-manager");
+
+    return WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+                "web-context", sess->web_context,
+                "settings", sess->webkit_settings,
+                "user-content-manager", uc_manager,
+                "is-controlled-by-automation", FALSE,
+                "website-policies", website_policies,
+                NULL));
+}
+
 purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace,
         const char *request_id, const char *gid, const char *name,
@@ -417,6 +436,8 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
     purcmc_plainwin *plain_win = NULL;
 
     workspace = &sess->workspace;
+    WebKitWebView *web_view = create_web_view(sess);
+
     if (gid == NULL) {
         /* create a ungrouped plain window */
         LOG_DEBUG("creating a ungrouped plain window with name (%s)\n", name);
@@ -433,7 +454,7 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         style.title = title;
         gtk_imp_convert_style(&style, widget_style);
         plain_win = gtk_imp_create_widget(&sess->workspace,
-                WS_WIDGET_TYPE_PLAINWINDOW, NULL, &style);
+                WS_WIDGET_TYPE_PLAINWINDOW, NULL, web_view, &style);
 
     }
     else if (workspace->layouter == NULL) {
@@ -446,14 +467,11 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
 
         /* create a plain window in the specified group */
         plain_win = ws_layouter_add_plain_window(workspace->layouter, gid,
-                name, class_name, title, layout_style, widget_style, retv);
+                name, class_name, title, layout_style, widget_style, web_view,
+                retv);
     }
 
     if (plain_win) {
-
-        WebKitWebView *web_view =
-            browser_plain_window_get_view(BROWSER_PLAIN_WINDOW(plain_win));
-
         g_signal_connect(web_view, "close",
                 G_CALLBACK(on_webview_close), sess);
         g_signal_connect(web_view, "user-message-received",
@@ -965,9 +983,10 @@ purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
         *retv = PCRDR_SC_PRECONDITION_FAILED;
     }
     else {
+        WebKitWebView *web_view = create_web_view(sess);
         page = ws_layouter_add_page(workspace->layouter,
                     gid, name, class_name, title,
-                    layout_style, widget_style, retv);
+                    layout_style, widget_style, web_view, retv);
     }
 
     return page;
