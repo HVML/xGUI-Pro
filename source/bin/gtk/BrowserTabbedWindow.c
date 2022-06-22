@@ -95,7 +95,7 @@ static void browserWindowSetStatusText(BrowserTabbedWindow *window, const char *
 
 static void activateUriEntryCallback(BrowserTabbedWindow *window)
 {
-    browser_tabbed_window_load_uri(window,
+    browser_tabbed_window_load_uri(window, NULL,
 #if GTK_CHECK_VERSION(3, 98, 0)
         gtk_editable_get_text(GTK_EDITABLE(window->uriEntry))
 #else
@@ -1516,12 +1516,14 @@ void browser_tabbed_window_append_view(BrowserTabbedWindow *window, WebKitWebVie
     gtk_widget_show(tab);
 }
 
-void browser_tabbed_window_load_uri(BrowserTabbedWindow *window, const char *uri)
+void browser_tabbed_window_load_uri(BrowserTabbedWindow *window, GtkWidget *widget, const char *uri)
 {
     g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
     g_return_if_fail(uri);
 
-    browser_tab_load_uri(window->activeTab, uri);
+    if (widget == NULL)
+        browser_tab_load_uri(window->activeTab, uri);
+    // TODO
 }
 
 void browser_tabbed_window_load_session(BrowserTabbedWindow *window, const char *sessionFile)

@@ -44,13 +44,36 @@ GType browser_tabbed_window_get_type(void);
 GtkWidget* browser_tabbed_window_new(GtkWindow*, WebKitWebContext*);
 WebKitWebContext* browser_tabbed_window_get_web_context(BrowserTabbedWindow*);
 
-/* Append a webview to the notebook */
+/* Create or get the menubar widget (only one menubar in a tabbed window) */
+GtkWidget* browser_tabbed_window_create_or_get_menubar(BrowserTabbedWindow*, const GdkRectangle*);
+
+/* Create or get the toolbar widget (only one toolbar in a tabbed window) */
+GtkWidget* browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow*, const GdkRectangle*);
+
+/* Create or get the container for BrowserTab widgets
+   (only one container for BrowserTab in a tabbed window). */
+GtkWidget* browser_tabbed_window_create_or_get_notebook(BrowserTabbedWindow*, const GdkRectangle*);
+
+/* Set webview of a BrowserPane widget */
+void browser_tabbed_window_set_view(BrowserTabbedWindow*, GtkWidget*, WebKitWebView*);
+
+/* Append a webview to the only one notebook which acts as
+   the container of BrowserTab. */
 void browser_tabbed_window_append_view(BrowserTabbedWindow*, WebKitWebView*);
 
-/* Append a webview to the specific container */
-void browser_tabbed_window_append_view_ex(BrowserTabbedWindow*, GtkWidget*, WebKitWebView*);
+/* Create the BrowserPane widget for header, footer, and aside. */
+GtkWidget* browser_tabbed_window_create_pane(BrowserTabbedWindow*, const GdkRectangle*);
 
-void browser_tabbed_window_load_uri(BrowserTabbedWindow*, const char *uri);
+/* Create the container (a frame) for BrowserPane widgets. */
+GtkWidget* browser_tabbed_window_create_frame(BrowserTabbedWindow*, const GdkRectangle*);
+
+/* Append a webview to the specific frame. */
+void browser_tabbed_window_append_view_to_frame(BrowserTabbedWindow*, GtkWidget*, WebKitWebView*);
+
+/* Load URI in the specific widget
+   (or the active BrowserTab if the widget is NULL). */
+void browser_tabbed_window_load_uri(BrowserTabbedWindow*, GtkWidget*, const char *uri);
+
 void browser_tabbed_window_set_background_color(BrowserTabbedWindow*, GdkRGBA*);
 
 G_END_DECLS

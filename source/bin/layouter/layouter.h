@@ -40,16 +40,16 @@ struct ws_metrics {
 typedef enum {
     WS_WIDGET_TYPE_NONE  = 0,       /* not-existing */
     WS_WIDGET_TYPE_PLAINWINDOW,     /* a plain main window for a webview */
-    WS_WIDGET_TYPE_TABBEDWINDOW,    /* a tabbede main window for webviews */
-    WS_WIDGET_TYPE_HEADER,  /* the renderer defiend header widget */
-    WS_WIDGET_TYPE_MENUBAR, /* the renderer defined menu bar widget */
-    WS_WIDGET_TYPE_TOOLBAR, /* the renderer defined tool bar widget */
-    WS_WIDGET_TYPE_SIDEBAR, /* the renderer defined aside widget */
-    WS_WIDGET_TYPE_FOOTER,  /* the renderer defiend footer widget */
-    WS_WIDGET_TYPE_PANEHOST,   /* the container widget of plain pages */
-    WS_WIDGET_TYPE_TABHOST, /* the container widget of tabbed pages */
-    WS_WIDGET_TYPE_PANEDPAGE,   /* a plain page for a webview */
-    WS_WIDGET_TYPE_TABBEDPAGE,     /* a tabbed page for a webview */
+    WS_WIDGET_TYPE_TABBEDWINDOW,    /* a tabbed main window for webviews */
+    WS_WIDGET_TYPE_TOOLBAR,         /* the renderer defined toolbar widget */
+    WS_WIDGET_TYPE_MENUBAR,         /* the renderer defined menubar widget */
+    WS_WIDGET_TYPE_HEADER,          /* a BrowserPane widget */
+    WS_WIDGET_TYPE_SIDEBAR,         /* a BrowserPane widget */
+    WS_WIDGET_TYPE_FOOTER,          /* a BrowserPane widget */
+    WS_WIDGET_TYPE_PANEHOST,        /* the container of BrowserPane widgets */
+    WS_WIDGET_TYPE_TABHOST,         /* the container of BrowserTab pages */
+    WS_WIDGET_TYPE_PANEDPAGE,       /* a plain page for a webview */
+    WS_WIDGET_TYPE_TABBEDPAGE,      /* a tabbed page for a webview */
 } ws_widget_type_t;
 
 #define WSWS_FLAG_NAME      0x00000001
