@@ -45,38 +45,30 @@ GtkWidget* browser_tabbed_window_new(GtkWindow*, WebKitWebContext*,
 
 WebKitWebContext* browser_tabbed_window_get_web_context(BrowserTabbedWindow*);
 
-/* Create or get the menubar widget (only one menubar in a tabbed window) */
-GtkWidget* browser_tabbed_window_create_or_get_menubar(BrowserTabbedWindow*,
-        const GdkRectangle*);
-
-/* Create or get the toolbar widget (only one toolbar in a tabbed window) */
-GtkWidget* browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow*,
-        const GdkRectangle*);
-
 /* Create or get the container for BrowserTab widgets
    (only one container for BrowserTab in a tabbed window). */
 GtkWidget* browser_tabbed_window_create_or_get_notebook(BrowserTabbedWindow*,
         const GdkRectangle*);
 
-/* Create a BrowserPane widget for header, footer, and aside. */
-GtkWidget* browser_tabbed_window_create_pane(BrowserTabbedWindow*,
-        WebKitWebView*, const GdkRectangle*);
+/* Create or get the only toolbar widget */
+GtkWidget* browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window);
 
-/* Create the container (a frame) for BrowserPane widgets. */
-GtkWidget* browser_tabbed_window_create_frame(BrowserTabbedWindow*,
-        const GdkRectangle*);
+/* Create a layout container. */
+GtkWidget* browser_tabbed_window_create_layout_container(BrowserTabbedWindow*,
+        GtkWidget*, const char *klass, const GdkRectangle*);
 
-/* Create a BrowserPane widget in the specific frame widget. */
-GtkWidget* browser_tabbed_window_create_pane_in_frame(BrowserTabbedWindow*,
+/* Create a pane container for BrowserPane widgets. */
+GtkWidget* browser_tabbed_window_create_pane_container(BrowserTabbedWindow*,
+        GtkWidget*, const char *klass, const GdkRectangle*);
+
+/* Create a BrowserPane widget in the specific pane container. */
+GtkWidget* browser_tabbed_window_append_view_pane(BrowserTabbedWindow*,
         GtkWidget*, WebKitWebView*, const GdkRectangle*);
-
-/* Set webview of a BrowserPane widget */
-void browser_tabbed_window_set_view(BrowserTabbedWindow*, GtkWidget*,
-        WebKitWebView*);
 
 /* Append a webview to the only one notebook which acts as
    the container of BrowserTab. */
-void browser_tabbed_window_append_view(BrowserTabbedWindow*, WebKitWebView*);
+GtkWidget* browser_tabbed_window_append_view_tab(BrowserTabbedWindow*,
+        WebKitWebView*);
 
 /* Load URI in the specific widget
    (or the active BrowserTab if the widget is NULL). */

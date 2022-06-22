@@ -519,7 +519,7 @@ webViewDecidePolicy(WebKitWebView *webView, WebKitPolicyDecision *decision,
                 "website-policies",
                     webkit_web_view_get_website_policies(webView),
         NULL));
-    browser_tabbed_window_append_view(window, newWebView);
+    browser_tabbed_window_append_view_tab(window, newWebView);
     webkit_web_view_load_request(newWebView,
             webkit_navigation_action_get_request(navigationAction));
 
@@ -821,7 +821,7 @@ newTabCallback(GSimpleAction *action, GVariant *parameter, gpointer userData)
     if (webkit_web_view_is_editable(webView))
         return;
 
-    browser_tabbed_window_append_view(window,
+    browser_tabbed_window_append_view_tab(window,
             WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
         "web-context", webkit_web_view_get_context(webView),
         "settings", webkit_web_view_get_settings(webView),
@@ -862,7 +862,7 @@ openPrivateWindow(GSimpleAction *action, GVariant *parameter, gpointer userData)
         browser_window_new(GTK_WINDOW(window), window->webContext);
     gtk_window_set_application(GTK_WINDOW(newWindow),
             gtk_window_get_application(GTK_WINDOW(window)));
-    browser_tabbed_window_append_view(BROWSER_TABBED_WINDOW(newWindow),
+    browser_tabbed_window_append_view_tab(BROWSER_TABBED_WINDOW(newWindow),
             newWebView);
     gtk_widget_grab_focus(GTK_WIDGET(newWebView));
     gtk_widget_show(GTK_WIDGET(newWindow));
@@ -1311,18 +1311,7 @@ browser_tabbed_window_get_web_context(BrowserTabbedWindow *window)
 }
 
 GtkWidget*
-browser_tabbed_window_create_or_get_menubar(BrowserTabbedWindow *window,
-        const GdkRectangle *geometry)
-{
-    g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
-
-    /* TODO */
-    return NULL;
-}
-
-GtkWidget*
-browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window,
-        const GdkRectangle *geometry)
+browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
@@ -1446,26 +1435,18 @@ browser_tabbed_window_create_or_get_notebook(BrowserTabbedWindow *window,
 }
 
 GtkWidget*
-browser_tabbed_window_create_pane(BrowserTabbedWindow *window,
-        WebKitWebView *webView, const GdkRectangle *geometry)
+browser_tabbed_window_create_layout_container(BrowserTabbedWindow *window,
+        GtkWidget *parent, const char *klass, const GdkRectangle *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
-    g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), NULL);
+    g_return_val_if_fail(GTK_IS_WIDGET(parent), NULL);
 
-    GtkWidget *pane = browser_pane_new(webView);
-
-#if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_box_append(GTK_BOX(window->mainBox), pane);
-#else
-    gtk_box_pack_start(GTK_BOX(window->mainBox), pane, TRUE, TRUE, 0);
-    gtk_widget_show(pane);
-#endif
     return NULL;
 }
 
 GtkWidget*
-browser_tabbed_window_create_frame(BrowserTabbedWindow *window,
-        const GdkRectangle *geometry)
+browser_tabbed_window_create_pane_container(BrowserTabbedWindow *window,
+        GtkWidget *parent, const char *klass, const GdkRectangle *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
@@ -1481,7 +1462,7 @@ browser_tabbed_window_create_frame(BrowserTabbedWindow *window,
 }
 
 GtkWidget*
-browser_tabbed_window_create_pane_in_frame(BrowserTabbedWindow *window,
+browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
         GtkWidget* frame, WebKitWebView *webView, const GdkRectangle *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
@@ -1493,16 +1474,8 @@ browser_tabbed_window_create_pane_in_frame(BrowserTabbedWindow *window,
     return pane;
 }
 
-void
-browser_tabbed_window_set_view(BrowserTabbedWindow *window, GtkWidget* pane,
-        WebKitWebView* webView)
-{
-    g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
-    g_return_if_fail(BROWSER_IS_PANE(pane));
-}
-
-void
-browser_tabbed_window_append_view(BrowserTabbedWindow *window,
+GtkWidget *
+browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
         WebKitWebView *webView)
 {
     g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
@@ -1510,13 +1483,13 @@ browser_tabbed_window_append_view(BrowserTabbedWindow *window,
 
     if (window->notebook == NULL) {
         g_warning("No notebook widget created");
-        return;
+        return NULL;
     }
 
     if (window->activeTab &&
             webkit_web_view_is_editable(BRW_TAB2VIEW(window->activeTab))) {
         g_warning("Only one tab is allowed in editable mode");
-        return;
+        return NULL;
     }
 
     /* We always want close to be connected even for not active tabs */
@@ -1538,6 +1511,8 @@ browser_tabbed_window_append_view(BrowserTabbedWindow *window,
             "tab-expand", TRUE, NULL);
 #endif
     gtk_widget_show(tab);
+
+    return tab;
 }
 
 void
