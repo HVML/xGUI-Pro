@@ -800,8 +800,46 @@ int ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
 struct create_widget_ctxt {
     struct ws_layouter *layouter;
     void *tabbed_window;
-    void *init_arg;
 };
+
+static const char *layout_tags[] = {
+    "ASIDE",
+    "DIV",
+    "FOOTER",
+    "HEADER",
+    "MAIN",
+    "MENU",
+    "NAV",
+};
+
+static bool is_layout_tag(const char *tag)
+{
+    static ssize_t max = sizeof(layout_tags)/sizeof(layout_tags[0]) - 1;
+
+    ssize_t low = 0, high = max, mid;
+    while (low <= high) {
+        int cmp;
+
+        mid = (low + high) / 2;
+        cmp = strcasecmp(tag, layout_tags[mid]);
+        if (cmp == 0) {
+            goto found;
+        }
+        else {
+            if (cmp < 0) {
+                high = mid - 1;
+            }
+            else {
+                low = mid + 1;
+            }
+        }
+    }
+
+    return false;
+
+found:
+    return true;
+}
 
 static pchtml_action_t
 create_widget_walker(pcdom_node_t *node, void *ctxt)
@@ -822,51 +860,25 @@ create_widget_walker(pcdom_node_t *node, void *ctxt)
         element = pcdom_interface_element(node);
         name = (const char *)pcdom_element_local_name(element, &len);
 
+        ws_widget_type_t type = WS_WIDGET_TYPE_NONE;
         struct create_widget_ctxt *my_ctxt = ctxt;
-        if (strcasecmp(name, "HEADER") == 0) {
-            create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
-                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
-        }
-        else if (strcasecmp(name, "MENU") == 0) {
-            create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
-                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
-        }
-        else if (strcasecmp(name, "NAV") == 0) {
-            create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
-                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
-        }
-        else if (strcasecmp(name, "ASIDE") == 0) {
-            create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
-                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
-        }
-        else if (strcasecmp(name, "FOOTER") == 0) {
-            create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
-                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
-        }
-        else if (strcasecmp(name, "DIV") == 0) {
-            create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_CONTAINER, my_ctxt->tabbed_window,
-                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
+        if (is_layout_tag(name)) {
+            type = WS_WIDGET_TYPE_CONTAINER;
         }
         else if (strcasecmp(name, "OL") == 0) {
-            create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_PANEHOST, my_ctxt->tabbed_window,
-                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
+            type = WS_WIDGET_TYPE_PANEHOST;
         }
         else if (strcasecmp(name, "UL") == 0) {
-            create_widget_for_element(my_ctxt->layouter, element,
-                    WS_WIDGET_TYPE_TABHOST, my_ctxt->tabbed_window,
-                    my_ctxt->init_arg, PURC_VARIANT_INVALID);
+            type = WS_WIDGET_TYPE_TABHOST;
         }
-        else if (strcasecmp(name, "DIV") == 0) {
-            if (node->first_child != NULL) {
-                return PCHTML_ACTION_OK;
-            }
+
+        if (type != WS_WIDGET_TYPE_NONE) {
+            create_widget_for_element(my_ctxt->layouter, element,
+                    type, node->parent->user, NULL, PURC_VARIANT_INVALID);
+        }
+
+        if (node->first_child) {
+            return PCHTML_ACTION_OK;
         }
 
         /* walk to the siblings. */
@@ -876,14 +888,13 @@ create_widget_walker(pcdom_node_t *node, void *ctxt)
     default:
         /* ignore any unknown node types */
         break;
-
     }
 
     return PCHTML_ACTION_OK;
 }
 
 static bool create_tabbed_window(struct ws_layouter *layouter,
-        pcdom_element_t *article, void *init_arg)
+        pcdom_element_t *article)
 {
     void *tabbed_window;
 
@@ -896,7 +907,8 @@ static bool create_tabbed_window(struct ws_layouter *layouter,
     if (tabbed_window == NULL)
         return false;
 
-    struct create_widget_ctxt ctxt = { layouter, tabbed_window, init_arg };
+    struct create_widget_ctxt ctxt = { layouter, tabbed_window };
+
     pcdom_node_simple_walk(pcdom_interface_node(article),
             create_widget_walker, &ctxt);
     return true;
@@ -957,7 +969,7 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
             void *parent = get_element_user_data(element);
             if (parent == NULL) {
                 /* create the ancestor widgets */
-                if (create_tabbed_window(layouter, article, init_arg)) {
+                if (create_tabbed_window(layouter, article)) {
                     parent = get_element_user_data(element);
                 }
             }
