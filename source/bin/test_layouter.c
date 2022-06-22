@@ -75,14 +75,14 @@ static const char *widget_types[] = {
     "TABPAGE",
 };
 
-void my_convert_style(struct ws_widget_style *style,
+void my_convert_style(struct ws_widget_info *style,
         purc_variant_t widget_style)
 {
     // do nothing.
 }
 
-void *my_create_widget(void *ws_ctxt, ws_widget_type_t type,
-        void *parent, void *init_arg, const struct ws_widget_style *style)
+void *my_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
+        void *parent, void *init_arg, const struct ws_widget_info *style)
 {
     struct test_ctxt *ctxt = ws_ctxt;
 
@@ -183,7 +183,7 @@ int my_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
 }
 
 void my_update_widget(void *ws_ctxt, void *widget,
-        ws_widget_type_t type, const struct ws_widget_style *style)
+        ws_widget_type_t type, const struct ws_widget_info *style)
 {
     struct test_ctxt *ctxt = ws_ctxt;
 

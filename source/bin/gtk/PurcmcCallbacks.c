@@ -448,13 +448,13 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
             goto done;
         }
 
-        struct ws_widget_style style = { };
+        struct ws_widget_info style = { };
         style.flags = WSWS_FLAG_NAME | WSWS_FLAG_TITLE;
         style.name = name;
         style.title = title;
         gtk_imp_convert_style(&style, widget_style);
         plain_win = gtk_imp_create_widget(&sess->workspace,
-                WS_WIDGET_TYPE_PLAINWINDOW, NULL, web_view, &style);
+                WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, web_view, &style);
 
     }
     else if (workspace->layouter == NULL) {

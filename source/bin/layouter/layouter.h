@@ -53,7 +53,7 @@ typedef enum {
 #define WSWS_FLAG_GEOMETRY  0x00000004
 #define WSWS_FLAG_TOOLKIT   0x00000008
 
-struct ws_widget_style {
+struct ws_widget_info {
     unsigned int flags;
 
     const char *name;
@@ -77,17 +77,18 @@ struct ws_widget_style {
     float       opacity;
 };
 
-typedef void (*wsltr_convert_style_fn)(struct ws_widget_style *style,
+typedef void (*wsltr_convert_style_fn)(struct ws_widget_info *style,
         purc_variant_t widget_style);
 
-typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt, ws_widget_type_t type,
-        void *parent, void *init_arg, const struct ws_widget_style *style);
+typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt,
+        ws_widget_type_t type, void *window, void *parent, void *init_arg,
+        const struct ws_widget_info *style);
 
 typedef int  (*wsltr_destroy_widget_fn)(void *ws_ctxt, void *widget,
         ws_widget_type_t type);
 
 typedef void (*wsltr_update_widget_fn)(void *ws_ctxt, void *widget,
-        ws_widget_type_t type, const struct ws_widget_style *style);
+        ws_widget_type_t type, const struct ws_widget_info *style);
 
 #ifdef __cplusplus
 extern "C" {

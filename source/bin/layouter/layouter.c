@@ -97,7 +97,7 @@ find_article_ancestor(pcdom_element_t *element)
 }
 
 static void
-fill_position(struct ws_widget_style *style, const HLBox *box)
+fill_position(struct ws_widget_info *style, const HLBox *box)
 {
     style->x = (int)(box->x + 0.5);
     style->y = (int)(box->y + 0.5);
@@ -140,12 +140,13 @@ fill_position(struct ws_widget_style *style, const HLBox *box)
 }
 
 static void get_element_name_title(pcdom_element_t *element,
-        char **name, char **title)
+        char **name, char **title, char **klass)
 {
     pcdom_attr_t *attr;
 
     *name  = NULL;
     *title = NULL;
+    *klass = NULL;
 
     attr = pcdom_element_first_attribute(element);
     while (attr) {
@@ -163,8 +164,13 @@ static void get_element_name_title(pcdom_element_t *element,
             if (sz > 0)
                 *title = strndup(attr_value, sz);
         }
+        else if (strncasecmp(attr_name, "class", sizeof("class")) == 0) {
+            attr_value = (const char *)pcdom_attr_value(attr, &sz);
+            if (sz > 0)
+                *klass = strndup(attr_value, sz);
+        }
 
-        if (*name && *title)
+        if (*name && *title && *klass)
             break;
 
         attr = pcdom_element_next_attribute(attr);
@@ -175,8 +181,8 @@ static void get_element_name_title(pcdom_element_t *element,
 #define UNTITLED            "Untitled"
 
 static void *create_widget_for_element(struct ws_layouter *layouter,
-        pcdom_element_t *element, ws_widget_type_t type, void *parent,
-        void *init_arg, purc_variant_t widget_style)
+        pcdom_element_t *element, ws_widget_type_t type, void *window,
+        void *parent, void *init_arg, purc_variant_t widget_style)
 {
     const HLBox *box;
     box = domruler_get_node_bounding_box(layouter->ruler,
@@ -184,19 +190,19 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
     if (box == NULL)
         return NULL;
 
-    char *name, *title;
-    get_element_name_title(element, &name, &title);
+    char *name, *title, *klass;
+    get_element_name_title(element, &name, &title, &klass);
 
-    struct ws_widget_style style = { 0, 0, 0, 0 };
-    style.flags = WSWS_FLAG_NAME | WSWS_FLAG_TITLE |
-        WSWS_FLAG_GEOMETRY;
+    struct ws_widget_info style = { 0, 0, 0, 0 };
+    style.flags = WSWS_FLAG_NAME | WSWS_FLAG_GEOMETRY;
     style.name = name ? name : ANONYMOUS_NAME;
     style.title = title ? title: UNTITLED;
+    style.klass = klass ? klass: NULL;
     fill_position(&style, box);
     layouter->cb_convert_style(&style, widget_style);
 
     void *widget = layouter->cb_create_widget(layouter->ws_ctxt,
-            type, parent, init_arg, &style);
+            type, window, parent, init_arg, &style);
     if (name) free(name);
     if (title) free(title);
     if (widget == NULL)
@@ -575,7 +581,7 @@ layout_widget_walker(pcdom_node_t *node, void *ctxt)
                     node);
 
             if (box) {
-                struct ws_widget_style style = { 0 };
+                struct ws_widget_info style = { 0 };
 
                 style.flags = WSWS_FLAG_GEOMETRY;
                 fill_position(&style, box);
@@ -730,7 +736,7 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
             relayout(layouter, section);
 
             if ((widget = create_widget_for_element(layouter, figure,
-                    WS_WIDGET_TYPE_PLAINWINDOW, NULL, init_arg,
+                    WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, init_arg,
                     widget_style)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
@@ -873,8 +879,9 @@ create_widget_walker(pcdom_node_t *node, void *ctxt)
         }
 
         if (type != WS_WIDGET_TYPE_NONE) {
-            create_widget_for_element(my_ctxt->layouter, element,
-                    type, node->parent->user, NULL, PURC_VARIANT_INVALID);
+            create_widget_for_element(my_ctxt->layouter, element, type,
+                    my_ctxt->tabbed_window, node->parent->user,
+                    NULL, PURC_VARIANT_INVALID);
         }
 
         if (node->first_child) {
@@ -893,7 +900,7 @@ create_widget_walker(pcdom_node_t *node, void *ctxt)
     return PCHTML_ACTION_OK;
 }
 
-static bool create_tabbed_window(struct ws_layouter *layouter,
+static void *create_tabbed_window(struct ws_layouter *layouter,
         pcdom_element_t *article)
 {
     void *tabbed_window;
@@ -901,17 +908,15 @@ static bool create_tabbed_window(struct ws_layouter *layouter,
     tabbed_window = get_element_user_data(article);
     if (tabbed_window == NULL) {
         tabbed_window = create_widget_for_element(layouter, article,
-                WS_WIDGET_TYPE_TABBEDWINDOW, NULL, NULL, PURC_VARIANT_INVALID);
+                WS_WIDGET_TYPE_TABBEDWINDOW,
+                NULL, NULL, NULL, PURC_VARIANT_INVALID);
+
+        struct create_widget_ctxt ctxt = { layouter, tabbed_window };
+        pcdom_node_simple_walk(pcdom_interface_node(article),
+                create_widget_walker, &ctxt);
     }
 
-    if (tabbed_window == NULL)
-        return false;
-
-    struct create_widget_ctxt ctxt = { layouter, tabbed_window };
-
-    pcdom_node_simple_walk(pcdom_interface_node(article),
-            create_widget_walker, &ctxt);
-    return true;
+    return tabbed_window;
 }
 
 #define HTML_FRAG_PAGE  \
@@ -966,10 +971,11 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
         if (subtree) {
             dom_append_subtree_to_element(dom_doc, element, subtree);
 
+            void *tabbed_win = NULL;
             void *parent = get_element_user_data(element);
             if (parent == NULL) {
                 /* create the ancestor widgets */
-                if (create_tabbed_window(layouter, article)) {
+                if ((tabbed_win = create_tabbed_window(layouter, article))) {
                     parent = get_element_user_data(element);
                 }
             }
@@ -987,7 +993,8 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
             assert(li);
 
             if ((widget = create_widget_for_element(layouter, li,
-                        widget_type, parent, init_arg, widget_style)) == NULL) {
+                            widget_type, tabbed_win, parent, init_arg,
+                            widget_style)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }
@@ -1054,7 +1061,7 @@ int ws_layouter_remove_page_by_widget(struct ws_layouter *layouter,
 int ws_layouter_update_widget(struct ws_layouter *layouter,
         void *widget, const char *property, purc_variant_t value)
 {
-    struct ws_widget_style style = { 0 };
+    struct ws_widget_info style = { 0 };
     ws_widget_type_t type;
 
     type = ws_layouter_retrieve_widget(layouter, widget);

@@ -70,17 +70,17 @@ struct purcmc_session {
 extern "C" {
 #endif
 
-void gtk_imp_convert_style(struct ws_widget_style *style,
+void gtk_imp_convert_style(struct ws_widget_info *style,
         purc_variant_t widget_style);
 
-void *gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type,
-        void *parent, void *init_arg, const struct ws_widget_style *style);
+void *gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
+        void *parent, void *init_arg, const struct ws_widget_info *style);
 
 int  gtk_imp_destroy_widget(void *ws_ctxt, void *widget,
         ws_widget_type_t type);
 
 void gtk_imp_update_widget(void *ws_ctxt, void *widget,
-        ws_widget_type_t type, const struct ws_widget_style *style);
+        ws_widget_type_t type, const struct ws_widget_info *style);
 
 #ifdef __cplusplus
 }
