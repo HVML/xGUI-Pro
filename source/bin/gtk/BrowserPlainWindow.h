@@ -1,5 +1,5 @@
 /*
-** BrowserPlainWindow.c -- The declaration of BrowserPlainWindow.
+** BrowserPlainWindow.h -- The declaration of BrowserPlainWindow.
 **
 ** Copyright (C) 2022 FMSoft <http://www.fmsoft.cn>
 **
