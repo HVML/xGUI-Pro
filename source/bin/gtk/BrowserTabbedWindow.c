@@ -50,6 +50,9 @@ struct _BrowserTabbedWindow {
 
     GtkWidget *settingsDialog;
 
+    unsigned nrViews;
+    GSList *viewContainers;
+
     GtkWidget *notebook;
     BrowserTab *activeTab;
 
@@ -404,6 +407,57 @@ browserTabbedWindowTryCloseCurrentWebView(GSimpleAction *action,
     webkit_web_view_try_close(BRW_TAB2VIEW(tab));
 }
 
+static void collectPane(BrowserPane* pane, GSList **webViews)
+{
+    *webViews = g_slist_prepend(*webViews, BRW_PANE2VIEW(pane));
+}
+
+static void
+containerTryClose(BrowserTabbedWindow *window, GtkWidget *container)
+{
+    GSList *webViews = NULL;
+
+    if (GTK_IS_NOTEBOOK(container)) {
+        GtkNotebook *notebook = GTK_NOTEBOOK(container);
+        int n = gtk_notebook_get_n_pages(notebook);
+        for (int i = 0; i < n; ++i) {
+            BrowserTab *tab;
+            tab = (BrowserTab *)gtk_notebook_get_nth_page(notebook, i);
+            webViews = g_slist_prepend(webViews, browser_tab_get_web_view(tab));
+        }
+    }
+    else if (GTK_IS_BOX(container)) {
+#if GTK_CHECK_VERSION(4, 0, 0)
+        GtkWidget *pane = gtk_widget_get_first_child(container);
+        while (pane) {
+            collectPane(BROWSER_PANE(pane), &webViews);
+            pane = gtk_widget_get_next_sibling(pane);
+        }
+#else
+        gtk_container_foreach(GTK_CONTAINER(container),
+                (GtkCallback)collectPane, &webViews);
+#endif
+    }
+
+    if (webViews) {
+        GSList *link;
+        for (link = webViews; link; link = link->next)
+            webkit_web_view_try_close(link->data);
+
+        g_slist_free(webViews);
+    }
+}
+
+static void
+windowTryClose(BrowserTabbedWindow *window)
+{
+    if (window->viewContainers) {
+        GSList *link;
+        for (link = window->viewContainers; link; link = link->next)
+            containerTryClose(window, link->data);
+    }
+}
+
 static void
 browserTabbedWindowTryClose(GSimpleAction *action, GVariant *parameter,
         gpointer userData)
@@ -433,11 +487,28 @@ backForwardlistChanged(WebKitBackForwardList *backForwardlist,
     browserTabbedWindowUpdateNavigationMenu(window, backForwardlist);
 }
 
-static void
-webViewClose(WebKitWebView *webView, BrowserTabbedWindow *window)
+#if !GTK_CHECK_VERSION(4, 0, 0)
+static void removePane(BrowserPane* pane, WebKitWebView *webView)
 {
-    int tabsCount = gtk_notebook_get_n_pages(GTK_NOTEBOOK(window->notebook));
-    if (tabsCount == 1) {
+    if (BRW_PANE2VIEW(pane) == webView) {
+        gtk_widget_destroy(GTK_WIDGET(pane));
+    }
+}
+#endif
+
+static void
+webViewClose(WebKitWebView *webView, GtkWidget *container)
+{
+    GdkWindow *win = gtk_widget_get_window(container);
+
+    if (win == NULL) {
+        g_warning("UNREALIZED wigdet (%p, %s)",
+                container, gtk_widget_get_name(container));
+        return;
+    }
+
+    BrowserTabbedWindow *window = BROWSER_TABBED_WINDOW(win);
+    if (window->nrViews == 1) {
 #if GTK_CHECK_VERSION(3, 98, 4)
         gtk_window_destroy(GTK_WINDOW(window));
 #else
@@ -446,18 +517,45 @@ webViewClose(WebKitWebView *webView, BrowserTabbedWindow *window)
         return;
     }
 
-    int i;
-    for (i = 0; i < tabsCount; ++i) {
-        BrowserTab *tab = (BrowserTab *)gtk_notebook_get_nth_page(
-                GTK_NOTEBOOK(window->notebook), i);
-        if (BRW_TAB2VIEW(tab) == webView) {
+    if (GTK_IS_NOTEBOOK(container)) {
+        int i;
+        int tabsCount = gtk_notebook_get_n_pages(GTK_NOTEBOOK(container));
+        for (i = 0; i < tabsCount; ++i) {
+            BrowserTab *tab = (BrowserTab *)gtk_notebook_get_nth_page(
+                    GTK_NOTEBOOK(container), i);
+            if (BRW_TAB2VIEW(tab) == webView) {
 #if GTK_CHECK_VERSION(3, 98, 4)
-            gtk_notebook_remove_page(GTK_NOTEBOOK(window->notebook), i);
+                gtk_notebook_remove_page(GTK_NOTEBOOK(container), i);
 #else
-            gtk_widget_destroy(GTK_WIDGET(tab));
+                gtk_widget_destroy(GTK_WIDGET(tab));
 #endif
-            return;
+                break;
+            }
         }
+    }
+    else if (GTK_IS_BOX(container)) {
+#if GTK_CHECK_VERSION(4, 0, 0)
+        GtkWidget *pane = gtk_widget_get_first_child(container);
+        while (pane) {
+            if (BRW_PANE2VIEW(pane) == webView) {
+#if GTK_CHECK_VERSION(3, 98, 4)
+                gtk_box_remove(GTK_BOX(container), pane);
+#else
+                gtk_widget_destroy(GTK_WIDGET(pane));
+#endif
+                break;
+            }
+
+            pane = gtk_widget_get_next_sibling(pane);
+        }
+#else
+        gtk_container_foreach(GTK_CONTAINER(container),
+                (GtkCallback)removePane, webView);
+#endif
+    }
+    else {
+        g_warning("ODD widget (%p, %s)",
+                container, gtk_widget_get_name(container));
     }
 }
 
@@ -1404,61 +1502,108 @@ browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window)
     return window->toolbar;
 }
 
-GtkWidget*
-browser_tabbed_window_create_tab_container(BrowserTabbedWindow *window,
-        GtkWidget *parent, const GdkRectangle *geometry)
+static GtkWidget *create_layout_container(const char *klass)
 {
-    g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
+    const char *occurrence;
+    GtkOrientation orit = GTK_ORIENTATION_VERTICAL;
 
-    if (window->notebook)
-        return window->notebook;
+    if (klass == NULL) {
+        //
+    }
+    else if ((occurrence = strstr(klass, "vbox"))) {
+        if (occurrence[4] == '\0' || g_ascii_isspace(occurrence[4])) {
+            orit = GTK_ORIENTATION_VERTICAL;
+        }
+    }
+    else if ((occurrence = strstr(klass, "hbox"))) {
+        if (occurrence[4] == '\0' || g_ascii_isspace(occurrence[4])) {
+            orit = GTK_ORIENTATION_HORIZONTAL;
+        }
+    }
 
-    window->notebook = gtk_notebook_new();
-    g_signal_connect(window->notebook, "switch-page",
-            G_CALLBACK(browserTabbedWindowSwitchTab), window);
-    g_signal_connect(window->notebook, "page-added",
-            G_CALLBACK(browserTabbedWindowTabAddedOrRemoved), window);
-    g_signal_connect(window->notebook, "page-removed",
-            G_CALLBACK(browserTabbedWindowTabAddedOrRemoved), window);
-    gtk_notebook_set_show_tabs(GTK_NOTEBOOK(window->notebook), FALSE);
-    gtk_notebook_set_show_border(GTK_NOTEBOOK(window->notebook), FALSE);
-
-#if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_box_append(GTK_BOX(window->mainBox), window->notebook);
-#else
-    gtk_box_pack_start(GTK_BOX(window->mainBox), window->notebook,
-            TRUE, TRUE, 0);
-    gtk_widget_show(window->notebook);
-#endif
-
-    return window->notebook;
+    return gtk_box_new(orit, 0);
 }
 
 GtkWidget*
 browser_tabbed_window_create_layout_container(BrowserTabbedWindow *window,
-        GtkWidget *parent, const char *klass, const GdkRectangle *geometry)
+        GtkWidget *container, const char *klass, const GdkRectangle *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
-    g_return_val_if_fail(GTK_IS_WIDGET(parent), NULL);
 
-    return NULL;
+    if (container == NULL) {
+        container = window->mainBox;
+    }
+    else if (!GTK_IS_BOX(container)) {
+        g_warning("The container is not a GtkBox: %p", container);
+        return NULL;
+    }
+
+    GtkWidget *box = create_layout_container(klass);
+
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_box_append(GTK_BOX(container), box);
+#else
+    gtk_box_pack_start(GTK_BOX(container), box, FALSE, FALSE, 0);
+    gtk_widget_show(box);
+#endif
+
+    return box;
 }
 
 GtkWidget*
 browser_tabbed_window_create_pane_container(BrowserTabbedWindow *window,
-        GtkWidget *parent, const char *klass, const GdkRectangle *geometry)
+        GtkWidget *container, const char *klass, const GdkRectangle *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
-    GtkWidget *frame = gtk_flow_box_new();
+    if (container == NULL) {
+        container = window->mainBox;
+    }
+    else if (!GTK_IS_BOX(container)) {
+        g_warning("The container is not a GtkBox: %p", container);
+        return NULL;
+    }
+
+    GtkWidget *box = create_layout_container(klass);
+    window->viewContainers = g_slist_append(window->viewContainers, box);
 
 #if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_box_append(GTK_BOX(window->mainBox), frame);
+    gtk_box_append(GTK_BOX(container), box);
 #else
-    gtk_box_pack_start(GTK_BOX(window->mainBox), frame, TRUE, TRUE, 0);
-    gtk_widget_show(frame);
+    gtk_box_pack_start(GTK_BOX(container), box, TRUE, TRUE, 0);
+    gtk_widget_show(box);
 #endif
-    return NULL;
+
+    return box;
+}
+
+GtkWidget*
+browser_tabbed_window_create_tab_container(BrowserTabbedWindow *window,
+        GtkWidget *container, const GdkRectangle *geometry)
+{
+    g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
+    g_return_val_if_fail(GTK_IS_BOX(container), NULL);
+
+    GtkWidget *notebook = gtk_notebook_new();
+    g_signal_connect(notebook, "switch-page",
+            G_CALLBACK(browserTabbedWindowSwitchTab), window);
+    g_signal_connect(notebook, "page-added",
+            G_CALLBACK(browserTabbedWindowTabAddedOrRemoved), window);
+    g_signal_connect(notebook, "page-removed",
+            G_CALLBACK(browserTabbedWindowTabAddedOrRemoved), window);
+    gtk_notebook_set_show_tabs(GTK_NOTEBOOK(notebook), FALSE);
+    gtk_notebook_set_show_border(GTK_NOTEBOOK(notebook), FALSE);
+
+    window->viewContainers = g_slist_append(window->viewContainers, notebook);
+
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_box_append(GTK_BOX(container), notebook);
+#else
+    gtk_box_pack_start(GTK_BOX(container), notebook, TRUE, TRUE, 0);
+    gtk_widget_show(notebook);
+#endif
+
+    return notebook;
 }
 
 GtkWidget*
@@ -1469,9 +1614,33 @@ browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
     g_return_if_fail(GTK_IS_FLOW_BOX(container));
 
-    GtkWidget *pane = browser_pane_new(webView);
+    if (webkit_web_view_is_editable(webView)) {
+        g_warning("Editable webView is not allowed");
+        return NULL;
+    }
 
-    gtk_flow_box_insert(GTK_FLOW_BOX(container), pane, -1);
+    if (GTK_IS_BOX(container)) {
+        g_warning("Container is not a GtkBox");
+        return NULL;
+    }
+
+    g_signal_connect_after(webView, "close",
+            G_CALLBACK(webViewClose), container);
+
+    GtkWidget *pane = browser_pane_new(webView);
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_box_append(GTK_BOX(container), pane);
+#else
+    gtk_container_add(GTK_CONTAINER(container), pane);
+#endif
+
+#if !GTK_CHECK_VERSION(3, 98, 0)
+    if (gtk_widget_get_app_paintable(GTK_WIDGET(window)))
+#endif
+        browser_pane_set_background_color(BROWSER_PANE(pane),
+                &window->backgroundColor);
+    gtk_widget_show(pane);
+
     return pane;
 }
 
@@ -1482,19 +1651,18 @@ browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
     g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
     g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
 
-    if (window->notebook == NULL) {
-        g_warning("No notebook widget created");
+    if (webkit_web_view_is_editable(webView)) {
+        g_warning("Editable webView is not allowed");
         return NULL;
     }
 
-    if (window->activeTab &&
-            webkit_web_view_is_editable(BRW_TAB2VIEW(window->activeTab))) {
-        g_warning("Only one tab is allowed in editable mode");
+    if (GTK_IS_NOTEBOOK(container)) {
+        g_warning("Container is not a GtkNotebook");
         return NULL;
     }
 
-    /* We always want close to be connected even for not active tabs */
-    g_signal_connect_after(webView, "close", G_CALLBACK(webViewClose), window);
+    g_signal_connect_after(webView, "close",
+            G_CALLBACK(webViewClose), container);
 
     GtkWidget *tab = browser_tab_new(webView);
 #if !GTK_CHECK_VERSION(3, 98, 0)
@@ -1502,13 +1670,13 @@ browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
 #endif
         browser_tab_set_background_color(BROWSER_TAB(tab),
                 &window->backgroundColor);
-    gtk_notebook_append_page(GTK_NOTEBOOK(window->notebook), tab,
+    gtk_notebook_append_page(GTK_NOTEBOOK(container), tab,
             browser_tab_get_title_widget(BROWSER_TAB(tab)));
 #if GTK_CHECK_VERSION(3, 98, 5)
-    g_object_set(gtk_notebook_get_page(GTK_NOTEBOOK(window->notebook), tab),
+    g_object_set(gtk_notebook_get_page(GTK_NOTEBOOK(container), tab),
             "tab-expand", TRUE, NULL);
 #else
-    gtk_container_child_set(GTK_CONTAINER(window->notebook), tab,
+    gtk_container_child_set(GTK_CONTAINER(container), tab,
             "tab-expand", TRUE, NULL);
 #endif
     gtk_widget_show(tab);
@@ -1518,11 +1686,17 @@ browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
 
 void
 browser_tabbed_window_clear_container(BrowserTabbedWindow *window,
-        GtkWidget *widget)
+        GtkWidget *container)
 {
     g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
 
-    // TODO
+    if (container == NULL) {
+        windowTryClose(window);
+    }
+    else {
+        g_return_if_fail(GTK_IS_WIDGET(container));
+        containerTryClose(window, container);
+    }
 }
 
 void browser_tabbed_window_clear_pane_or_tab(BrowserTabbedWindow *window,
