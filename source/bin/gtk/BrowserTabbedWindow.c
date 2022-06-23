@@ -519,7 +519,7 @@ webViewDecidePolicy(WebKitWebView *webView, WebKitPolicyDecision *decision,
                 "website-policies",
                     webkit_web_view_get_website_policies(webView),
         NULL));
-    browser_tabbed_window_append_view_tab(window, newWebView);
+    browser_tabbed_window_append_view_tab(window, NULL, newWebView);
     webkit_web_view_load_request(newWebView,
             webkit_navigation_action_get_request(navigationAction));
 
@@ -821,7 +821,7 @@ newTabCallback(GSimpleAction *action, GVariant *parameter, gpointer userData)
     if (webkit_web_view_is_editable(webView))
         return;
 
-    browser_tabbed_window_append_view_tab(window,
+    browser_tabbed_window_append_view_tab(window, NULL,
             WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
         "web-context", webkit_web_view_get_context(webView),
         "settings", webkit_web_view_get_settings(webView),
@@ -863,7 +863,7 @@ openPrivateWindow(GSimpleAction *action, GVariant *parameter, gpointer userData)
     gtk_window_set_application(GTK_WINDOW(newWindow),
             gtk_window_get_application(GTK_WINDOW(window)));
     browser_tabbed_window_append_view_tab(BROWSER_TABBED_WINDOW(newWindow),
-            newWebView);
+            NULL, newWebView);
     gtk_widget_grab_focus(GTK_WIDGET(newWebView));
     gtk_widget_show(GTK_WIDGET(newWindow));
 }
@@ -1405,8 +1405,8 @@ browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window)
 }
 
 GtkWidget*
-browser_tabbed_window_create_or_get_notebook(BrowserTabbedWindow *window,
-        const GdkRectangle *geometry)
+browser_tabbed_window_create_tab_container(BrowserTabbedWindow *window,
+        GtkWidget *parent, const GdkRectangle *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
@@ -1463,20 +1463,21 @@ browser_tabbed_window_create_pane_container(BrowserTabbedWindow *window,
 
 GtkWidget*
 browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
-        GtkWidget* frame, WebKitWebView *webView, const GdkRectangle *geometry)
+        GtkWidget* container, WebKitWebView *webView,
+        const GdkRectangle *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
-    g_return_if_fail(GTK_IS_FLOW_BOX(frame));
+    g_return_if_fail(GTK_IS_FLOW_BOX(container));
 
     GtkWidget *pane = browser_pane_new(webView);
 
-    gtk_flow_box_insert(GTK_FLOW_BOX(frame), pane, -1);
+    gtk_flow_box_insert(GTK_FLOW_BOX(container), pane, -1);
     return pane;
 }
 
 GtkWidget *
 browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
-        WebKitWebView *webView)
+        GtkWidget *container, WebKitWebView *webView)
 {
     g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
     g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
@@ -1513,6 +1514,39 @@ browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
     gtk_widget_show(tab);
 
     return tab;
+}
+
+void
+browser_tabbed_window_clear_container(BrowserTabbedWindow *window,
+        GtkWidget *widget)
+{
+    g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
+
+    // TODO
+}
+
+void browser_tabbed_window_clear_pane_or_tab(BrowserTabbedWindow *window,
+        GtkWidget *widget)
+{
+    g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
+    g_return_if_fail(GTK_IS_WIDGET(widget));
+
+    WebKitWebView* web_view = NULL;
+    if (BROWSER_IS_TAB(widget)) {
+        BrowserTab *tab = BROWSER_TAB(widget);
+
+        web_view = browser_tab_get_web_view(tab);
+    }
+    else if (BROWSER_IS_PANE(widget)) {
+        BrowserPane *pane = BROWSER_PANE(widget);
+
+        web_view = browser_pane_get_web_view(pane);
+    }
+
+    if (web_view)
+        webkit_web_view_try_close(web_view);
+    else
+        g_warning("Bad widget: %s", gtk_widget_get_name(widget));
 }
 
 void

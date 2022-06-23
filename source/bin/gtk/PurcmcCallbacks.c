@@ -567,7 +567,7 @@ int gtk_destroy_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
 {
     workspace = &sess->workspace;
 
-    return gtk_imp_destroy_widget(workspace, plain_win,
+    return gtk_imp_destroy_widget(workspace, plain_win, plain_win,
         WS_WIDGET_TYPE_PLAINWINDOW);
 }
 

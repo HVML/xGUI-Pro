@@ -45,11 +45,6 @@ GtkWidget* browser_tabbed_window_new(GtkWindow*, WebKitWebContext*,
 
 WebKitWebContext* browser_tabbed_window_get_web_context(BrowserTabbedWindow*);
 
-/* Create or get the container for BrowserTab widgets
-   (only one container for BrowserTab in a tabbed window). */
-GtkWidget* browser_tabbed_window_create_or_get_notebook(BrowserTabbedWindow*,
-        const GdkRectangle*);
-
 /* Create or get the only toolbar widget */
 GtkWidget* browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window);
 
@@ -65,10 +60,19 @@ GtkWidget* browser_tabbed_window_create_pane_container(BrowserTabbedWindow*,
 GtkWidget* browser_tabbed_window_append_view_pane(BrowserTabbedWindow*,
         GtkWidget*, WebKitWebView*, const GdkRectangle*);
 
-/* Append a webview to the only one notebook which acts as
-   the container of BrowserTab. */
+/* Create a container for BrowserTab widgets */
+GtkWidget* browser_tabbed_window_create_tab_container(BrowserTabbedWindow*,
+        GtkWidget*, const GdkRectangle*);
+
+/* Append a webview to the tab container. */
 GtkWidget* browser_tabbed_window_append_view_tab(BrowserTabbedWindow*,
-        WebKitWebView*);
+        GtkWidget*, WebKitWebView*);
+
+/* Try to close all webViews in the container */
+void browser_tabbed_window_clear_container(BrowserTabbedWindow*, GtkWidget*);
+
+/* Try to close the webView in the BrowserPane or BrowserTab */
+void browser_tabbed_window_clear_pane_or_tab(BrowserTabbedWindow*, GtkWidget*);
 
 /* Load URI in the specific widget
    (or the active BrowserTab if the widget is NULL). */

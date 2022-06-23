@@ -81,11 +81,11 @@ typedef void (*wsltr_convert_style_fn)(struct ws_widget_info *style,
         purc_variant_t toolkit_style);
 
 typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt,
-        ws_widget_type_t type, void *window, void *parent, void *init_arg,
+        ws_widget_type_t type, void *window, void *container, void *init_arg,
         const struct ws_widget_info *style);
 
-typedef int  (*wsltr_destroy_widget_fn)(void *ws_ctxt, void *widget,
-        ws_widget_type_t type);
+typedef int  (*wsltr_destroy_widget_fn)(void *ws_ctxt,
+        void *window, void *widget, ws_widget_type_t type);
 
 typedef void (*wsltr_update_widget_fn)(void *ws_ctxt, void *widget,
         ws_widget_type_t type, const struct ws_widget_info *style);
