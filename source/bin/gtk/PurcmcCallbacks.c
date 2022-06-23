@@ -431,7 +431,7 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace,
         const char *request_id, const char *gid, const char *name,
         const char *class_name, const char *title, const char *layout_style,
-        purc_variant_t widget_style, int *retv)
+        purc_variant_t toolkit_style, int *retv)
 {
     purcmc_plainwin *plain_win = NULL;
 
@@ -452,7 +452,7 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         style.flags = WSWS_FLAG_NAME | WSWS_FLAG_TITLE;
         style.name = name;
         style.title = title;
-        gtk_imp_convert_style(&style, widget_style);
+        gtk_imp_convert_style(&style, toolkit_style);
         plain_win = gtk_imp_create_widget(&sess->workspace,
                 WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, web_view, &style);
 
@@ -467,7 +467,7 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
 
         /* create a plain window in the specified group */
         plain_win = ws_layouter_add_plain_window(workspace->layouter, gid,
-                name, class_name, title, layout_style, widget_style, web_view,
+                name, class_name, title, layout_style, toolkit_style, web_view,
                 retv);
     }
 
@@ -555,7 +555,7 @@ int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
     else if (strcmp(property, "layoutStyle") == 0) {
         /* TODO */
     }
-    else if (strcmp(property, "widgetStyle") == 0) {
+    else if (strcmp(property, "toolkitStyle") == 0) {
         /* TODO */
     }
 
@@ -974,7 +974,7 @@ int gtk_remove_page_group(purcmc_session *sess, purcmc_workspace *workspace,
 purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
             const char *request_id, const char *gid, const char *name,
             const char *class_name, const char *title, const char *layout_style,
-            purc_variant_t widget_style, int *retv)
+            purc_variant_t toolkit_style, int *retv)
 {
     purcmc_page *page = NULL;
 
@@ -986,7 +986,7 @@ purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
         WebKitWebView *web_view = create_web_view(sess);
         page = ws_layouter_add_page(workspace->layouter,
                     gid, name, class_name, title,
-                    layout_style, widget_style, web_view, retv);
+                    layout_style, toolkit_style, web_view, retv);
     }
 
     return page;

@@ -23,7 +23,7 @@
 #include "config.h"
 #include "main.h"
 #include "BrowserPlainWindow.h"
-#include "BrowserWindow.h"
+#include "BrowserTabbedWindow.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "LayouterWidgets.h"
@@ -38,28 +38,28 @@
 #include <webkit2/webkit2.h>
 
 void gtk_imp_convert_style(struct ws_widget_info *style,
-        purc_variant_t widget_style)
+        purc_variant_t toolkit_style)
 {
     style->darkMode = false;
     style->fullScreen = false;
     style->backgroundColor = NULL;
     style->flags |= WSWS_FLAG_TOOLKIT;
 
-    if (widget_style == PURC_VARIANT_INVALID)
+    if (toolkit_style == PURC_VARIANT_INVALID)
         return;
 
     purc_variant_t tmp;
-    if ((tmp = purc_variant_object_get_by_ckey(widget_style, "darkMode")) &&
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "darkMode")) &&
             purc_variant_is_true(tmp)) {
         style->darkMode = true;
     }
 
-    if ((tmp = purc_variant_object_get_by_ckey(widget_style, "fullScreen")) &&
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "fullScreen")) &&
             purc_variant_is_true(tmp)) {
         style->fullScreen = true;
     }
 
-    if ((tmp = purc_variant_object_get_by_ckey(widget_style,
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style,
                     "backgroundColor"))) {
         const char *value = purc_variant_get_string_const(tmp);
         if (value) {
@@ -173,6 +173,7 @@ gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
         return create_tabbedwin(ws_ctxt, init_arg, style);
 
     case WS_WIDGET_TYPE_CONTAINER:
+        return create_container(ws_ctxt, window, parent, style);
         break;
 
     case WS_WIDGET_TYPE_PANEHOST:

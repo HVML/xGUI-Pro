@@ -71,7 +71,7 @@ extern "C" {
 #endif
 
 void gtk_imp_convert_style(struct ws_widget_info *style,
-        purc_variant_t widget_style);
+        purc_variant_t toolkit_style);
 
 void *gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
         void *parent, void *init_arg, const struct ws_widget_info *style);

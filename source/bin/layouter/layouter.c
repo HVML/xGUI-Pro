@@ -182,7 +182,7 @@ static void get_element_name_title(pcdom_element_t *element,
 
 static void *create_widget_for_element(struct ws_layouter *layouter,
         pcdom_element_t *element, ws_widget_type_t type, void *window,
-        void *parent, void *init_arg, purc_variant_t widget_style)
+        void *parent, void *init_arg, purc_variant_t toolkit_style)
 {
     const HLBox *box;
     box = domruler_get_node_bounding_box(layouter->ruler,
@@ -199,7 +199,7 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
     style.title = title ? title: UNTITLED;
     style.klass = klass ? klass: NULL;
     fill_position(&style, box);
-    layouter->cb_convert_style(&style, widget_style);
+    layouter->cb_convert_style(&style, toolkit_style);
 
     void *widget = layouter->cb_create_widget(layouter->ws_ctxt,
             type, window, parent, init_arg, &style);
@@ -689,7 +689,7 @@ find_page_element(pcdom_document_t *dom_doc,
 void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         const char *group_id, const char *window_name,
         const char *class_name, const char *title, const char *layout_style,
-        purc_variant_t widget_style, void *init_arg, int *retv)
+        purc_variant_t toolkit_style, void *init_arg, int *retv)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
@@ -737,7 +737,7 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
 
             if ((widget = create_widget_for_element(layouter, figure,
                     WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, init_arg,
-                    widget_style)) == NULL) {
+                    toolkit_style)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }
@@ -925,7 +925,7 @@ static void *create_tabbed_window(struct ws_layouter *layouter,
 void *ws_layouter_add_page(struct ws_layouter *layouter,
         const char *group_id, const char *page_name,
         const char *class_name, const char *title, const char *layout_style,
-        purc_variant_t widget_style, void *init_arg, int *retv)
+        purc_variant_t toolkit_style, void *init_arg, int *retv)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
@@ -994,7 +994,7 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
 
             if ((widget = create_widget_for_element(layouter, li,
                             widget_type, tabbed_win, parent, init_arg,
-                            widget_style)) == NULL) {
+                            toolkit_style)) == NULL) {
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }
@@ -1145,7 +1145,7 @@ int ws_layouter_update_widget(struct ws_layouter *layouter,
 
         return PCRDR_SC_BAD_REQUEST;
     }
-    else if (strcasecmp(property, "widgetStyle") == 0) {
+    else if (strcasecmp(property, "toolkitStyle") == 0) {
         layouter->cb_convert_style(&style, value);
         if (style.flags & WSWS_FLAG_TOOLKIT) {
             layouter->cb_update_widget(layouter->ws_ctxt, widget, type, &style);

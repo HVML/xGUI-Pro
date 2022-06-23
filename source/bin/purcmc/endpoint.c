@@ -864,7 +864,7 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char* class = NULL;
     const char* title = NULL;
     const char* layout_style = NULL;
-    purc_variant_t widget_style;
+    purc_variant_t toolkit_style;
 
     if (msg->target == PCRDR_MSG_TARGET_WORKSPACE) {
         workspace = (void *)(uintptr_t)msg->targetValue;
@@ -911,12 +911,12 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
         layout_style = purc_variant_get_string_const(tmp);
     }
 
-    widget_style = purc_variant_object_get_by_ckey(msg->data, "widgetStyle");
+    toolkit_style = purc_variant_object_get_by_ckey(msg->data, "toolkitStyle");
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
     win = srv->cbs.create_plainwin(endpoint->session, workspace,
             request_id, gid, name, class, title, layout_style,
-            widget_style, &retv);
+            toolkit_style, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -1093,7 +1093,7 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char* class = NULL;
     const char* title = NULL;
     const char* layout_style = NULL;
-    purc_variant_t widget_style;
+    purc_variant_t toolkit_style;
     purc_variant_t tmp;
 
     if ((tmp = purc_variant_object_get_by_ckey(msg->data, "name"))) {
@@ -1116,12 +1116,12 @@ static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
         layout_style = purc_variant_get_string_const(tmp);
     }
 
-    widget_style = purc_variant_object_get_by_ckey(msg->data, "widgetStyle");
+    toolkit_style = purc_variant_object_get_by_ckey(msg->data, "toolkitStyle");
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
     page = srv->cbs.create_page(endpoint->session, workspace,
             request_id, gid, name, class, title, layout_style,
-            widget_style, &retv);
+            toolkit_style, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),

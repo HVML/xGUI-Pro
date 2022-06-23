@@ -76,7 +76,7 @@ static const char *widget_types[] = {
 };
 
 void my_convert_style(struct ws_widget_info *style,
-        purc_variant_t widget_style)
+        purc_variant_t toolkit_style)
 {
     // do nothing.
 }
