@@ -97,10 +97,11 @@ find_article_ancestor(pcdom_element_t *element)
 }
 
 static void
-fill_position(struct ws_widget_info *style, const HLBox *box)
+fill_position(struct ws_widget_info *style, const HLBox *box,
+        float off_x, float off_y)
 {
-    style->x = (int)(box->x + 0.5);
-    style->y = (int)(box->y + 0.5);
+    style->x = (int)(box->x - off_x + 0.5);
+    style->y = (int)(box->y - off_y + 0.5);
 
     if (box->w == HL_AUTO) {
         style->w = 0;
@@ -177,6 +178,34 @@ static void get_element_name_title(pcdom_element_t *element,
     }
 }
 
+static void calc_offsets(struct ws_layouter *layouter, pcdom_node_t *node,
+        float *off_x, float *off_y)
+{
+    if (is_an_element_with_tag(node, "FIGURE")) {
+        *off_x = *off_y = 0;
+        return;
+    }
+
+    *off_x = 0;
+    *off_y = 0;
+
+    node = node->parent;
+    while (node) {
+
+        if (node->user) {
+            const HLBox *box;
+            box = domruler_get_node_bounding_box(layouter->ruler, node);
+            *off_x += box->x;
+            *off_y += box->y;
+        }
+
+        if (is_an_element_with_tag(node, "ARTICLE"))
+            break;
+
+        node = node->parent;
+    }
+}
+
 #define ANONYMOUS_NAME      "annoymous"
 #define UNTITLED            "Untitled"
 
@@ -198,7 +227,9 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
     style.name = name ? name : ANONYMOUS_NAME;
     style.title = title ? title: UNTITLED;
     style.klass = klass ? klass: NULL;
-    fill_position(&style, box);
+    float off_x, off_y;
+    calc_offsets(layouter, pcdom_interface_node(element), &off_x, &off_y);
+    fill_position(&style, box, off_x, off_y);
     layouter->cb_convert_style(&style, toolkit_style);
 
     void *widget = layouter->cb_create_widget(layouter->ws_ctxt,
@@ -631,7 +662,9 @@ layout_widget_walker(pcdom_node_t *node, void *ctxt)
                 struct ws_widget_info style = { 0 };
 
                 style.flags = WSWS_FLAG_GEOMETRY;
-                fill_position(&style, box);
+                float off_x, off_y;
+                calc_offsets(my_ctxt->layouter, node, &off_x, &off_y);
+                fill_position(&style, box, off_x, off_y);
 
                 ws_widget_type_t type;
                 pcdom_element_t *element = pcdom_interface_element(node);
