@@ -93,8 +93,8 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
                     style->w, style->h);
             gtk_window_resize(GTK_WINDOW(plainwin), style->w, style->h);
         }
-        if (style->x >= 0 && style->y >= 0)
-            gtk_window_move(GTK_WINDOW(plainwin), style->x, style->y);
+
+        gtk_window_move(GTK_WINDOW(plainwin), style->x, style->y);
 
         gtk_window_set_resizable(GTK_WINDOW(plainwin), FALSE);
     }
@@ -134,7 +134,8 @@ static BrowserTabbedWindow *create_tabbedwin(purcmc_workspace *workspace,
 
     BrowserTabbedWindow *window;
     window = BROWSER_TABBED_WINDOW(browser_tabbed_window_new(NULL,
-                sess->web_context, style->name, style->title));
+                sess->web_context, style->name, style->title,
+                style->w, style->h));
 
     GtkApplication *application;
     application = g_object_get_data(G_OBJECT(sess->webkit_settings),
@@ -163,6 +164,7 @@ static BrowserTabbedWindow *create_tabbedwin(purcmc_workspace *workspace,
         }
     }
 
+    gtk_window_move(GTK_WINDOW(window), style->x, style->y);
     return window;
 }
 

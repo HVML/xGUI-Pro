@@ -40,6 +40,7 @@ struct _BrowserTabbedWindow {
     WebKitWebContext *webContext;
 
     GtkWidget *mainBox;
+    GtkWidget *mainFixed;
 
     /* widgets for toolbar */
     GtkWidget *toolbar;
@@ -69,6 +70,8 @@ struct _BrowserTabbedWindow {
 
     gchar *name;
     gchar *title;
+    gint width;
+    gint height;
 
     GdkRGBA backgroundColor;
 };
@@ -426,7 +429,7 @@ containerTryClose(BrowserTabbedWindow *window, GtkWidget *container)
             webViews = g_slist_prepend(webViews, browser_tab_get_web_view(tab));
         }
     }
-    else if (GTK_IS_BOX(container)) {
+    else if (GTK_IS_FIXED(container)) {
 #if GTK_CHECK_VERSION(4, 0, 0)
         GtkWidget *pane = gtk_widget_get_first_child(container);
         while (pane) {
@@ -521,13 +524,13 @@ webViewClose(WebKitWebView *webView, GtkWidget *container)
             }
         }
     }
-    else if (GTK_IS_BOX(container)) {
+    else if (GTK_IS_FIXED(container)) {
 #if GTK_CHECK_VERSION(4, 0, 0)
         GtkWidget *pane = gtk_widget_get_first_child(container);
         while (pane) {
             if (BRW_PANE2VIEW(pane) == webView) {
 #if GTK_CHECK_VERSION(3, 98, 4)
-                gtk_box_remove(GTK_BOX(container), pane);
+                gtk_box_remove(GTK_FIXED(container), pane);
 #else
                 gtk_widget_destroy(GTK_WIDGET(pane));
 #endif
@@ -1298,13 +1301,15 @@ static void browser_tabbed_window_init(BrowserTabbedWindow *window)
         window->backgroundColor.green = window->backgroundColor.blue = 255;
     window->backgroundColor.alpha = 1;
 
-    gtk_window_set_title(GTK_WINDOW(window), BROWSER_DEFAULT_TITLE);
-    gtk_window_set_default_size(GTK_WINDOW(window), 1024, 768);
+    gtk_window_set_title(GTK_WINDOW(window),
+            window->title ? window->title : BROWSER_DEFAULT_TITLE);
+    gtk_window_set_default_size(GTK_WINDOW(window),
+            (window->width > 0) ? window->width : 1024,
+            (window->height > 0) ? window->height : 768);
 
     g_action_map_add_action_entries(G_ACTION_MAP(window),
             actions, G_N_ELEMENTS(actions), window);
 
-    /* TODO: use FlowBox instead */
     GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     window->mainBox = vbox;
 #if GTK_CHECK_VERSION(3, 98, 5)
@@ -1312,6 +1317,17 @@ static void browser_tabbed_window_init(BrowserTabbedWindow *window)
 #else
     gtk_container_add(GTK_CONTAINER(window), vbox);
     gtk_widget_show(vbox);
+#endif
+
+    window->mainFixed = gtk_fixed_new();
+    gtk_widget_set_size_request(window->mainFixed,
+            (window->width > 0) ? window->width : 1024,
+            (window->height > 0) ? window->height : 768);
+#if GTK_CHECK_VERSION(3, 98, 5)
+    gtk_box_append(GTK_BOX(vbox), window->mainFixed);
+#else
+    gtk_box_pack_start(GTK_BOX(vbox), window->mainFixed, FALSE, FALSE, 0);
+    gtk_widget_show(window->mainFixed);
 #endif
 
 #if GTK_CHECK_VERSION(3, 98, 5)
@@ -1359,7 +1375,7 @@ browser_tabbed_window_class_init(BrowserTabbedWindowClass *klass)
 /* Public API. */
 GtkWidget *
 browser_tabbed_window_new(GtkWindow *parent, WebKitWebContext *webContext,
-        const char *name, const char *title)
+        const char *name, const char *title, gint width, gint height)
 {
     g_return_val_if_fail(WEBKIT_IS_WEB_CONTEXT(webContext), NULL);
 
@@ -1384,6 +1400,11 @@ browser_tabbed_window_new(GtkWindow *parent, WebKitWebContext *webContext,
 
     if (title)
         window->title = g_strdup(title);
+
+    if (width > 0)
+        window->width = width;
+    if (height > 0)
+        window->height = height;
 
     return GTK_WIDGET(window);
 }
@@ -1490,6 +1511,7 @@ browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window)
     return window->toolbar;
 }
 
+#if 0
 static GtkWidget *create_layout_container(const char *klass)
 {
     const char *occurrence;
@@ -1511,6 +1533,7 @@ static GtkWidget *create_layout_container(const char *klass)
 
     return gtk_box_new(orit, 0);
 }
+#endif
 
 GtkWidget*
 browser_tabbed_window_create_layout_container(BrowserTabbedWindow *window,
@@ -1521,21 +1544,17 @@ browser_tabbed_window_create_layout_container(BrowserTabbedWindow *window,
     if (container == NULL || (void *)container == (void *)window) {
         container = window->mainBox;
     }
-    else if (!GTK_IS_BOX(container)) {
-        g_warning("The container is not a GtkBox: %p", container);
+    else if (!GTK_IS_FIXED(container)) {
+        g_warning("The container is not a GtkFixed: %p", container);
         return NULL;
     }
 
-    GtkWidget *box = create_layout_container(klass);
+    GtkWidget *fixed = gtk_fixed_new();
 
-#if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_box_append(GTK_BOX(container), box);
-#else
-    gtk_box_pack_start(GTK_BOX(container), box, FALSE, FALSE, 0);
-    gtk_widget_show(box);
-#endif
-
-    return box;
+    gtk_fixed_put(GTK_FIXED(container), fixed, geometry->x, geometry->y);
+    gtk_widget_set_size_request(fixed, geometry->width, geometry->height);
+    gtk_widget_show(fixed);
+    return fixed;
 }
 
 GtkWidget*
@@ -1547,22 +1566,18 @@ browser_tabbed_window_create_pane_container(BrowserTabbedWindow *window,
     if (container == NULL || (void *)container == (void *)window) {
         container = window->mainBox;
     }
-    else if (!GTK_IS_BOX(container)) {
-        g_warning("The container is not a GtkBox: %p", container);
+    else if (!GTK_IS_FIXED(container)) {
+        g_warning("The container is not a GtkFixed: %p", container);
         return NULL;
     }
 
-    GtkWidget *box = create_layout_container(klass);
-    window->viewContainers = g_slist_append(window->viewContainers, box);
+    GtkWidget *fixed = gtk_fixed_new();
+    window->viewContainers = g_slist_append(window->viewContainers, fixed);
 
-#if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_box_append(GTK_BOX(container), box);
-#else
-    gtk_box_pack_start(GTK_BOX(container), box, TRUE, TRUE, 0);
-    gtk_widget_show(box);
-#endif
-
-    return box;
+    gtk_fixed_put(GTK_FIXED(container), fixed, geometry->x, geometry->y);
+    gtk_widget_set_size_request(fixed, geometry->width, geometry->height);
+    gtk_widget_show(fixed);
+    return fixed;
 }
 
 GtkWidget*
@@ -1574,8 +1589,8 @@ browser_tabbed_window_create_tab_container(BrowserTabbedWindow *window,
     if (container == NULL || (void *)container == (void *)window) {
         container = window->mainBox;
     }
-    else if (!GTK_IS_BOX(container)) {
-        g_warning("The container is not a GtkBox: %p", container);
+    else if (!GTK_IS_FIXED(container)) {
+        g_warning("The container is not a GtkFixed: %p", container);
         return NULL;
     }
 
@@ -1591,13 +1606,9 @@ browser_tabbed_window_create_tab_container(BrowserTabbedWindow *window,
 
     window->viewContainers = g_slist_append(window->viewContainers, notebook);
 
-#if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_box_append(GTK_BOX(container), notebook);
-#else
-    gtk_box_pack_start(GTK_BOX(container), notebook, TRUE, TRUE, 0);
+    gtk_fixed_put(GTK_FIXED(container), notebook, geometry->x, geometry->y);
+    gtk_widget_set_size_request(notebook, geometry->width, geometry->height);
     gtk_widget_show(notebook);
-#endif
-
     return notebook;
 }
 
@@ -1607,15 +1618,15 @@ browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
         const GdkRectangle *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
-    g_return_if_fail(GTK_IS_FLOW_BOX(container));
+    g_return_val_if_fail(GTK_IS_FIXED(container), NULL);
 
     if (webkit_web_view_is_editable(webView)) {
         g_warning("Editable webView is not allowed");
         return NULL;
     }
 
-    if (GTK_IS_BOX(container)) {
-        g_warning("Container is not a GtkBox");
+    if (GTK_IS_FIXED(container)) {
+        g_warning("Container is not a GtkFixed");
         return NULL;
     }
 
@@ -1623,11 +1634,8 @@ browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
             G_CALLBACK(webViewClose), container);
 
     GtkWidget *pane = browser_pane_new(webView);
-#if GTK_CHECK_VERSION(3, 98, 5)
-    gtk_box_append(GTK_BOX(container), pane);
-#else
-    gtk_container_add(GTK_CONTAINER(container), pane);
-#endif
+    gtk_fixed_put(GTK_FIXED(container), pane, geometry->x, geometry->y);
+    gtk_widget_set_size_request(pane, geometry->width, geometry->height);
 
 #if !GTK_CHECK_VERSION(3, 98, 0)
     if (gtk_widget_get_app_paintable(GTK_WIDGET(window)))

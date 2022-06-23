@@ -41,7 +41,7 @@ typedef struct _BrowserTabbedWindowClass   BrowserTabbedWindowClass;
 GType browser_tabbed_window_get_type(void);
 
 GtkWidget* browser_tabbed_window_new(GtkWindow*, WebKitWebContext*,
-        const char*, const char*);
+        const char*, const char*, gint, gint);
 
 WebKitWebContext* browser_tabbed_window_get_web_context(BrowserTabbedWindow*);
 
