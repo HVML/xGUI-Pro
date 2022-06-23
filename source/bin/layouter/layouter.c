@@ -182,7 +182,7 @@ static void get_element_name_title(pcdom_element_t *element,
 
 static void *create_widget_for_element(struct ws_layouter *layouter,
         pcdom_element_t *element, ws_widget_type_t type, void *window,
-        void *parent, void *init_arg, purc_variant_t toolkit_style)
+        void *container, void *init_arg, purc_variant_t toolkit_style)
 {
     const HLBox *box;
     box = domruler_get_node_bounding_box(layouter->ruler,
@@ -202,7 +202,7 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
     layouter->cb_convert_style(&style, toolkit_style);
 
     void *widget = layouter->cb_create_widget(layouter->ws_ctxt,
-            type, window, parent, init_arg, &style);
+            type, window, container, init_arg, &style);
     if (name) free(name);
     if (title) free(title);
     if (widget == NULL)

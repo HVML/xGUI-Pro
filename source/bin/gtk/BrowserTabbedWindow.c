@@ -464,19 +464,7 @@ browserTabbedWindowTryClose(GSimpleAction *action, GVariant *parameter,
 {
     BrowserTabbedWindow *window = BROWSER_TABBED_WINDOW(userData);
 
-    GSList *webViews = NULL;
-    int n = gtk_notebook_get_n_pages(GTK_NOTEBOOK(window->notebook));
-    int i;
-
-    for (i = 0; i < n; ++i) {
-        BrowserTab *tab = (BrowserTab *)gtk_notebook_get_nth_page(
-                GTK_NOTEBOOK(window->notebook), i);
-        webViews = g_slist_prepend(webViews, BRW_TAB2VIEW(tab));
-    }
-
-    GSList *link;
-    for (link = webViews; link; link = link->next)
-        webkit_web_view_try_close(link->data);
+    windowTryClose(window);
 }
 
 static void
@@ -1530,7 +1518,7 @@ browser_tabbed_window_create_layout_container(BrowserTabbedWindow *window,
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
-    if (container == NULL) {
+    if (container == NULL || (void *)container == (void *)window) {
         container = window->mainBox;
     }
     else if (!GTK_IS_BOX(container)) {
@@ -1556,7 +1544,7 @@ browser_tabbed_window_create_pane_container(BrowserTabbedWindow *window,
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
-    if (container == NULL) {
+    if (container == NULL || (void *)container == (void *)window) {
         container = window->mainBox;
     }
     else if (!GTK_IS_BOX(container)) {
@@ -1582,7 +1570,14 @@ browser_tabbed_window_create_tab_container(BrowserTabbedWindow *window,
         GtkWidget *container, const GdkRectangle *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
-    g_return_val_if_fail(GTK_IS_BOX(container), NULL);
+
+    if (container == NULL || (void *)container == (void *)window) {
+        container = window->mainBox;
+    }
+    else if (!GTK_IS_BOX(container)) {
+        g_warning("The container is not a GtkBox: %p", container);
+        return NULL;
+    }
 
     GtkWidget *notebook = gtk_notebook_new();
     g_signal_connect(notebook, "switch-page",
