@@ -127,38 +127,53 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
     return (struct purcmc_plainwin *)plainwin;
 }
 
-static BrowserWindow *create_tabbedwin(purcmc_workspace *workspace,
+static BrowserTabbedWindow *create_tabbedwin(purcmc_workspace *workspace,
         void *init_arg, const struct ws_widget_info *style)
 {
     purcmc_session *sess = workspace->sess;
 
-    BrowserWindow *main_win;
-    main_win = BROWSER_WINDOW(browser_window_new(NULL, sess->web_context));
+    BrowserTabbedWindow *window;
+    window = BROWSER_TABBED_WINDOW(browser_tabbed_window_new(NULL,
+                sess->web_context, style->name, style->title));
 
     GtkApplication *application;
     application = g_object_get_data(G_OBJECT(sess->webkit_settings),
             "gtk-application");
 
     gtk_application_add_window(GTK_APPLICATION(application),
-            GTK_WINDOW(main_win));
+            GTK_WINDOW(window));
+
+    if (style->withToolbar) {
+        browser_tabbed_window_create_or_get_toolbar(window);
+    }
 
     if (style->darkMode) {
-        g_object_set(gtk_widget_get_settings(GTK_WIDGET(main_win)),
+        g_object_set(gtk_widget_get_settings(GTK_WIDGET(window)),
                 "gtk-application-prefer-dark-theme", TRUE, NULL);
     }
 
     if (style->fullScreen) {
-        gtk_window_fullscreen(GTK_WINDOW(main_win));
+        gtk_window_fullscreen(GTK_WINDOW(window));
     }
 
     if (style->backgroundColor) {
         GdkRGBA rgba;
         if (gdk_rgba_parse(&rgba, style->backgroundColor)) {
-            browser_window_set_background_color(main_win, &rgba);
+            browser_tabbed_window_set_background_color(window, &rgba);
         }
     }
 
-    return main_win;
+    return window;
+}
+
+static GtkWidget *create_container(purcmc_workspace *workspace,
+        BrowserTabbedWindow *window, GtkWidget *parent,
+        const struct ws_widget_info *style)
+{
+    GdkRectangle geometry = { style->x, style->y, style->w, style->h };
+
+    return browser_tabbed_window_create_layout_container(window,
+            parent, style->klass, &geometry);
 }
 
 void *
@@ -174,7 +189,6 @@ gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
 
     case WS_WIDGET_TYPE_CONTAINER:
         return create_container(ws_ctxt, window, parent, style);
-        break;
 
     case WS_WIDGET_TYPE_PANEHOST:
         break;
