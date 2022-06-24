@@ -241,8 +241,9 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
                 name, title);
     }
     else {
-        purc_log_info("Create widget for name (%s), title (%s): %p\n",
-                name, title, widget);
+        purc_log_info("Created widget for element (%s) with name (%s), title (%s): %p (%d, %d; %u x %u)\n",
+                pcdom_element_local_name(element, NULL), name, title, widget,
+                style.x, style.y, style.w, style.h);
     }
 
     if (name) free(name);
@@ -539,7 +540,7 @@ struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
     layouter->cb_create_widget = cb_create_widget;
     layouter->cb_destroy_widget = cb_destroy_widget;
     layouter->cb_update_widget = cb_update_widget;
-    *retv = relayout(layouter, NULL);
+    *retv = relayout(layouter, pchtml_doc_get_body(layouter->dom_doc));
     return layouter;
 
 failed:
@@ -915,39 +916,39 @@ create_widget_walker(pcdom_node_t *node, void *ctxt)
         return PCHTML_ACTION_NEXT;
 
     case PCDOM_NODE_TYPE_ELEMENT:
-    {
-        const char *name;
-        size_t len;
+        if (node->user == NULL) {
+            const char *name;
+            size_t len;
 
-        pcdom_element_t *element;
-        element = pcdom_interface_element(node);
-        name = (const char *)pcdom_element_local_name(element, &len);
+            pcdom_element_t *element;
+            element = pcdom_interface_element(node);
+            name = (const char *)pcdom_element_local_name(element, &len);
 
-        ws_widget_type_t type = WS_WIDGET_TYPE_NONE;
-        struct create_widget_ctxt *my_ctxt = ctxt;
-        if (is_layout_tag(name)) {
-            type = WS_WIDGET_TYPE_CONTAINER;
-        }
-        else if (strcasecmp(name, "OL") == 0) {
-            type = WS_WIDGET_TYPE_PANEHOST;
-        }
-        else if (strcasecmp(name, "UL") == 0) {
-            type = WS_WIDGET_TYPE_TABHOST;
-        }
+            ws_widget_type_t type = WS_WIDGET_TYPE_NONE;
+            struct create_widget_ctxt *my_ctxt = ctxt;
+            if (is_layout_tag(name)) {
+                type = WS_WIDGET_TYPE_CONTAINER;
+            }
+            else if (strcasecmp(name, "OL") == 0) {
+                type = WS_WIDGET_TYPE_PANEHOST;
+            }
+            else if (strcasecmp(name, "UL") == 0) {
+                type = WS_WIDGET_TYPE_TABHOST;
+            }
 
-        if (type != WS_WIDGET_TYPE_NONE) {
-            create_widget_for_element(my_ctxt->layouter, element, type,
-                    my_ctxt->tabbed_window, node->parent->user,
-                    NULL, PURC_VARIANT_INVALID);
-        }
+            if (type != WS_WIDGET_TYPE_NONE) {
+                create_widget_for_element(my_ctxt->layouter, element, type,
+                        my_ctxt->tabbed_window, node->parent->user,
+                        NULL, PURC_VARIANT_INVALID);
+            }
 
-        if (node->first_child) {
-            return PCHTML_ACTION_OK;
-        }
+            if (node->first_child) {
+                return PCHTML_ACTION_OK;
+            }
 
-        /* walk to the siblings. */
-        return PCHTML_ACTION_NEXT;
-    }
+            /* walk to the siblings. */
+            return PCHTML_ACTION_NEXT;
+        }
 
     default:
         /* ignore any unknown node types */

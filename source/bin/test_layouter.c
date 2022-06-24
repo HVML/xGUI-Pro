@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
     char *html;
     size_t len_html;
     html = load_asset_content(NULL, NULL,
-                "test_layouter.html", &len_html);
+                (argc > 1) ? argv[1] : "test_layouter.html", &len_html);
     assert(html);
 
     struct ws_layouter *layouter;
@@ -258,6 +258,12 @@ int main(int argc, char *argv[])
 
     if (layouter == NULL) {
         return retv;
+    }
+
+    if (argc > 1) {
+        ws_layouter_delete(layouter);
+        sorted_array_destroy(ctxt.sa_widget);
+        return 0;
     }
 
     pcdom_element_t *element;
