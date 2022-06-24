@@ -22,8 +22,8 @@
 
 #include "config.h"
 #include "main.h"
+#include "BrowserPane.h"
 #include "BrowserPlainWindow.h"
-#include "BrowserWindow.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "HVMLURISchema.h"
@@ -496,8 +496,6 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         gtk_widget_grab_focus(GTK_WIDGET(web_view));
         gtk_widget_show(GTK_WIDGET(plain_win));
 
-        gtk_window_resize(GTK_WINDOW(plain_win), 320, 240);
-
         sorted_array_add(sess->all_handles, PTR2U64(plain_win),
                 INT2PTR(HT_PLAINWIN));
         sorted_array_add(sess->all_handles, PTR2U64(web_view),
@@ -599,7 +597,14 @@ static inline WebKitWebView *validate_page(purcmc_session *sess,
         return NULL;
     }
 
-    if ((uintptr_t)data != HT_WEBVIEW) {
+    if ((uintptr_t)data == HT_PAGE) {
+        BrowserPane *pane = BROWSER_PANE(page);
+        return browser_pane_get_web_view(pane);
+    }
+    else if ((uintptr_t)data == HT_WEBVIEW) {
+        return (WebKitWebView *)page;
+    }
+    else {
         *retv = PCRDR_SC_BAD_REQUEST;
         return NULL;
     }
@@ -987,6 +992,16 @@ purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
         page = ws_layouter_add_page(workspace->layouter,
                     gid, name, class_name, title,
                     layout_style, toolkit_style, web_view, retv);
+
+        if (page) {
+            sorted_array_add(sess->all_handles, PTR2U64(page),
+                    INT2PTR(HT_PAGE));
+            sorted_array_add(sess->all_handles, PTR2U64(web_view),
+                    INT2PTR(HT_WEBVIEW));
+        }
+        else {
+            gtk_widget_destroy(GTK_WIDGET(web_view));
+        }
     }
 
     return page;

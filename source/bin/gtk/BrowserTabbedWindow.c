@@ -1564,7 +1564,7 @@ browser_tabbed_window_create_pane_container(BrowserTabbedWindow *window,
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
     if (container == NULL || (void *)container == (void *)window) {
-        container = window->mainBox;
+        container = window->mainFixed;
     }
     else if (!GTK_IS_FIXED(container)) {
         g_warning("The container is not a GtkFixed: %p", container);
@@ -1587,7 +1587,7 @@ browser_tabbed_window_create_tab_container(BrowserTabbedWindow *window,
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
     if (container == NULL || (void *)container == (void *)window) {
-        container = window->mainBox;
+        container = window->mainFixed;
     }
     else if (!GTK_IS_FIXED(container)) {
         g_warning("The container is not a GtkFixed: %p", container);
@@ -1625,8 +1625,8 @@ browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
         return NULL;
     }
 
-    if (GTK_IS_FIXED(container)) {
-        g_warning("Container is not a GtkFixed");
+    if (!GTK_IS_FIXED(container)) {
+        g_warning("Container is not a GtkFixed: %p", container);
         return NULL;
     }
 

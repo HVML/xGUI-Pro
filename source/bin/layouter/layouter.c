@@ -216,8 +216,10 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
     const HLBox *box;
     box = domruler_get_node_bounding_box(layouter->ruler,
             pcdom_interface_node(element));
-    if (box == NULL)
+    if (box == NULL) {
+        purc_log_error("Cannot get bounding box for element\n");
         return NULL;
+    }
 
     char *name, *title, *klass;
     get_element_name_title(element, &name, &title, &klass);
@@ -234,10 +236,20 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
 
     void *widget = layouter->cb_create_widget(layouter->ws_ctxt,
             type, window, container, init_arg, &style);
+    if (widget == NULL) {
+        purc_log_error("Failed to create widget for name (%s), title (%s)\n",
+                name, title);
+    }
+    else {
+        purc_log_info("Create widget for name (%s), title (%s): %p\n",
+                name, title, widget);
+    }
+
     if (name) free(name);
     if (title) free(title);
-    if (widget == NULL)
+    if (widget == NULL) {
         return NULL;
+    }
 
     set_element_user_data(element, widget);
     if (sorted_array_add(layouter->sa_widget,
@@ -355,9 +367,10 @@ static void *find_window_of_widget(pcdom_element_t *element)
 {
     pcdom_node_t *node = pcdom_interface_node(element);
 
-    node = node->parent;
     while (node) {
-        if (is_an_element_with_tag(node, "ARTICLE"))
+        if (is_an_element_with_tag(node, "FIGURE"))
+            return node->user;
+        else if (is_an_element_with_tag(node, "ARTICLE"))
             return node->user;
         else if (is_an_element_with_tag(node, "BODY"))
             break;
@@ -375,7 +388,7 @@ static bool destroy_widget_for_element(struct ws_layouter *layouter,
     void *container = find_container_of_widget(element);
     void *window = find_window_of_widget(element);
 
-    if (widget && container && window) {
+    if (widget && window) {
         sorted_array_remove(layouter->sa_widget, PTR2U64(widget));
 
         ws_widget_type_t type;
@@ -450,6 +463,9 @@ static void append_css_in_style_element(struct ws_layouter *layouter)
             append_style_walker, layouter);
 }
 
+static int
+relayout(struct ws_layouter *layouter, pcdom_element_t *subtree_root);
+
 struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
         const char *html_contents, size_t sz_html_contents, void *ws_ctxt,
         wsltr_convert_style_fn cb_convert_style,
@@ -523,7 +539,7 @@ struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
     layouter->cb_create_widget = cb_create_widget;
     layouter->cb_destroy_widget = cb_destroy_widget;
     layouter->cb_update_widget = cb_update_widget;
-    *retv = PCRDR_SC_OK;
+    *retv = relayout(layouter, NULL);
     return layouter;
 
 failed:
@@ -952,11 +968,14 @@ static void *create_tabbed_window(struct ws_layouter *layouter,
                 WS_WIDGET_TYPE_TABBEDWINDOW,
                 NULL, NULL, NULL, PURC_VARIANT_INVALID);
 
-        struct create_widget_ctxt ctxt = { layouter, tabbed_window };
-        pcdom_node_simple_walk(pcdom_interface_node(article),
-                create_widget_walker, &ctxt);
+        if (tabbed_window == NULL) {
+            return NULL;
+        }
     }
 
+    struct create_widget_ctxt ctxt = { layouter, tabbed_window };
+    pcdom_node_simple_walk(pcdom_interface_node(article),
+            create_widget_walker, &ctxt);
     return tabbed_window;
 }
 
@@ -1013,15 +1032,19 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
             dom_append_subtree_to_element(dom_doc, element, subtree);
 
             void *tabbed_win = NULL;
-            void *container = get_element_user_data(element);
-            if (container == NULL) {
-                /* create the ancestor widgets */
-                if ((tabbed_win = create_tabbed_window(layouter, article))) {
-                    container = get_element_user_data(element);
-                }
+            void *container;
+            /* create the ancestor widgets */
+            if ((tabbed_win = create_tabbed_window(layouter, article))) {
+                container = get_element_user_data(element);
+            }
+            else {
+                purc_log_error("Failed to create the tabbed window\n");
+                *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
+                goto failed;
             }
 
             if (container == NULL) {
+                purc_log_error("Failed to create the container\n");
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }
@@ -1036,6 +1059,7 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
             if ((widget = create_widget_for_element(layouter, li,
                             widget_type, tabbed_win, container, init_arg,
                             toolkit_style)) == NULL) {
+                purc_log_error("Failed to create widget for page\n");
                 *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
                 goto failed;
             }
@@ -1043,6 +1067,7 @@ void *ws_layouter_add_page(struct ws_layouter *layouter,
             *retv = PCRDR_SC_OK;
         }
         else {
+            purc_log_error("Failed to parse the HTML fragment for new page\n");
             *retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
         }
     }

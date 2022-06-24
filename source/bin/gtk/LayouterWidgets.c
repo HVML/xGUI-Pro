@@ -42,6 +42,7 @@ void gtk_imp_convert_style(struct ws_widget_info *style,
 {
     style->darkMode = false;
     style->fullScreen = false;
+    style->withToolbar = false;
     style->backgroundColor = NULL;
     style->flags |= WSWS_FLAG_TOOLKIT;
 
@@ -57,6 +58,11 @@ void gtk_imp_convert_style(struct ws_widget_info *style,
     if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "fullScreen")) &&
             purc_variant_is_true(tmp)) {
         style->fullScreen = true;
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "withToolbar")) &&
+            purc_variant_is_true(tmp)) {
+        style->withToolbar = true;
     }
 
     if ((tmp = purc_variant_object_get_by_ckey(toolkit_style,
@@ -164,7 +170,10 @@ static BrowserTabbedWindow *create_tabbedwin(purcmc_workspace *workspace,
         }
     }
 
+    LOG_INFO("the geometry of created tabbedWindow: %d, %d; %u x %u\n",
+            style->x, style->y, style->w, style->h);
     gtk_window_move(GTK_WINDOW(window), style->x, style->y);
+    gtk_widget_show(GTK_WIDGET(window));
     return window;
 }
 
@@ -220,7 +229,7 @@ void *
 gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
         void *container, void *init_arg, const struct ws_widget_info *style)
 {
-    switch(type) {
+    switch (type) {
     case WS_WIDGET_TYPE_PLAINWINDOW:
         return create_plainwin(ws_ctxt, init_arg, style);
 
