@@ -383,7 +383,6 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
             /* endpoint might be deleted already. */
             if (endpoint) {
                 /* post close event for the plainwindow */
-                LOG_DEBUG("post close event for the plainwindow (%p)\n", container);
                 event.target = PCRDR_MSG_TARGET_PLAINWINDOW;
                 event.targetValue = PTR2U64(container);
                 purcmc_endpoint_post_event(sess->srv, endpoint, &event);
@@ -401,7 +400,7 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
             if (endpoint) {
                 /* post close event for the page */
                 event.target = PCRDR_MSG_TARGET_PAGE;
-                event.targetValue = PTR2U64(web_view);
+                event.targetValue = PTR2U64(container);
                 purcmc_endpoint_post_event(sess->srv,
                     get_endpoint_by_session(sess), &event);
             }
