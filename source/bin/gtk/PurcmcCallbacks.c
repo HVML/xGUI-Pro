@@ -914,8 +914,8 @@ static void get_monitor_geometry(struct ws_metrics *ws_geometry)
 
     ws_geometry->width  = geometry.width;
     ws_geometry->height = geometry.height;
-    ws_geometry->dpi = 120; /* TODO: calculate from physical width and height */
-    ws_geometry->density = 1;
+    ws_geometry->dpi = 72; /* TODO: calculate from physical width and height */
+    ws_geometry->density = 27;
 }
 
 int gtk_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
