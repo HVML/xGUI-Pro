@@ -364,6 +364,8 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
         GtkWidget *container = g_object_get_data(G_OBJECT(web_view),
                 "purcmc-container");
 
+        sorted_array_remove(sess->all_handles, PTR2U64(container));
+
         pcrdr_msg event = { };
         event.type = PCRDR_MSG_TYPE_EVENT;
         event.eventName = purc_variant_make_string_static("close", false);
@@ -375,8 +377,8 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
         event.property = PURC_VARIANT_INVALID;
         event.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
+        purcmc_endpoint *endpoint = get_endpoint_by_session(sess);
         if (BROWSER_IS_PLAIN_WINDOW(container)) {
-            purcmc_endpoint *endpoint = get_endpoint_by_session(sess);
 
             /* endpoint might be deleted already. */
             if (endpoint) {
@@ -387,8 +389,6 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
                 purcmc_endpoint_post_event(sess->srv, endpoint, &event);
             }
 
-            sorted_array_remove(sess->all_handles, PTR2U64(container));
-
             const char *name = browser_plain_window_get_name(
                         BROWSER_PLAIN_WINDOW(container));
             kvlist_delete(&sess->workspace.ug_wins, name);
@@ -397,11 +397,14 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
                     WS_WIDGET_TYPE_PLAINWINDOW); */
         }
         else {
-            /* post close event for the page */
-            event.target = PCRDR_MSG_TARGET_PAGE;
-            event.targetValue = PTR2U64(web_view);
-            purcmc_endpoint_post_event(sess->srv,
-                get_endpoint_by_session(sess), &event);
+            /* endpoint might be deleted already. */
+            if (endpoint) {
+                /* post close event for the page */
+                event.target = PCRDR_MSG_TARGET_PAGE;
+                event.targetValue = PTR2U64(web_view);
+                purcmc_endpoint_post_event(sess->srv,
+                    get_endpoint_by_session(sess), &event);
+            }
         }
     }
 
@@ -605,7 +608,7 @@ static inline WebKitWebView *validate_page(purcmc_session *sess,
         return NULL;
     }
 
-    if ((uintptr_t)data == HT_PAGE) {
+    if ((uintptr_t)data == HT_PANE_TAB) {
         BrowserPane *pane = BROWSER_PANE(page);
         return browser_pane_get_web_view(pane);
     }
@@ -1007,7 +1010,7 @@ purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
             gtk_widget_grab_focus(GTK_WIDGET(web_view));
 
             sorted_array_add(sess->all_handles, PTR2U64(page),
-                    INT2PTR(HT_PAGE));
+                    INT2PTR(HT_PANE_TAB));
             sorted_array_add(sess->all_handles, PTR2U64(web_view),
                     INT2PTR(HT_WEBVIEW));
             *retv = 0;

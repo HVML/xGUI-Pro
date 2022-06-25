@@ -133,6 +133,31 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
     return (struct purcmc_plainwin *)plainwin;
 }
 
+static void
+on_destroy_tabbed_window(BrowserTabbedWindow *window, purcmc_session *sess)
+{
+    void *data;
+    if (!sorted_array_find(sess->all_handles, PTR2U64(window), &data)
+            || (uintptr_t)data != HT_TABBEDWIN) {
+        LOG_ERROR("ODD tabbede window: %p\n", window);
+        return;
+    }
+
+    sorted_array_remove(sess->all_handles, PTR2U64(window));
+}
+
+static void on_destroy_container(GtkWidget *container, purcmc_session *sess)
+{
+    void *data;
+    if (!sorted_array_find(sess->all_handles, PTR2U64(container), &data)
+            || (uintptr_t)data != HT_CONTAINER) {
+        LOG_ERROR("ODD container: %p\n", container);
+        return;
+    }
+
+    sorted_array_remove(sess->all_handles, PTR2U64(container));
+}
+
 static BrowserTabbedWindow *create_tabbedwin(purcmc_workspace *workspace,
         void *init_arg, const struct ws_widget_info *style)
 {
@@ -170,8 +195,10 @@ static BrowserTabbedWindow *create_tabbedwin(purcmc_workspace *workspace,
         }
     }
 
-    LOG_INFO("the geometry of created tabbedWindow: %d, %d; %u x %u\n",
-            style->x, style->y, style->w, style->h);
+    sorted_array_add(sess->all_handles, PTR2U64(window), INT2PTR(HT_TABBEDWIN));
+    g_signal_connect(window, "destroy",
+            G_CALLBACK(on_destroy_tabbed_window), sess);
+
     gtk_window_move(GTK_WINDOW(window), style->x, style->y);
     gtk_widget_show(GTK_WIDGET(window));
     return window;
@@ -183,8 +210,18 @@ static GtkWidget *create_layout_container(purcmc_workspace *workspace,
 {
     GdkRectangle geometry = { style->x, style->y, style->w, style->h };
 
-    return browser_tabbed_window_create_layout_container(window,
+    GtkWidget *widget = browser_tabbed_window_create_layout_container(window,
             container, style->klass, &geometry);
+    if (widget) {
+        purcmc_session *sess = workspace->sess;
+
+        sorted_array_add(sess->all_handles, PTR2U64(widget),
+                INT2PTR(HT_CONTAINER));
+        g_signal_connect(widget, "destroy",
+                G_CALLBACK(on_destroy_container), sess);
+    }
+
+    return widget;
 }
 
 static GtkWidget *create_pane_container(purcmc_workspace *workspace,
@@ -193,8 +230,18 @@ static GtkWidget *create_pane_container(purcmc_workspace *workspace,
 {
     GdkRectangle geometry = { style->x, style->y, style->w, style->h };
 
-    return browser_tabbed_window_create_pane_container(window,
+    GtkWidget *widget = browser_tabbed_window_create_pane_container(window,
             container, style->klass, &geometry);
+    if (widget) {
+        purcmc_session *sess = workspace->sess;
+
+        sorted_array_add(sess->all_handles, PTR2U64(widget),
+                INT2PTR(HT_CONTAINER));
+        g_signal_connect(widget, "destroy",
+                G_CALLBACK(on_destroy_container), sess);
+    }
+
+    return widget;
 }
 
 static GtkWidget *create_tab_container(purcmc_workspace *workspace,
@@ -203,8 +250,18 @@ static GtkWidget *create_tab_container(purcmc_workspace *workspace,
 {
     GdkRectangle geometry = { style->x, style->y, style->w, style->h };
 
-    return browser_tabbed_window_create_tab_container(window,
+    GtkWidget *widget = browser_tabbed_window_create_tab_container(window,
             container, &geometry);
+    if (widget) {
+        purcmc_session *sess = workspace->sess;
+
+        sorted_array_add(sess->all_handles, PTR2U64(widget),
+                INT2PTR(HT_CONTAINER));
+        g_signal_connect(widget, "destroy",
+                G_CALLBACK(on_destroy_container), sess);
+    }
+
+    return widget;
 }
 
 static GtkWidget *create_pane(purcmc_workspace *workspace,
@@ -213,16 +270,24 @@ static GtkWidget *create_pane(purcmc_workspace *workspace,
 {
     GdkRectangle geometry = { style->x, style->y, style->w, style->h };
 
-    return browser_tabbed_window_append_view_pane(window,
+    GtkWidget *widget = browser_tabbed_window_append_view_pane(window,
             container, web_view, &geometry);
+    if (widget)
+        g_object_set_data(G_OBJECT(web_view), "purcmc-container", widget);
+
+    return widget;
 }
 
 static GtkWidget *create_tab(purcmc_workspace *workspace,
         BrowserTabbedWindow *window, GtkWidget *container,
         WebKitWebView *web_view, const struct ws_widget_info *style)
 {
-    return browser_tabbed_window_append_view_tab(window,
+    GtkWidget *widget = browser_tabbed_window_append_view_tab(window,
             container, web_view);
+    if (widget)
+        g_object_set_data(G_OBJECT(web_view), "purcmc-container", widget);
+
+    return widget;
 }
 
 void *
@@ -280,6 +345,24 @@ static int destroy_plainwin(purcmc_workspace *workspace,
 static int destroy_container_in_tabbedwin(purcmc_workspace *workspace,
         BrowserTabbedWindow *window, GtkWidget *container)
 {
+    purcmc_session *sess = workspace->sess;
+
+    void *data;
+    if (!sorted_array_find(sess->all_handles, PTR2U64(window), &data)) {
+        LOG_INFO("The tabbed window (%p) has been destroyed.\n", window);
+        return PCRDR_SC_OK;
+    }
+    assert((uintptr_t)data == HT_TABBEDWIN);
+
+    if (container != NULL && (uintptr_t)container != (uintptr_t)window) {
+        if (!sorted_array_find(sess->all_handles,
+                    PTR2U64(container), &data)) {
+            LOG_INFO("The container (%p) has been destroyed.\n", container);
+            return PCRDR_SC_OK;
+        }
+        assert((uintptr_t)data == HT_CONTAINER);
+    }
+
     browser_tabbed_window_clear_container(window, container);
     return PCRDR_SC_OK;
 }
@@ -287,6 +370,21 @@ static int destroy_container_in_tabbedwin(purcmc_workspace *workspace,
 static int destroy_pane_or_tab_in_tabbedwin(purcmc_workspace *workspace,
         BrowserTabbedWindow *window, GtkWidget *pane_or_tab)
 {
+    purcmc_session *sess = workspace->sess;
+
+    void *data;
+    if (!sorted_array_find(sess->all_handles, PTR2U64(window), &data)) {
+        LOG_INFO("The tabbed window (%p) has been destroyed.\n", window);
+        return PCRDR_SC_OK;
+    }
+    assert((uintptr_t)data == HT_TABBEDWIN);
+
+    if (!sorted_array_find(sess->all_handles, PTR2U64(pane_or_tab), &data)) {
+        LOG_INFO("The pane or tab (%p) has been destroyed.\n", pane_or_tab);
+        return PCRDR_SC_OK;
+    }
+    assert((uintptr_t)data == HT_CONTAINER);
+
     browser_tabbed_window_clear_pane_or_tab(window, pane_or_tab);
     return PCRDR_SC_OK;
 }

@@ -623,9 +623,9 @@ destroy_widget_walker(pcdom_node_t *node, void *ctxt)
     case PCDOM_NODE_TYPE_ELEMENT:
         if (node->user) {
             struct destroy_widget_ctxt *my_ctxt = ctxt;
-            destroy_widget_for_element(my_ctxt->layouter,
-                    pcdom_interface_element(node));
-            my_ctxt->nr_destroyed++;
+            if (destroy_widget_for_element(my_ctxt->layouter,
+                    pcdom_interface_element(node)))
+                my_ctxt->nr_destroyed++;
 
             node->user = NULL;
         }

@@ -34,7 +34,9 @@
 enum {
     HT_WORKSPACE = 0,
     HT_PLAINWIN,
-    HT_PAGE,
+    HT_TABBEDWIN,
+    HT_CONTAINER,
+    HT_PANE_TAB,
     HT_WEBVIEW,
 };
 

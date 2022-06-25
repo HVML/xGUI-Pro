@@ -487,18 +487,26 @@ static void removePane(BrowserPane* pane, WebKitWebView *webView)
 }
 #endif
 
+static BrowserTabbedWindow *get_main_window(GtkWidget *widget)
+{
+    BrowserTabbedWindow *main_win = NULL;
+
+    while (widget) {
+        if (BROWSER_IS_TABBED_WINDOW(widget)) {
+            main_win = BROWSER_TABBED_WINDOW(widget);
+            break;
+        }
+
+        widget = gtk_widget_get_parent(widget);
+    }
+
+    return main_win;
+}
+
 static void
 webViewClose(WebKitWebView *webView, GtkWidget *container)
 {
-    GdkWindow *win = gtk_widget_get_window(container);
-
-    if (win == NULL) {
-        g_warning("UNREALIZED wigdet (%p, %s)",
-                container, gtk_widget_get_name(container));
-        return;
-    }
-
-    BrowserTabbedWindow *window = BROWSER_TABBED_WINDOW(win);
+    BrowserTabbedWindow *window = get_main_window(container);
     if (window->nrViews == 1) {
 #if GTK_CHECK_VERSION(3, 98, 4)
         gtk_window_destroy(GTK_WINDOW(window));
@@ -547,7 +555,10 @@ webViewClose(WebKitWebView *webView, GtkWidget *container)
     else {
         g_warning("ODD widget (%p, %s)",
                 container, gtk_widget_get_name(container));
+        return;
     }
+
+    window->nrViews--;
 }
 
 static gboolean
@@ -1651,6 +1662,7 @@ browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
                 &window->backgroundColor);
     gtk_widget_show(pane);
 
+    window->nrViews++;
     return pane;
 }
 
@@ -1691,6 +1703,7 @@ browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
 #endif
     gtk_widget_show(tab);
 
+    window->nrViews++;
     return tab;
 }
 
@@ -1700,7 +1713,7 @@ browser_tabbed_window_clear_container(BrowserTabbedWindow *window,
 {
     g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
 
-    if (container == NULL) {
+    if ((void *)window == (void *)container || container == NULL) {
         windowTryClose(window);
     }
     else {
