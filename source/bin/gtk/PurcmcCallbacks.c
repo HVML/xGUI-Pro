@@ -427,6 +427,32 @@ static WebKitWebView *create_web_view(purcmc_session *sess)
                 NULL));
 }
 
+static void web_view_load_uri(WebKitWebView *web_view,
+        purcmc_session *sess, const char *gid, const char *name,
+        const char *request_id)
+{
+    g_signal_connect(web_view, "close",
+            G_CALLBACK(on_webview_close), sess);
+    g_signal_connect(web_view, "user-message-received",
+            G_CALLBACK(user_message_received_callback),
+            sess);
+
+    char uri[strlen(sess->uri_prefix) + (gid ? strlen(gid) : 0) +
+        strlen(name) + strlen(request_id) + 12];
+    strcpy(uri, sess->uri_prefix);
+    if (gid) {
+        strcat(uri, gid);
+        strcat(uri, "/");
+    }
+    else {
+        strcat(uri, "-/");
+    }
+    strcat(uri, name);
+    strcat(uri, "?irId=");
+    strcat(uri, request_id);
+    webkit_web_view_load_uri(web_view, uri);
+}
+
 purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace,
         const char *request_id, const char *gid, const char *name,
@@ -472,26 +498,8 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
     }
 
     if (plain_win) {
-        g_signal_connect(web_view, "close",
-                G_CALLBACK(on_webview_close), sess);
-        g_signal_connect(web_view, "user-message-received",
-                G_CALLBACK(user_message_received_callback),
-                sess);
 
-        char uri[strlen(sess->uri_prefix) + (gid ? strlen(gid) : 0) +
-            strlen(name) + strlen(request_id) + 12];
-        strcpy(uri, sess->uri_prefix);
-        if (gid) {
-            strcat(uri, gid);
-            strcat(uri, "/");
-        }
-        else {
-            strcat(uri, "-/");
-        }
-        strcat(uri, name);
-        strcat(uri, "?irId=");
-        strcat(uri, request_id);
-        webkit_web_view_load_uri(web_view, uri);
+        web_view_load_uri(web_view, sess, gid, name, request_id);
 
         gtk_widget_grab_focus(GTK_WIDGET(web_view));
         gtk_widget_show(GTK_WIDGET(plain_win));
@@ -994,10 +1002,15 @@ purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
                     layout_style, toolkit_style, web_view, retv);
 
         if (page) {
+            web_view_load_uri(web_view, sess, gid, name, request_id);
+
+            gtk_widget_grab_focus(GTK_WIDGET(web_view));
+
             sorted_array_add(sess->all_handles, PTR2U64(page),
                     INT2PTR(HT_PAGE));
             sorted_array_add(sess->all_handles, PTR2U64(web_view),
                     INT2PTR(HT_WEBVIEW));
+            *retv = 0;
         }
         else {
             gtk_widget_destroy(GTK_WIDGET(web_view));

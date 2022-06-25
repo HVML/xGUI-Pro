@@ -1542,9 +1542,10 @@ browser_tabbed_window_create_layout_container(BrowserTabbedWindow *window,
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
     if (container == NULL || (void *)container == (void *)window) {
-        container = window->mainBox;
+        container = window->mainFixed;
     }
-    else if (!GTK_IS_FIXED(container)) {
+
+    if (!GTK_IS_FIXED(container)) {
         g_warning("The container is not a GtkFixed: %p", container);
         return NULL;
     }
@@ -1573,6 +1574,9 @@ browser_tabbed_window_create_pane_container(BrowserTabbedWindow *window,
 
     GtkWidget *fixed = gtk_fixed_new();
     window->viewContainers = g_slist_append(window->viewContainers, fixed);
+
+    g_warning("Creating pan container: (%d, %d; %d x %d)",
+            geometry->x, geometry->y, geometry->width, geometry->height);
 
     gtk_fixed_put(GTK_FIXED(container), fixed, geometry->x, geometry->y);
     gtk_widget_set_size_request(fixed, geometry->width, geometry->height);
@@ -1636,6 +1640,9 @@ browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
     GtkWidget *pane = browser_pane_new(webView);
     gtk_fixed_put(GTK_FIXED(container), pane, geometry->x, geometry->y);
     gtk_widget_set_size_request(pane, geometry->width, geometry->height);
+
+    g_warning("Creating pan: (%d, %d; %d x %d)",
+            geometry->x, geometry->y, geometry->width, geometry->height);
 
 #if !GTK_CHECK_VERSION(3, 98, 0)
     if (gtk_widget_get_app_paintable(GTK_WIDGET(window)))
