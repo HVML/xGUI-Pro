@@ -133,6 +133,34 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
     return (struct purcmc_plainwin *)plainwin;
 }
 
+static void post_tabbedwindow_event(purcmc_session *sess, void *window,
+        bool create_or_destroy)
+{
+    purcmc_endpoint *endpoint = purcmc_get_endpoint_by_session(sess);
+    /* endpoint might be deleted already. */
+    if (endpoint) {
+        char buff[64];
+        sprintf(buff, "%llx", (unsigned long long)PTR2U64(window));
+
+        pcrdr_msg event = { };
+        event.type = PCRDR_MSG_TYPE_EVENT;
+        event.target = PCRDR_MSG_TARGET_WORKSPACE;
+        event.targetValue = 0;  /* XXX: only one workspace */
+        event.eventName =
+            purc_variant_make_string_static(create_or_destroy ?
+                    "create:tabbedwindow" : "destroy:tabbedwindow", false);
+        /* TODO: use real URI for the sourceURI */
+        event.sourceURI = purc_variant_make_string_static(PCRDR_APP_RENDERER,
+                false);
+        event.elementType = PCRDR_MSG_ELEMENT_TYPE_HANDLE;
+        event.elementValue = purc_variant_make_string_static(buff, false);
+        event.property = PURC_VARIANT_INVALID;
+        event.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+
+        purcmc_endpoint_post_event(sess->srv, endpoint, &event);
+    }
+}
+
 static void
 on_destroy_tabbed_window(BrowserTabbedWindow *window, purcmc_session *sess)
 {
@@ -143,6 +171,7 @@ on_destroy_tabbed_window(BrowserTabbedWindow *window, purcmc_session *sess)
         return;
     }
 
+    post_tabbedwindow_event(sess, window, false);
     sorted_array_remove(sess->all_handles, PTR2U64(window));
 }
 
@@ -201,6 +230,8 @@ static BrowserTabbedWindow *create_tabbedwin(purcmc_workspace *workspace,
 
     gtk_window_move(GTK_WINDOW(window), style->x, style->y);
     gtk_widget_show(GTK_WIDGET(window));
+
+    post_tabbedwindow_event(sess, window, true);
     return window;
 }
 

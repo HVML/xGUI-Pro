@@ -83,6 +83,12 @@ purc_variant_t gtk_set_property_in_dom(purcmc_session *, const char *,
 bool gtk_pend_response(purcmc_session* sess, const char *operation,
         const char *request_id, void *result_value);
 
+/*
+ * Use this function to retrieve the endpoint of a session.
+ * the endpoint might be deleted earlier than session.
+ */
+purcmc_endpoint* purcmc_get_endpoint_by_session(purcmc_session *sess);
+
 #ifdef __cplusplus
 }
 #endif

@@ -43,7 +43,7 @@
  * Use this function to retrieve the endpoint of a session.
  * the endpoint might be deleted earlier than session.
  */
-static inline purcmc_endpoint* get_endpoint_by_session(purcmc_session *sess)
+purcmc_endpoint* purcmc_get_endpoint_by_session(purcmc_session *sess)
 {
     char host[PURC_LEN_HOST_NAME + 1];
     char app[PURC_LEN_APP_NAME + 1];
@@ -80,7 +80,7 @@ static void finish_response(purcmc_session* sess, const char *request_id,
         result_value = *(void **)data;
 
         purcmc_endpoint* endpoint;
-        endpoint = get_endpoint_by_session(sess);
+        endpoint = purcmc_get_endpoint_by_session(sess);
         if (endpoint) {
             pcrdr_msg response = { };
             response.type = PCRDR_MSG_TYPE_RESPONSE;
@@ -188,7 +188,7 @@ user_message_received_callback(WebKitWebView *web_view,
         if (strcmp(type, "as") == 0) {
             size_t len;
             const char **strv = g_variant_get_strv(param, &len);
-            purcmc_endpoint* endpoint = get_endpoint_by_session(sess);
+            purcmc_endpoint* endpoint = purcmc_get_endpoint_by_session(sess);
 
             if (len == 4 && endpoint) {
                 pcrdr_msg event = { };
@@ -377,7 +377,7 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
         event.property = PURC_VARIANT_INVALID;
         event.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
-        purcmc_endpoint *endpoint = get_endpoint_by_session(sess);
+        purcmc_endpoint *endpoint = purcmc_get_endpoint_by_session(sess);
         if (BROWSER_IS_PLAIN_WINDOW(container)) {
 
             /* endpoint might be deleted already. */
@@ -401,8 +401,7 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
                 /* post `destroy` event for the page */
                 event.target = PCRDR_MSG_TARGET_PAGE;
                 event.targetValue = PTR2U64(container);
-                purcmc_endpoint_post_event(sess->srv,
-                    get_endpoint_by_session(sess), &event);
+                purcmc_endpoint_post_event(sess->srv, endpoint, &event);
             }
         }
     }
