@@ -368,7 +368,7 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
 
         pcrdr_msg event = { };
         event.type = PCRDR_MSG_TYPE_EVENT;
-        event.eventName = purc_variant_make_string_static("close", false);
+        event.eventName = purc_variant_make_string_static("destroy", false);
         /* TODO: use real URI for the sourceURI */
         event.sourceURI = purc_variant_make_string_static(PCRDR_APP_RENDERER,
                 false);
@@ -382,7 +382,7 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
 
             /* endpoint might be deleted already. */
             if (endpoint) {
-                /* post close event for the plainwindow */
+                /* post `destroy` event for the plainwindow */
                 event.target = PCRDR_MSG_TARGET_PLAINWINDOW;
                 event.targetValue = PTR2U64(container);
                 purcmc_endpoint_post_event(sess->srv, endpoint, &event);
@@ -398,7 +398,7 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
         else {
             /* endpoint might be deleted already. */
             if (endpoint) {
-                /* post close event for the page */
+                /* post `destroy` event for the page */
                 event.target = PCRDR_MSG_TARGET_PAGE;
                 event.targetValue = PTR2U64(container);
                 purcmc_endpoint_post_event(sess->srv,

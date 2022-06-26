@@ -53,9 +53,8 @@ following repositories:
 ## Building xGUI Pro
 
 ```
-rm -rf build && cmake -DCMAKE_BUILD_TYPE=Debug -DPORT=Linux -B build && cmake --build build
+rm -rf build && cmake -DCMAKE_BUILD_TYPE=Debug -DPORT=GTK -B build && cmake --build build
 ```
-
 
 ## Debugging xGUI Pro
 
@@ -101,14 +100,7 @@ After this, run `purc` to execute an HVML program:
 ```
 ```
 
-Or run `purcsmg` in PurC Midnigth Commander in another terminal:
-
-```
-$ cd /path/to/purc-midnight-commander/build/
-$ source/bin/purcsmg --app=cn.fmsoft.hvml.purcsmg --runner=test --testmethod=1 --file=simplest.html
-```
-
-You can also run `purcsex` in PurC Midnigth Commander in another terminal:
+Or run `purcsex` in PurC Midnigth Commander in another terminal:
 
 ```
 $ cd /path/to/purc-midnight-commander/build/
@@ -121,9 +113,12 @@ If encounter core dumps, use `gdb`:
 $ gdb bin/xguipro -c /tmp/core-pid_xxxx.dump
 ```
 
+Note that, `gdb` might take several minutes to load the symbols of xGUI Pro
+and WebKit. So please wait patiently.
+
 ## Current Status
 
-- May 2022: Version 0.2.0.
+- July 2022: Version 0.6.0.
 
 ## Authors and Contributors
 
