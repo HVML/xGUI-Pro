@@ -52,6 +52,8 @@ void browser_window_set_background_color(BrowserWindow*, GdkRGBA*);
 WebKitWebView* browser_window_get_or_create_web_view_for_automation(BrowserWindow*);
 WebKitWebView *browser_window_create_web_view_in_new_tab_for_automation(BrowserWindow*);
 
+GtkWidget *browser_window_webview_create(WebKitWebView*, WebKitNavigationAction*, BrowserWindow*);
+
 G_END_DECLS
 
 #endif

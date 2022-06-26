@@ -79,4 +79,6 @@ void browser_pane_leave_fullscreen(BrowserPane*);
 
 G_END_DECLS
 
+#define BRW_PANE2VIEW(tab)  browser_pane_get_web_view((tab))
+
 #endif

@@ -527,22 +527,8 @@ static gboolean webViewDecidePolicy(WebKitWebView *webView,
             GDK_BUTTON_MIDDLE)
         return FALSE;
 
-    /* Multiple tabs are not allowed in editor mode. */
     if (webkit_web_view_is_editable(webView))
         return FALSE;
-
-#if 0
-    /* Opening a new tab if link clicked with the middle button. */
-    WebKitWebView *newWebView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-        "web-context", webkit_web_view_get_context(webView),
-        "settings", webkit_web_view_get_settings(webView),
-        "user-content-manager", webkit_web_view_get_user_content_manager(webView),
-        "is-controlled-by-automation", webkit_web_view_is_controlled_by_automation(webView),
-        "website-policies", webkit_web_view_get_website_policies(webView),
-        NULL));
-    browser_plain_window_append_view(window, newWebView);
-    webkit_web_view_load_request(newWebView, webkit_navigation_action_get_request(navigationAction));
-#endif
 
     webkit_policy_decision_ignore(decision);
     return TRUE;

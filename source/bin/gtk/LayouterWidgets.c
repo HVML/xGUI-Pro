@@ -23,7 +23,7 @@
 #include "config.h"
 #include "main.h"
 #include "BrowserPlainWindow.h"
-#include "BrowserWindow.h"
+#include "BrowserTabbedWindow.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "LayouterWidgets.h"
@@ -37,29 +37,35 @@
 #include <gtk/gtk.h>
 #include <webkit2/webkit2.h>
 
-void gtk_imp_convert_style(struct ws_widget_style *style,
-        purc_variant_t widget_style)
+void gtk_imp_convert_style(struct ws_widget_info *style,
+        purc_variant_t toolkit_style)
 {
     style->darkMode = false;
     style->fullScreen = false;
+    style->withToolbar = false;
     style->backgroundColor = NULL;
     style->flags |= WSWS_FLAG_TOOLKIT;
 
-    if (widget_style == PURC_VARIANT_INVALID)
+    if (toolkit_style == PURC_VARIANT_INVALID)
         return;
 
     purc_variant_t tmp;
-    if ((tmp = purc_variant_object_get_by_ckey(widget_style, "darkMode")) &&
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "darkMode")) &&
             purc_variant_is_true(tmp)) {
         style->darkMode = true;
     }
 
-    if ((tmp = purc_variant_object_get_by_ckey(widget_style, "fullScreen")) &&
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "fullScreen")) &&
             purc_variant_is_true(tmp)) {
         style->fullScreen = true;
     }
 
-    if ((tmp = purc_variant_object_get_by_ckey(widget_style,
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "withToolbar")) &&
+            purc_variant_is_true(tmp)) {
+        style->withToolbar = true;
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style,
                     "backgroundColor"))) {
         const char *value = purc_variant_get_string_const(tmp);
         if (value) {
@@ -69,7 +75,7 @@ void gtk_imp_convert_style(struct ws_widget_style *style,
 }
 
 static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
-        const struct ws_widget_style *style)
+        WebKitWebView *web_view, const struct ws_widget_info *style)
 {
     purcmc_session *sess = workspace->sess;
 
@@ -93,8 +99,8 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
                     style->w, style->h);
             gtk_window_resize(GTK_WINDOW(plainwin), style->w, style->h);
         }
-        if (style->x >= 0 && style->y >= 0)
-            gtk_window_move(GTK_WINDOW(plainwin), style->x, style->y);
+
+        gtk_window_move(GTK_WINDOW(plainwin), style->x, style->y);
 
         gtk_window_set_resizable(GTK_WINDOW(plainwin), FALSE);
     }
@@ -115,23 +121,6 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
         }
     }
 
-    WebKitWebsitePolicies *website_policies;
-    website_policies = g_object_get_data(G_OBJECT(sess->webkit_settings),
-            "default-website-policies");
-
-    WebKitUserContentManager *uc_manager;
-    uc_manager = g_object_get_data(G_OBJECT(sess->webkit_settings),
-            "default-user-content-manager");
-
-    WebKitWebView *web_view;
-    web_view = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-                "web-context", sess->web_context,
-                "settings", sess->webkit_settings,
-                "user-content-manager", uc_manager,
-                "is-controlled-by-automation", FALSE,
-                "website-policies", website_policies,
-                NULL));
-
 #if 0
     if (editorMode)
         webkit_web_view_set_editable(web_view, TRUE);
@@ -144,77 +133,188 @@ static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
     return (struct purcmc_plainwin *)plainwin;
 }
 
-static BrowserWindow *create_tabbedwin(purcmc_workspace *workspace,
-        const struct ws_widget_style *style)
+static void
+on_destroy_tabbed_window(BrowserTabbedWindow *window, purcmc_session *sess)
+{
+    void *data;
+    if (!sorted_array_find(sess->all_handles, PTR2U64(window), &data)
+            || (uintptr_t)data != HT_TABBEDWIN) {
+        LOG_ERROR("ODD tabbede window: %p\n", window);
+        return;
+    }
+
+    sorted_array_remove(sess->all_handles, PTR2U64(window));
+}
+
+static void on_destroy_container(GtkWidget *container, purcmc_session *sess)
+{
+    void *data;
+    if (!sorted_array_find(sess->all_handles, PTR2U64(container), &data)
+            || (uintptr_t)data != HT_CONTAINER) {
+        LOG_ERROR("ODD container: %p\n", container);
+        return;
+    }
+
+    sorted_array_remove(sess->all_handles, PTR2U64(container));
+}
+
+static BrowserTabbedWindow *create_tabbedwin(purcmc_workspace *workspace,
+        void *init_arg, const struct ws_widget_info *style)
 {
     purcmc_session *sess = workspace->sess;
 
-    BrowserWindow *main_win;
-    main_win = BROWSER_WINDOW(browser_window_new(NULL, sess->web_context));
+    BrowserTabbedWindow *window;
+    window = BROWSER_TABBED_WINDOW(browser_tabbed_window_new(NULL,
+                sess->web_context, style->name, style->title,
+                style->w, style->h));
 
     GtkApplication *application;
     application = g_object_get_data(G_OBJECT(sess->webkit_settings),
             "gtk-application");
 
     gtk_application_add_window(GTK_APPLICATION(application),
-            GTK_WINDOW(main_win));
+            GTK_WINDOW(window));
+
+    if (style->withToolbar) {
+        browser_tabbed_window_create_or_get_toolbar(window);
+    }
 
     if (style->darkMode) {
-        g_object_set(gtk_widget_get_settings(GTK_WIDGET(main_win)),
+        g_object_set(gtk_widget_get_settings(GTK_WIDGET(window)),
                 "gtk-application-prefer-dark-theme", TRUE, NULL);
     }
 
     if (style->fullScreen) {
-        gtk_window_fullscreen(GTK_WINDOW(main_win));
+        gtk_window_fullscreen(GTK_WINDOW(window));
     }
 
     if (style->backgroundColor) {
         GdkRGBA rgba;
         if (gdk_rgba_parse(&rgba, style->backgroundColor)) {
-            browser_window_set_background_color(main_win, &rgba);
+            browser_tabbed_window_set_background_color(window, &rgba);
         }
     }
 
-    return main_win;
+    sorted_array_add(sess->all_handles, PTR2U64(window), INT2PTR(HT_TABBEDWIN));
+    g_signal_connect(window, "destroy",
+            G_CALLBACK(on_destroy_tabbed_window), sess);
+
+    gtk_window_move(GTK_WINDOW(window), style->x, style->y);
+    gtk_widget_show(GTK_WIDGET(window));
+    return window;
+}
+
+static GtkWidget *create_layout_container(purcmc_workspace *workspace,
+        BrowserTabbedWindow *window, GtkWidget *container,
+        const struct ws_widget_info *style)
+{
+    GdkRectangle geometry = { style->x, style->y, style->w, style->h };
+
+    GtkWidget *widget = browser_tabbed_window_create_layout_container(window,
+            container, style->klass, &geometry);
+    if (widget) {
+        purcmc_session *sess = workspace->sess;
+
+        sorted_array_add(sess->all_handles, PTR2U64(widget),
+                INT2PTR(HT_CONTAINER));
+        g_signal_connect(widget, "destroy",
+                G_CALLBACK(on_destroy_container), sess);
+    }
+
+    return widget;
+}
+
+static GtkWidget *create_pane_container(purcmc_workspace *workspace,
+        BrowserTabbedWindow *window, GtkWidget *container,
+        const struct ws_widget_info *style)
+{
+    GdkRectangle geometry = { style->x, style->y, style->w, style->h };
+
+    GtkWidget *widget = browser_tabbed_window_create_pane_container(window,
+            container, style->klass, &geometry);
+    if (widget) {
+        purcmc_session *sess = workspace->sess;
+
+        sorted_array_add(sess->all_handles, PTR2U64(widget),
+                INT2PTR(HT_CONTAINER));
+        g_signal_connect(widget, "destroy",
+                G_CALLBACK(on_destroy_container), sess);
+    }
+
+    return widget;
+}
+
+static GtkWidget *create_tab_container(purcmc_workspace *workspace,
+        BrowserTabbedWindow *window, GtkWidget *container,
+        const struct ws_widget_info *style)
+{
+    GdkRectangle geometry = { style->x, style->y, style->w, style->h };
+
+    GtkWidget *widget = browser_tabbed_window_create_tab_container(window,
+            container, &geometry);
+    if (widget) {
+        purcmc_session *sess = workspace->sess;
+
+        sorted_array_add(sess->all_handles, PTR2U64(widget),
+                INT2PTR(HT_CONTAINER));
+        g_signal_connect(widget, "destroy",
+                G_CALLBACK(on_destroy_container), sess);
+    }
+
+    return widget;
+}
+
+static GtkWidget *create_pane(purcmc_workspace *workspace,
+        BrowserTabbedWindow *window, GtkWidget *container,
+        WebKitWebView *web_view, const struct ws_widget_info *style)
+{
+    GdkRectangle geometry = { style->x, style->y, style->w, style->h };
+
+    GtkWidget *widget = browser_tabbed_window_append_view_pane(window,
+            container, web_view, &geometry);
+    if (widget)
+        g_object_set_data(G_OBJECT(web_view), "purcmc-container", widget);
+
+    return widget;
+}
+
+static GtkWidget *create_tab(purcmc_workspace *workspace,
+        BrowserTabbedWindow *window, GtkWidget *container,
+        WebKitWebView *web_view, const struct ws_widget_info *style)
+{
+    GtkWidget *widget = browser_tabbed_window_append_view_tab(window,
+            container, web_view);
+    if (widget)
+        g_object_set_data(G_OBJECT(web_view), "purcmc-container", widget);
+
+    return widget;
 }
 
 void *
-gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type,
-        void *parent, const struct ws_widget_style *style)
+gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
+        void *container, void *init_arg, const struct ws_widget_info *style)
 {
-    switch(type) {
+    switch (type) {
     case WS_WIDGET_TYPE_PLAINWINDOW:
-        return create_plainwin(ws_ctxt, style);
+        return create_plainwin(ws_ctxt, init_arg, style);
 
     case WS_WIDGET_TYPE_TABBEDWINDOW:
-        return create_tabbedwin(ws_ctxt, style);
+        return create_tabbedwin(ws_ctxt, init_arg, style);
 
-    case WS_WIDGET_TYPE_HEADER:
-        break;
-
-    case WS_WIDGET_TYPE_MENUBAR:
-        break;
-
-    case WS_WIDGET_TYPE_TOOLBAR:
-        break;
-
-    case WS_WIDGET_TYPE_SIDEBAR:
-        break;
-
-    case WS_WIDGET_TYPE_FOOTER:
-        break;
+    case WS_WIDGET_TYPE_CONTAINER:
+        return create_layout_container(ws_ctxt, window, container, style);
 
     case WS_WIDGET_TYPE_PANEHOST:
-        break;
+        return create_pane_container(ws_ctxt, window, container, style);
 
     case WS_WIDGET_TYPE_TABHOST:
-        break;
+        return create_tab_container(ws_ctxt, window, container, style);
 
     case WS_WIDGET_TYPE_PANEDPAGE:
-        break;
+        return create_pane(ws_ctxt, window, container, init_arg, style);
 
     case WS_WIDGET_TYPE_TABBEDPAGE:
-        break;
+        return create_tab(ws_ctxt, window, container, init_arg, style);
 
     default:
         break;
@@ -242,42 +342,70 @@ static int destroy_plainwin(purcmc_workspace *workspace,
     return PCRDR_SC_OK;
 }
 
-int
-gtk_imp_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
+static int destroy_container_in_tabbedwin(purcmc_workspace *workspace,
+        BrowserTabbedWindow *window, GtkWidget *container)
 {
-    switch(type) {
+    purcmc_session *sess = workspace->sess;
+
+    void *data;
+    if (!sorted_array_find(sess->all_handles, PTR2U64(window), &data)) {
+        LOG_INFO("The tabbed window (%p) has been destroyed.\n", window);
+        return PCRDR_SC_OK;
+    }
+    assert((uintptr_t)data == HT_TABBEDWIN);
+
+    if (container != NULL && (uintptr_t)container != (uintptr_t)window) {
+        if (!sorted_array_find(sess->all_handles,
+                    PTR2U64(container), &data)) {
+            LOG_INFO("The container (%p) has been destroyed.\n", container);
+            return PCRDR_SC_OK;
+        }
+        assert((uintptr_t)data == HT_CONTAINER);
+    }
+
+    browser_tabbed_window_clear_container(window, container);
+    return PCRDR_SC_OK;
+}
+
+static int destroy_pane_or_tab_in_tabbedwin(purcmc_workspace *workspace,
+        BrowserTabbedWindow *window, GtkWidget *pane_or_tab)
+{
+    purcmc_session *sess = workspace->sess;
+
+    void *data;
+    if (!sorted_array_find(sess->all_handles, PTR2U64(window), &data)) {
+        LOG_INFO("The tabbed window (%p) has been destroyed.\n", window);
+        return PCRDR_SC_OK;
+    }
+    assert((uintptr_t)data == HT_TABBEDWIN);
+
+    if (!sorted_array_find(sess->all_handles, PTR2U64(pane_or_tab), &data)) {
+        LOG_INFO("The pane or tab (%p) has been destroyed.\n", pane_or_tab);
+        return PCRDR_SC_OK;
+    }
+    assert((uintptr_t)data == HT_CONTAINER);
+
+    browser_tabbed_window_clear_pane_or_tab(window, pane_or_tab);
+    return PCRDR_SC_OK;
+}
+
+int
+gtk_imp_destroy_widget(void *ws_ctxt, void *window, void *widget,
+        ws_widget_type_t type)
+{
+    switch (type) {
     case WS_WIDGET_TYPE_PLAINWINDOW:
         return destroy_plainwin(ws_ctxt, widget);
 
     case WS_WIDGET_TYPE_TABBEDWINDOW:
-        break;
-
-    case WS_WIDGET_TYPE_HEADER:
-        break;
-
-    case WS_WIDGET_TYPE_MENUBAR:
-        break;
-
-    case WS_WIDGET_TYPE_TOOLBAR:
-        break;
-
-    case WS_WIDGET_TYPE_SIDEBAR:
-        break;
-
-    case WS_WIDGET_TYPE_FOOTER:
-        break;
-
+    case WS_WIDGET_TYPE_CONTAINER:
     case WS_WIDGET_TYPE_PANEHOST:
-        break;
-
     case WS_WIDGET_TYPE_TABHOST:
-        break;
+        return destroy_container_in_tabbedwin(ws_ctxt, window, widget);
 
     case WS_WIDGET_TYPE_PANEDPAGE:
-        break;
-
     case WS_WIDGET_TYPE_TABBEDPAGE:
-        break;
+        return destroy_pane_or_tab_in_tabbedwin(ws_ctxt, window, widget);
 
     default:
         break;
@@ -288,7 +416,7 @@ gtk_imp_destroy_widget(void *ws_ctxt, void *widget, ws_widget_type_t type)
 
 void
 gtk_imp_update_widget(void *ws_ctxt, void *widget,
-        ws_widget_type_t type, const struct ws_widget_style *style)
+        ws_widget_type_t type, const struct ws_widget_info *style)
 {
 }
 

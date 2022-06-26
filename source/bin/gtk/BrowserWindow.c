@@ -388,6 +388,8 @@ static void browserWindowTryClose(GSimpleAction *action, GVariant *parameter, gp
     GSList *link;
     for (link = webViews; link; link = link->next)
         webkit_web_view_try_close(link->data);
+
+    g_slist_free(webViews);
 }
 
 static void backForwardlistChanged(WebKitBackForwardList *backForwardlist, WebKitBackForwardListItem *itemAdded, GList *itemsRemoved, BrowserWindow *window)
@@ -454,17 +456,24 @@ static void webViewReadyToShow(WebKitWebView *webView, BrowserWindow *window)
     gtk_widget_show(GTK_WIDGET(window));
 }
 
-static GtkWidget *webViewCreate(WebKitWebView *webView, WebKitNavigationAction *navigation, BrowserWindow *window)
+GtkWidget *browser_window_webview_create(WebKitWebView *webView,
+        WebKitNavigationAction *navigation, BrowserWindow *window)
 {
-    WebKitWebView *newWebView = WEBKIT_WEB_VIEW(webkit_web_view_new_with_related_view(webView));
-    webkit_web_view_set_settings(newWebView, webkit_web_view_get_settings(webView));
+    WebKitWebView *newWebView =
+        WEBKIT_WEB_VIEW(webkit_web_view_new_with_related_view(webView));
+    webkit_web_view_set_settings(newWebView,
+            webkit_web_view_get_settings(webView));
 
-    GtkWidget *newWindow = browser_window_new(GTK_WINDOW(window), window->webContext);
-    gtk_window_set_application(GTK_WINDOW(newWindow), gtk_window_get_application(GTK_WINDOW(window)));
+    GtkWidget *newWindow =
+        browser_window_new(GTK_WINDOW(window), window->webContext);
+    gtk_window_set_application(GTK_WINDOW(newWindow),
+            gtk_window_get_application(GTK_WINDOW(window)));
     browser_window_append_view(BROWSER_WINDOW(newWindow), newWebView);
     gtk_widget_grab_focus(GTK_WIDGET(newWebView));
-    g_signal_connect(newWebView, "ready-to-show", G_CALLBACK(webViewReadyToShow), newWindow);
-    g_signal_connect(newWebView, "run-as-modal", G_CALLBACK(webViewRunAsModal), newWindow);
+    g_signal_connect(newWebView, "ready-to-show",
+            G_CALLBACK(webViewReadyToShow), newWindow);
+    g_signal_connect(newWebView, "run-as-modal",
+            G_CALLBACK(webViewRunAsModal), newWindow);
     return GTK_WIDGET(newWebView);
 }
 
@@ -1236,7 +1245,8 @@ static void browserWindowSwitchTab(GtkNotebook *notebook, BrowserTab *tab, guint
     g_signal_connect(webView, "notify::estimated-load-progress", G_CALLBACK(webViewLoadProgressChanged), window);
     g_signal_connect(webView, "notify::title", G_CALLBACK(webViewTitleChanged), window);
     g_signal_connect(webView, "notify::is-loading", G_CALLBACK(webViewIsLoadingChanged), window);
-    g_signal_connect(webView, "create", G_CALLBACK(webViewCreate), window);
+    g_signal_connect(webView, "create",
+            G_CALLBACK(browser_window_webview_create), window);
     g_signal_connect(webView, "load-failed", G_CALLBACK(webViewLoadFailed), window);
     g_signal_connect(webView, "decide-policy", G_CALLBACK(webViewDecidePolicy), window);
     g_signal_connect(webView, "mouse-target-changed", G_CALLBACK(webViewMouseTargetChanged), window);

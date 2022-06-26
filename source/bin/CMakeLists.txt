@@ -100,6 +100,7 @@ set(test_files_FILES
 )
 
 set(test_files_SOURCES
+    "layout-panes.html"
     "test_layouter.html"
 )
 

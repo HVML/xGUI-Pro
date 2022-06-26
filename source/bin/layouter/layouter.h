@@ -40,16 +40,12 @@ struct ws_metrics {
 typedef enum {
     WS_WIDGET_TYPE_NONE  = 0,       /* not-existing */
     WS_WIDGET_TYPE_PLAINWINDOW,     /* a plain main window for a webview */
-    WS_WIDGET_TYPE_TABBEDWINDOW,    /* a tabbede main window for webviews */
-    WS_WIDGET_TYPE_HEADER,  /* the renderer defiend header widget */
-    WS_WIDGET_TYPE_MENUBAR, /* the renderer defined menu bar widget */
-    WS_WIDGET_TYPE_TOOLBAR, /* the renderer defined tool bar widget */
-    WS_WIDGET_TYPE_SIDEBAR, /* the renderer defined aside widget */
-    WS_WIDGET_TYPE_FOOTER,  /* the renderer defiend footer widget */
-    WS_WIDGET_TYPE_PANEHOST,   /* the container widget of plain pages */
-    WS_WIDGET_TYPE_TABHOST, /* the container widget of tabbed pages */
-    WS_WIDGET_TYPE_PANEDPAGE,   /* a plain page for a webview */
-    WS_WIDGET_TYPE_TABBEDPAGE,     /* a tabbed page for a webview */
+    WS_WIDGET_TYPE_TABBEDWINDOW,    /* a tabbed main window for webviews */
+    WS_WIDGET_TYPE_CONTAINER,       /* A layout container widget */
+    WS_WIDGET_TYPE_PANEHOST,        /* the container of BrowserPane widgets */
+    WS_WIDGET_TYPE_TABHOST,         /* the container of BrowserTab pages */
+    WS_WIDGET_TYPE_PANEDPAGE,       /* a plain page for a webview */
+    WS_WIDGET_TYPE_TABBEDPAGE,      /* a tabbed page for a webview */
 } ws_widget_type_t;
 
 #define WSWS_FLAG_NAME      0x00000001
@@ -57,16 +53,18 @@ typedef enum {
 #define WSWS_FLAG_GEOMETRY  0x00000004
 #define WSWS_FLAG_TOOLKIT   0x00000008
 
-struct ws_widget_style {
+struct ws_widget_info {
     unsigned int flags;
 
     const char *name;
     const char *title;
+    const char *klass;
 
     /* other styles */
     const char *backgroundColor;
     bool        darkMode;
     bool        fullScreen;
+    bool        withToolbar;
 
     int         x, y;
     unsigned    w, h;
@@ -79,17 +77,18 @@ struct ws_widget_style {
     float       opacity;
 };
 
-typedef void (*wsltr_convert_style_fn)(struct ws_widget_style *style,
-        purc_variant_t widget_style);
+typedef void (*wsltr_convert_style_fn)(struct ws_widget_info *style,
+        purc_variant_t toolkit_style);
 
-typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt, ws_widget_type_t type,
-        void *parent, const struct ws_widget_style *style);
+typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt,
+        ws_widget_type_t type, void *window, void *container, void *init_arg,
+        const struct ws_widget_info *style);
 
-typedef int  (*wsltr_destroy_widget_fn)(void *ws_ctxt, void *widget,
-        ws_widget_type_t type);
+typedef int  (*wsltr_destroy_widget_fn)(void *ws_ctxt,
+        void *window, void *widget, ws_widget_type_t type);
 
 typedef void (*wsltr_update_widget_fn)(void *ws_ctxt, void *widget,
-        ws_widget_type_t type, const struct ws_widget_style *style);
+        ws_widget_type_t type, const struct ws_widget_info *style);
 
 #ifdef __cplusplus
 extern "C" {
@@ -118,7 +117,7 @@ int ws_layouter_remove_page_group(struct ws_layouter *layouter,
 void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         const char *group_id, const char *window_name,
         const char *class_name, const char *title, const char *layout_style,
-        purc_variant_t widget_style, int *retv);
+        purc_variant_t toolkit_style, void *init_arg, int *retv);
 
 /* Remove a plain window by identifier */
 int ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
@@ -132,7 +131,7 @@ int ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
 void *ws_layouter_add_page(struct ws_layouter *layouter,
         const char *group_id, const char *page_name,
         const char *class_name, const char *title, const char *layout_style,
-        purc_variant_t widget_style, int *retv);
+        purc_variant_t toolkit_style, void *init_arg, int *retv);
 
 /* Remove a page by identifier */
 int ws_layouter_remove_page_by_id(struct ws_layouter *layouter,
