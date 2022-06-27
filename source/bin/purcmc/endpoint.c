@@ -1297,7 +1297,7 @@ static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
             goto failed;
         }
     }
-    else if (msg->target == PCRDR_MSG_TARGET_PAGE) {
+    else if (msg->target == PCRDR_MSG_TARGET_WIDGET) {
         page = (void *)(uintptr_t)msg->targetValue;
         if (page == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
@@ -1358,7 +1358,7 @@ static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
             goto failed;
         }
     }
-    else if (msg->target == PCRDR_MSG_TARGET_PAGE) {
+    else if (msg->target == PCRDR_MSG_TARGET_WIDGET) {
         page = (void *)(uintptr_t)msg->targetValue;
         if (page == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
@@ -1883,11 +1883,11 @@ static struct request_handler {
     { PCRDR_OPERATION_APPEND, on_append },
     { PCRDR_OPERATION_CALLMETHOD, on_call_method },
     { PCRDR_OPERATION_CLEAR, on_clear },
-    { PCRDR_OPERATION_CREATEPAGE, on_create_page },
     { PCRDR_OPERATION_CREATEPLAINWINDOW, on_create_plain_window },
+    { PCRDR_OPERATION_CREATEWIDGET, on_create_page },
     { PCRDR_OPERATION_CREATEWORKSPACE, on_create_workspace },
-    { PCRDR_OPERATION_DESTROYPAGE, on_destroy_page },
     { PCRDR_OPERATION_DESTROYPLAINWINDOW, on_destroy_plain_window },
+    { PCRDR_OPERATION_DESTROYWIDGET, on_destroy_page },
     { PCRDR_OPERATION_DESTROYWORKSPACE, on_destroy_workspace },
     { PCRDR_OPERATION_DISPLACE, on_displace },
     { PCRDR_OPERATION_ENDSESSION, on_end_session },
@@ -1903,7 +1903,7 @@ static struct request_handler {
     { PCRDR_OPERATION_STARTSESSION, on_start_session },
     { PCRDR_OPERATION_UPDATE, on_update },
     { PCRDR_OPERATION_UPDATEPLAINWINDOW, on_update_plain_window },
-    { PCRDR_OPERATION_UPDATEPAGE, on_update_page },
+    { PCRDR_OPERATION_UPDATEWIDGET, on_update_page },
     { PCRDR_OPERATION_UPDATEWORKSPACE, on_update_workspace },
     { PCRDR_OPERATION_WRITEBEGIN, on_write_begin },
     { PCRDR_OPERATION_WRITEEND, on_write_end },

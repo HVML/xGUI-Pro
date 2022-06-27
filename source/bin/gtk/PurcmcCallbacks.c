@@ -398,8 +398,8 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
         else {
             /* endpoint might be deleted already. */
             if (endpoint) {
-                /* post close event for the page */
-                event.target = PCRDR_MSG_TARGET_PAGE;
+                /* post destroy event for the widget */
+                event.target = PCRDR_MSG_TARGET_WIDGET;
                 event.targetValue = PTR2U64(container);
                 purcmc_endpoint_post_event(sess->srv,
                     get_endpoint_by_session(sess), &event);
