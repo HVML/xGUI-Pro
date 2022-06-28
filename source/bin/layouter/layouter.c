@@ -582,7 +582,7 @@ void ws_layouter_delete(struct ws_layouter *layouter)
     free(layouter);
 }
 
-int ws_layouter_add_page_groups(struct ws_layouter *layouter,
+int ws_layouter_add_widget_groups(struct ws_layouter *layouter,
         const char *html_fragment, size_t sz_html_fragment)
 {
     pcdom_element_t *body = pchtml_doc_get_body(layouter->dom_doc);
@@ -736,7 +736,7 @@ relayout(struct ws_layouter *layouter, pcdom_element_t *subtree_root)
     return PCRDR_SC_OK;
 }
 
-int ws_layouter_remove_page_group(struct ws_layouter *layouter,
+int ws_layouter_remove_widget_group(struct ws_layouter *layouter,
         const char *group_id)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
@@ -875,7 +875,7 @@ int ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
     return PCRDR_SC_NOT_FOUND;
 }
 
-int ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
+int ws_layouter_remove_plain_window_by_handle(struct ws_layouter *layouter,
         void *widget)
 {
     void *data;
@@ -983,7 +983,7 @@ static void *create_tabbed_window(struct ws_layouter *layouter,
 #define HTML_FRAG_PAGE  \
     "<li id='%s-%s' class='%s' name='%s' title='%s' style='%s'></li>"
 
-void *ws_layouter_add_page(struct ws_layouter *layouter,
+void *ws_layouter_add_widget(struct ws_layouter *layouter,
         const char *group_id, const char *page_name,
         const char *class_name, const char *title, const char *layout_style,
         purc_variant_t toolkit_style, void *init_arg, int *retv)
@@ -1080,7 +1080,7 @@ failed:
     return widget;
 }
 
-int ws_layouter_remove_page_by_id(struct ws_layouter *layouter,
+int ws_layouter_remove_widget_by_id(struct ws_layouter *layouter,
         const char *group_id, const char *page_name)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
@@ -1103,7 +1103,7 @@ int ws_layouter_remove_page_by_id(struct ws_layouter *layouter,
     return PCRDR_SC_NOT_FOUND;
 }
 
-int ws_layouter_remove_page_by_widget(struct ws_layouter *layouter,
+int ws_layouter_remove_widget_by_handle(struct ws_layouter *layouter,
         void *widget)
 {
     void *data;

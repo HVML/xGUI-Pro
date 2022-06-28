@@ -50,13 +50,13 @@ int gtk_add_page_groups(purcmc_session *, purcmc_workspace *,
 int gtk_remove_page_group(purcmc_session *, purcmc_workspace *,
         const char* gid);
 
-purcmc_page *gtk_create_page(purcmc_session *, purcmc_workspace *,
+purcmc_page *gtk_create_widget(purcmc_session *, purcmc_workspace *,
             const char *request_id, const char *gid, const char *name,
             const char *class_name, const char *title, const char *layout_style,
             purc_variant_t toolkit_style, int *retv);
-int gtk_update_page(purcmc_session *, purcmc_workspace *,
+int gtk_update_widget(purcmc_session *, purcmc_workspace *,
             purcmc_page *page, const char *property, purc_variant_t value);
-int gtk_destroy_page(purcmc_session *, purcmc_workspace *,
+int gtk_destroy_widget(purcmc_session *, purcmc_workspace *,
             purcmc_page *page);
 
 purcmc_dom *gtk_load_or_write(purcmc_session *, purcmc_page *,

@@ -962,7 +962,7 @@ int gtk_add_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
         retv = PCRDR_SC_PRECONDITION_FAILED;
     }
     else {
-        retv = ws_layouter_add_page_groups(workspace->layouter,
+        retv = ws_layouter_add_widget_groups(workspace->layouter,
                     content, length);
     }
 
@@ -979,13 +979,13 @@ int gtk_remove_page_group(purcmc_session *sess, purcmc_workspace *workspace,
         retv = PCRDR_SC_PRECONDITION_FAILED;
     }
     else {
-        retv = ws_layouter_remove_page_group(workspace->layouter, gid);
+        retv = ws_layouter_remove_widget_group(workspace->layouter, gid);
     }
 
     return retv;
 }
 
-purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
+purcmc_page *gtk_create_widget(purcmc_session *sess, purcmc_workspace *workspace,
             const char *request_id, const char *gid, const char *name,
             const char *class_name, const char *title, const char *layout_style,
             purc_variant_t toolkit_style, int *retv)
@@ -998,7 +998,7 @@ purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
     }
     else {
         WebKitWebView *web_view = create_web_view(sess);
-        page = ws_layouter_add_page(workspace->layouter,
+        page = ws_layouter_add_widget(workspace->layouter,
                     gid, name, class_name, title,
                     layout_style, toolkit_style, web_view, retv);
 
@@ -1021,7 +1021,7 @@ purcmc_page *gtk_create_page(purcmc_session *sess, purcmc_workspace *workspace,
     return page;
 }
 
-int gtk_update_page(purcmc_session *sess, purcmc_workspace *workspace,
+int gtk_update_widget(purcmc_session *sess, purcmc_workspace *workspace,
             purcmc_page *page, const char *property, purc_variant_t value)
 {
     int retv;
@@ -1046,7 +1046,7 @@ int gtk_update_page(purcmc_session *sess, purcmc_workspace *workspace,
     return retv;
 }
 
-int gtk_destroy_page(purcmc_session *sess, purcmc_workspace *workspace,
+int gtk_destroy_widget(purcmc_session *sess, purcmc_workspace *workspace,
             purcmc_page *page)
 {
     int retv;
@@ -1060,7 +1060,7 @@ int gtk_destroy_page(purcmc_session *sess, purcmc_workspace *workspace,
             ws_layouter_retrieve_widget(workspace->layouter, page);
         if (type == WS_WIDGET_TYPE_PANEDPAGE ||
                 type == WS_WIDGET_TYPE_TABBEDPAGE) {
-            if (ws_layouter_remove_page_by_widget(workspace->layouter, page))
+            if (ws_layouter_remove_widget_by_handle(workspace->layouter, page))
                 retv = PCRDR_SC_OK;
             else
                 retv = PCRDR_SC_INTERNAL_SERVER_ERROR;

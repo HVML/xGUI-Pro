@@ -106,11 +106,11 @@ struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
 void ws_layouter_delete(struct ws_layouter *layouter);
 
 /* Add new page groups */
-int ws_layouter_add_page_groups(struct ws_layouter *layouter,
+int ws_layouter_add_widget_groups(struct ws_layouter *layouter,
         const char *html_fragment, size_t sz_html_fragment);
 
 /* Remove a page group */
-int ws_layouter_remove_page_group(struct ws_layouter *layouter,
+int ws_layouter_remove_widget_group(struct ws_layouter *layouter,
         const char *group_id);
 
 /* Add a plain window into a group */
@@ -124,21 +124,21 @@ int ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
         const char *group_id, const char *window_name);
 
 /* Remove a plain window by widget */
-int ws_layouter_remove_plain_window_by_widget(struct ws_layouter *layouter,
+int ws_layouter_remove_plain_window_by_handle(struct ws_layouter *layouter,
         void *widget);
 
 /* Add a page into a group */
-void *ws_layouter_add_page(struct ws_layouter *layouter,
+void *ws_layouter_add_widget(struct ws_layouter *layouter,
         const char *group_id, const char *page_name,
         const char *class_name, const char *title, const char *layout_style,
         purc_variant_t toolkit_style, void *init_arg, int *retv);
 
 /* Remove a page by identifier */
-int ws_layouter_remove_page_by_id(struct ws_layouter *layouter,
+int ws_layouter_remove_widget_by_id(struct ws_layouter *layouter,
         const char *group_id, const char *page_name);
 
 /* Remove a page by widget */
-int ws_layouter_remove_page_by_widget(struct ws_layouter *layouter,
+int ws_layouter_remove_widget_by_handle(struct ws_layouter *layouter,
         void *widget);
 
 /* Update a widget */

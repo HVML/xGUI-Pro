@@ -280,7 +280,7 @@ int main(int argc, char *argv[])
     element = dom_get_element_by_id(layouter->dom_doc, "viewerBody");
     assert(element && has_tag(element, "ARTICLE"));
 
-    retv = ws_layouter_add_page_groups(layouter, new_page_groups,
+    retv = ws_layouter_add_widget_groups(layouter, new_page_groups,
             strlen(new_page_groups));
     assert(retv == PCRDR_SC_OK);
 
@@ -292,7 +292,7 @@ int main(int argc, char *argv[])
     assert(element);
     assert(has_tag(element, "SECTION"));
 
-    retv = ws_layouter_remove_page_group(layouter, "freeWindows");
+    retv = ws_layouter_remove_widget_group(layouter, "freeWindows");
     assert(retv == PCRDR_SC_OK);
 
     ws_layouter_add_plain_window(layouter,
@@ -322,25 +322,25 @@ int main(int argc, char *argv[])
     retv = ws_layouter_remove_plain_window_by_id(layouter, "theModals", "test2");
     assert(retv == PCRDR_SC_OK);
 
-    retv = ws_layouter_remove_plain_window_by_widget(layouter, widget);
+    retv = ws_layouter_remove_plain_window_by_handle(layouter, widget);
     assert(retv == PCRDR_SC_OK);
 
-    ws_layouter_add_page(layouter,
+    ws_layouter_add_widget(layouter,
         "viewerBody", "panel1", "bar", NULL, NULL,
         PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_BAD_REQUEST);
 
-    ws_layouter_add_page(layouter,
+    ws_layouter_add_widget(layouter,
         "viewerBodyPanels", "panel1", "bar", NULL, NULL,
         PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
 
-    ws_layouter_add_page(layouter,
+    ws_layouter_add_widget(layouter,
         "viewerBodyTabs", "tab1", NULL, NULL, NULL,
         PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
 
-    widget = ws_layouter_add_page(layouter,
+    widget = ws_layouter_add_widget(layouter,
         "viewerBodyTabs", "tab2", NULL, NULL, NULL,
         PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
@@ -350,7 +350,7 @@ int main(int argc, char *argv[])
     type = ws_layouter_retrieve_widget_by_id(layouter, "theModals", "test3");
     assert(type == WS_WIDGET_TYPE_NONE);
 
-    retv = ws_layouter_remove_page_by_id(layouter, "theModals", "test3");
+    retv = ws_layouter_remove_widget_by_id(layouter, "theModals", "test3");
     assert(retv == PCRDR_SC_NOT_FOUND);
 
     type = ws_layouter_retrieve_widget_by_id(layouter, "viewerBodyPanels", "panel1");
@@ -359,10 +359,10 @@ int main(int argc, char *argv[])
     type = ws_layouter_retrieve_widget(layouter, widget);
     assert(type == WS_WIDGET_TYPE_TABBEDPAGE);
 
-    retv = ws_layouter_remove_page_by_id(layouter, "viewerBodyPanels", "panel1");
+    retv = ws_layouter_remove_widget_by_id(layouter, "viewerBodyPanels", "panel1");
     assert(retv == PCRDR_SC_OK);
 
-    retv = ws_layouter_remove_page_by_widget(layouter, widget);
+    retv = ws_layouter_remove_widget_by_handle(layouter, widget);
     assert(retv == PCRDR_SC_OK);
 
     ws_layouter_delete(layouter);

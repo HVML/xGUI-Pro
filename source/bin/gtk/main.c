@@ -732,9 +732,9 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
         .add_page_groups = gtk_add_page_groups,
         .remove_page_group = gtk_remove_page_group,
 
-        .create_page = gtk_create_page,
-        .update_page = gtk_update_page,
-        .destroy_page = gtk_destroy_page,
+        .create_page = gtk_create_widget,
+        .update_page = gtk_update_widget,
+        .destroy_page = gtk_destroy_widget,
 
         .load = gtk_load_or_write,
         .write = gtk_load_or_write,
