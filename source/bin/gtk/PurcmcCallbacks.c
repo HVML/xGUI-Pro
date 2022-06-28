@@ -39,6 +39,52 @@
 #include <string.h>
 #include <webkit2/webkit2.h>
 
+static KVLIST(kv_app_workspace, NULL);
+
+int pcmc_gtk_prepare(purcmc_server *srv)
+{
+    return 0;
+}
+
+void pcmc_gtk_cleanup(purcmc_server *srv)
+{
+    const char *name;
+    void *next, *data;
+
+    kvlist_for_each_safe(&kv_app_workspace, name, next, data) {
+        purcmc_workspace *workspace = *(purcmc_workspace **)data;
+        if (workspace->layouter) {
+            ws_layouter_delete(workspace->layouter);
+        }
+    }
+}
+
+static purcmc_workspace *create_or_get_workspace(purcmc_endpoint* endpoint)
+{
+    char app_key[PURC_LEN_ENDPOINT_NAME + 1];
+
+    const char *host = purcmc_endpoint_host_name(endpoint);
+    const char *app = purcmc_endpoint_app_name(endpoint);
+
+    sprintf(app_key, "%s-%s", host, app);
+
+    void *data;
+    purcmc_workspace *workspace;
+    if ((data = kvlist_get(&kv_app_workspace, app_key))) {
+        workspace = *(purcmc_workspace **)data;
+        assert(workspace);
+    }
+    else {
+        workspace = calloc(1, sizeof(purcmc_workspace));
+        if (workspace) {
+            workspace->layouter = NULL;
+            kvlist_set(&kv_app_workspace, app_key, &workspace);
+        }
+    }
+
+    return workspace;
+}
+
 /*
  * Use this function to retrieve the endpoint of a session.
  * the endpoint might be deleted earlier than session.
@@ -240,20 +286,24 @@ user_message_received_callback(WebKitWebView *web_view,
 purcmc_session *gtk_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
 {
     purcmc_session* sess = calloc(1, sizeof(purcmc_session));
+
+    sess->workspace = create_or_get_workspace(endpt);
+    if (sess->workspace == NULL) {
+        goto failed;
+    }
+
     sess->uri_prefix = purc_hvml_uri_assemble_alloc(
             purcmc_endpoint_host_name(endpt),
             purcmc_endpoint_app_name(endpt),
             purcmc_endpoint_runner_name(endpt),
             NULL, NULL);
     if (sess->uri_prefix == NULL) {
-        free(sess);
-        return NULL;
+        goto failed;
     }
 
     sess->all_handles = sorted_array_create(SAFLAG_DEFAULT, 8, NULL, NULL);
     if (sess->all_handles == NULL) {
-        free(sess);
-        return NULL;
+        goto failed;
     }
 
     sess->srv = srv;
@@ -274,39 +324,6 @@ purcmc_session *gtk_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
     g_signal_connect(web_context, "initialize-web-extensions",
             G_CALLBACK(initializeWebExtensionsCallback), (gpointer)"HVML");
 
-#if 0
-    if (enableSandbox)
-        webkit_web_context_set_sandbox_enabled(web_context, TRUE);
-
-    if (cookiesPolicy) {
-        WebKitCookieManager *cookieManager = webkit_web_context_get_cookie_manager(web_context);
-        GEnumClass *enumClass = g_type_class_ref(WEBKIT_TYPE_COOKIE_ACCEPT_POLICY);
-        GEnumValue *enumValue = g_enum_get_value_by_nick(enumClass, cookiesPolicy);
-        if (enumValue)
-            webkit_cookie_manager_set_accept_policy(cookieManager, enumValue->value);
-        g_type_class_unref(enumClass);
-    }
-
-    if (cookiesFile && !webkit_web_context_is_ephemeral(web_context)) {
-        WebKitCookieManager *cookieManager = webkit_web_context_get_cookie_manager(web_context);
-        WebKitCookiePersistentStorage storageType = g_str_has_suffix(cookiesFile, ".txt") ? WEBKIT_COOKIE_PERSISTENT_STORAGE_TEXT : WEBKIT_COOKIE_PERSISTENT_STORAGE_SQLITE;
-        webkit_cookie_manager_set_persistent_storage(cookieManager, cookiesFile, storageType);
-    }
-
-    // Enable the favicon database, by specifying the default directory.
-    webkit_web_context_set_favicon_database_directory(web_context, NULL);
-
-    webkit_web_context_register_uri_scheme(web_context, BROWSER_ABOUT_SCHEME, (WebKitURISchemeRequestCallback)aboutURISchemeRequestCallback, web_context, NULL);
-
-    WebKitUserContentManager *userContentManager = webkit_user_content_manager_new();
-    webkit_user_content_manager_register_script_message_handler(userContentManager, "aboutData");
-    g_signal_connect(userContentManager, "script-message-received::aboutData", G_CALLBACK(aboutDataScriptMessageReceivedCallback), web_context);
-
-    WebKitWebsitePolicies *defaultWebsitePolicies = webkit_website_policies_new_with_policies(
-        "autoplay", autoplayPolicy,
-        NULL);
-#endif
-
     // hvml schema
     webkit_web_context_register_uri_scheme(web_context,
             BROWSER_HVML_SCHEME,
@@ -317,10 +334,18 @@ purcmc_session *gtk_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
     sess->web_context = web_context;
 
     kvlist_init(&sess->pending_responses, NULL);
-    kvlist_init(&sess->workspace.ug_wins, NULL);
-    sess->workspace.layouter = NULL;
-    sess->workspace.sess = sess;
     return sess;
+
+failed:
+    if (sess->uri_prefix) {
+        free(sess->uri_prefix);
+    }
+
+    if (sess->all_handles)
+        sorted_array_destroy(sess->all_handles);
+
+    free(sess);
+    return NULL;
 }
 
 int gtk_remove_session(purcmc_session *sess)
@@ -330,18 +355,20 @@ int gtk_remove_session(purcmc_session *sess)
 
     LOG_DEBUG("removing session (%p)...\n", sess);
 
+#if 0
     LOG_DEBUG("deleting layouter ...\n");
     if (sess->workspace.layouter)
         ws_layouter_delete(sess->workspace.layouter);
+#endif
 
     LOG_DEBUG("destroy all ungrouped plain windows...\n");
-    kvlist_for_each_safe(&sess->workspace.ug_wins, name, next, data) {
+    kvlist_for_each_safe(&sess->ug_wins, name, next, data) {
         BrowserPlainWindow *plain_win = *(BrowserPlainWindow **)data;
         webkit_web_view_try_close(browser_plain_window_get_view(plain_win));
     }
 
     LOG_DEBUG("destroy kvlist for ungrouped plain windows...\n");
-    kvlist_free(&sess->workspace.ug_wins);
+    kvlist_free(&sess->ug_wins);
 
     LOG_DEBUG("destroy sorted array for all handles...\n");
     sorted_array_destroy(sess->all_handles);
@@ -390,7 +417,7 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
 
             const char *name = browser_plain_window_get_name(
                         BROWSER_PLAIN_WINDOW(container));
-            kvlist_delete(&sess->workspace.ug_wins, name);
+            kvlist_delete(&sess->ug_wins, name);
             /* Not necessary to call this explicitly.
             gtk_imp_destroy_widget(&sess->workspace, plain_win,
                     WS_WIDGET_TYPE_PLAINWINDOW); */
@@ -462,14 +489,14 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
 {
     purcmc_plainwin *plain_win = NULL;
 
-    workspace = &sess->workspace;
+    workspace = sess->workspace;
     WebKitWebView *web_view = create_web_view(sess);
 
     if (gid == NULL) {
         /* create a ungrouped plain window */
         LOG_DEBUG("creating a ungrouped plain window with name (%s)\n", name);
 
-        if (kvlist_get(&sess->workspace.ug_wins, name)) {
+        if (kvlist_get(&sess->ug_wins, name)) {
             LOG_WARN("Duplicated ungrouped plain window: %s\n", name);
             *retv = PCRDR_SC_CONFLICT;
             goto done;
@@ -480,7 +507,7 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         style.name = name;
         style.title = title;
         gtk_imp_convert_style(&style, toolkit_style);
-        plain_win = gtk_imp_create_widget(&sess->workspace,
+        plain_win = gtk_imp_create_widget(workspace, sess,
                 WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, web_view, &style);
 
     }
@@ -493,9 +520,9 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
                 gid, name);
 
         /* create a plain window in the specified group */
-        plain_win = ws_layouter_add_plain_window(workspace->layouter, gid,
-                name, class_name, title, layout_style, toolkit_style, web_view,
-                retv);
+        plain_win = ws_layouter_add_plain_window(workspace->layouter, sess,
+                gid, name, class_name, title, layout_style, toolkit_style,
+                web_view, retv);
     }
 
     if (plain_win) {
@@ -529,7 +556,7 @@ int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         if (workspace->layouter) {
             if (ws_layouter_retrieve_widget(workspace->layouter, plain_win) ==
                     WS_WIDGET_TYPE_PLAINWINDOW) {
-                return ws_layouter_update_widget(workspace->layouter,
+                return ws_layouter_update_widget(workspace->layouter, sess,
                         plain_win, property, value);
             }
         }
@@ -572,9 +599,9 @@ int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
 int gtk_destroy_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         purcmc_plainwin *plain_win)
 {
-    workspace = &sess->workspace;
+    workspace = sess->workspace;
 
-    return gtk_imp_destroy_widget(workspace, plain_win, plain_win,
+    return gtk_imp_destroy_widget(workspace, sess, plain_win, plain_win,
         WS_WIDGET_TYPE_PLAINWINDOW);
 }
 
@@ -932,7 +959,7 @@ int gtk_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
 {
     int retv;
 
-    workspace = &sess->workspace;   /* only one workspace */
+    workspace = sess->workspace;   /* only one workspace */
     if (workspace->layouter == NULL) {
         struct ws_metrics metrics;
         get_monitor_geometry(&metrics);
@@ -957,7 +984,7 @@ int gtk_add_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
 {
     int retv;
 
-    workspace = &sess->workspace;   /* only one workspace */
+    workspace = sess->workspace;   /* only one workspace */
     if (workspace->layouter == NULL) {
         retv = PCRDR_SC_PRECONDITION_FAILED;
     }
@@ -974,12 +1001,12 @@ int gtk_remove_page_group(purcmc_session *sess, purcmc_workspace *workspace,
 {
     int retv;
 
-    workspace = &sess->workspace;   /* only one workspace */
+    workspace = sess->workspace;   /* only one workspace */
     if (workspace->layouter == NULL) {
         retv = PCRDR_SC_PRECONDITION_FAILED;
     }
     else {
-        retv = ws_layouter_remove_widget_group(workspace->layouter, gid);
+        retv = ws_layouter_remove_widget_group(workspace->layouter, sess, gid);
     }
 
     return retv;
@@ -992,13 +1019,13 @@ purcmc_page *gtk_create_widget(purcmc_session *sess, purcmc_workspace *workspace
 {
     purcmc_page *page = NULL;
 
-    workspace = &sess->workspace;   /* only one workspace */
+    workspace = sess->workspace;   /* only one workspace */
     if (workspace->layouter == NULL) {
         *retv = PCRDR_SC_PRECONDITION_FAILED;
     }
     else {
         WebKitWebView *web_view = create_web_view(sess);
-        page = ws_layouter_add_widget(workspace->layouter,
+        page = ws_layouter_add_widget(workspace->layouter, sess,
                     gid, name, class_name, title,
                     layout_style, toolkit_style, web_view, retv);
 
@@ -1026,7 +1053,7 @@ int gtk_update_widget(purcmc_session *sess, purcmc_workspace *workspace,
 {
     int retv;
 
-    workspace = &sess->workspace;   /* only one workspace */
+    workspace = sess->workspace;   /* only one workspace */
     if (workspace->layouter == NULL) {
         retv = PCRDR_SC_PRECONDITION_FAILED;
     }
@@ -1035,7 +1062,7 @@ int gtk_update_widget(purcmc_session *sess, purcmc_workspace *workspace,
             ws_layouter_retrieve_widget(workspace->layouter, page);
         if (type == WS_WIDGET_TYPE_PANEDPAGE ||
                 type == WS_WIDGET_TYPE_TABBEDPAGE) {
-            retv = ws_layouter_update_widget(workspace->layouter, page,
+            retv = ws_layouter_update_widget(workspace->layouter, sess, page,
                     property, value);
         }
         else {
@@ -1051,7 +1078,7 @@ int gtk_destroy_widget(purcmc_session *sess, purcmc_workspace *workspace,
 {
     int retv;
 
-    workspace = &sess->workspace;   /* only one workspace */
+    workspace = sess->workspace;   /* only one workspace */
     if (workspace->layouter == NULL) {
         retv = PCRDR_SC_PRECONDITION_FAILED;
     }
@@ -1060,7 +1087,8 @@ int gtk_destroy_widget(purcmc_session *sess, purcmc_workspace *workspace,
             ws_layouter_retrieve_widget(workspace->layouter, page);
         if (type == WS_WIDGET_TYPE_PANEDPAGE ||
                 type == WS_WIDGET_TYPE_TABBEDPAGE) {
-            if (ws_layouter_remove_widget_by_handle(workspace->layouter, page))
+            if (ws_layouter_remove_widget_by_handle(workspace->layouter,
+                        sess, page))
                 retv = PCRDR_SC_OK;
             else
                 retv = PCRDR_SC_INTERNAL_SERVER_ERROR;

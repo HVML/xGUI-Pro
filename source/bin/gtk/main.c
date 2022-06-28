@@ -720,6 +720,9 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
     setDefaultWebsitePolicies(webkitSettings);
 
     purcmc_server_callbacks cbs = {
+        .prepare = pcmc_gtk_prepare,
+        .cleanup = pcmc_gtk_cleanup,
+
         .create_session = gtk_create_session,
         .remove_session = gtk_remove_session,
 

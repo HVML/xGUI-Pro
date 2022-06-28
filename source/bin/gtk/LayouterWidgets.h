@@ -41,13 +41,8 @@ enum {
 };
 
 struct purcmc_workspace {
-    /* ungrouped plain windows */
-    struct kvlist       ug_wins;
-
     /* manager of grouped plain windows and pages */
     struct ws_layouter *layouter;
-
-    purcmc_session     *sess;
 };
 
 struct purcmc_session {
@@ -56,14 +51,17 @@ struct purcmc_session {
     WebKitSettings *webkit_settings;
     WebKitWebContext *web_context;
 
+    /* ungrouped plain windows */
+    struct kvlist       ug_wins;
+
     /* the sorted array of all valid handles */
     struct sorted_array *all_handles;
 
     /* the pending requests */
     struct kvlist pending_responses;
 
-    /* the only workspace */
-    purcmc_workspace workspace;
+    /* the only workspace for all sessions of current app */
+    purcmc_workspace *workspace;
 
     /* the URI prefix: hvml://<hostName>/<appName>/<runnerName>/ */
     char *uri_prefix;
@@ -76,13 +74,14 @@ extern "C" {
 void gtk_imp_convert_style(struct ws_widget_info *style,
         purc_variant_t toolkit_style);
 
-void *gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
+void *gtk_imp_create_widget(void *workspace, void *session,
+        ws_widget_type_t type, void *window,
         void *parent, void *init_arg, const struct ws_widget_info *style);
 
-int  gtk_imp_destroy_widget(void *ws_ctxt, void *window, void *widget,
-        ws_widget_type_t type);
+int  gtk_imp_destroy_widget(void *workspace, void *session,
+        void *window, void *widget, ws_widget_type_t type);
 
-void gtk_imp_update_widget(void *ws_ctxt, void *widget,
+void gtk_imp_update_widget(void *workspace, void *session, void *widget,
         ws_widget_type_t type, const struct ws_widget_info *style);
 
 #ifdef __cplusplus

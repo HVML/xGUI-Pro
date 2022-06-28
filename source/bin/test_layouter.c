@@ -81,10 +81,11 @@ void my_convert_style(struct ws_widget_info *style,
     // do nothing.
 }
 
-void *my_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
-        void *parent, void *init_arg, const struct ws_widget_info *style)
+void *my_create_widget(void *workspace, void *session,
+        ws_widget_type_t type, void *window, void *parent, void *init_arg,
+        const struct ws_widget_info *style)
 {
-    struct test_ctxt *ctxt = ws_ctxt;
+    struct test_ctxt *ctxt = workspace;
 
     purc_log_info("Creating a `%s` widget (%s, %s) (%d, %d; %u x %u)\n",
             widget_types[type], style->name, style->title,
@@ -123,10 +124,10 @@ void *my_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
     return widget;
 }
 
-int my_destroy_widget(void *ws_ctxt, void *window, void *widget,
+int my_destroy_widget(void *workspace, void *session, void *window, void *widget,
         ws_widget_type_t type)
 {
-    struct test_ctxt *ctxt = ws_ctxt;
+    struct test_ctxt *ctxt = workspace;
 
     purc_log_info("Destroying a widget (%p)\n", widget);
     if (widget == NULL) {
@@ -154,7 +155,7 @@ int my_destroy_widget(void *ws_ctxt, void *window, void *widget,
                     (unsigned)i, (unsigned)n);
             one = INT2PTR(sorted_array_get(ctxt->sa_widget, i, NULL));
             if (one->parent == w) {
-                my_destroy_widget(ctxt, NULL, one, one->type);
+                my_destroy_widget(ctxt, NULL, NULL, one, one->type);
             }
 
             n = sorted_array_count(ctxt->sa_widget);
@@ -183,10 +184,10 @@ int my_destroy_widget(void *ws_ctxt, void *window, void *widget,
     return PCRDR_SC_OK;
 }
 
-void my_update_widget(void *ws_ctxt, void *widget,
+void my_update_widget(void *workspace, void *session, void *widget,
         ws_widget_type_t type, const struct ws_widget_info *style)
 {
-    struct test_ctxt *ctxt = ws_ctxt;
+    struct test_ctxt *ctxt = workspace;
 
     purc_log_info("Updating a widget (%p)\n", widget);
 
@@ -292,16 +293,16 @@ int main(int argc, char *argv[])
     assert(element);
     assert(has_tag(element, "SECTION"));
 
-    retv = ws_layouter_remove_widget_group(layouter, "freeWindows");
+    retv = ws_layouter_remove_widget_group(layouter, NULL, "freeWindows");
     assert(retv == PCRDR_SC_OK);
 
-    ws_layouter_add_plain_window(layouter,
+    ws_layouter_add_plain_window(layouter, NULL,
         "freeWindows", "test", NULL, NULL, NULL,
         PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_NOT_FOUND);
 
     void *widget;
-    widget = ws_layouter_add_plain_window(layouter,
+    widget = ws_layouter_add_plain_window(layouter, NULL,
         "theModals", "test1", "main", "this is a test plain window", NULL,
         PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
@@ -310,37 +311,39 @@ int main(int argc, char *argv[])
     element = dom_get_element_by_id(layouter->dom_doc, "theModals-test1");
     assert(has_tag(element, "FIGURE"));
 
-    ws_layouter_add_plain_window(layouter,
+    ws_layouter_add_plain_window(layouter, NULL,
         "theModals", "test2", "main", "this is a test plain window", NULL,
         PURC_VARIANT_INVALID, NULL, &retv);
     element = dom_get_element_by_id(layouter->dom_doc, "theModals-test2");
     assert(has_tag(element, "FIGURE"));
 
-    retv = ws_layouter_remove_plain_window_by_id(layouter, "theModals", "test3");
+    retv = ws_layouter_remove_plain_window_by_id(layouter, NULL,
+            "theModals", "test3");
     assert(retv == PCRDR_SC_NOT_FOUND);
 
-    retv = ws_layouter_remove_plain_window_by_id(layouter, "theModals", "test2");
+    retv = ws_layouter_remove_plain_window_by_id(layouter, NULL,
+            "theModals", "test2");
     assert(retv == PCRDR_SC_OK);
 
-    retv = ws_layouter_remove_plain_window_by_handle(layouter, widget);
+    retv = ws_layouter_remove_plain_window_by_handle(layouter, NULL, widget);
     assert(retv == PCRDR_SC_OK);
 
-    ws_layouter_add_widget(layouter,
+    ws_layouter_add_widget(layouter, NULL,
         "viewerBody", "panel1", "bar", NULL, NULL,
         PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_BAD_REQUEST);
 
-    ws_layouter_add_widget(layouter,
+    ws_layouter_add_widget(layouter, NULL,
         "viewerBodyPanels", "panel1", "bar", NULL, NULL,
         PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
 
-    ws_layouter_add_widget(layouter,
+    ws_layouter_add_widget(layouter, NULL,
         "viewerBodyTabs", "tab1", NULL, NULL, NULL,
         PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
 
-    widget = ws_layouter_add_widget(layouter,
+    widget = ws_layouter_add_widget(layouter, NULL,
         "viewerBodyTabs", "tab2", NULL, NULL, NULL,
         PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
@@ -350,19 +353,23 @@ int main(int argc, char *argv[])
     type = ws_layouter_retrieve_widget_by_id(layouter, "theModals", "test3");
     assert(type == WS_WIDGET_TYPE_NONE);
 
-    retv = ws_layouter_remove_widget_by_id(layouter, "theModals", "test3");
+    retv = ws_layouter_remove_widget_by_id(layouter, NULL,
+            "theModals", "test3");
     assert(retv == PCRDR_SC_NOT_FOUND);
 
-    type = ws_layouter_retrieve_widget_by_id(layouter, "viewerBodyPanels", "panel1");
+    type = ws_layouter_retrieve_widget_by_id(layouter,
+            "viewerBodyPanels", "panel1");
     assert(type == WS_WIDGET_TYPE_PANEDPAGE);
 
     type = ws_layouter_retrieve_widget(layouter, widget);
     assert(type == WS_WIDGET_TYPE_TABBEDPAGE);
 
-    retv = ws_layouter_remove_widget_by_id(layouter, "viewerBodyPanels", "panel1");
+    retv = ws_layouter_remove_widget_by_id(layouter, NULL,
+            "viewerBodyPanels", "panel1");
     assert(retv == PCRDR_SC_OK);
 
-    retv = ws_layouter_remove_widget_by_handle(layouter, widget);
+    retv = ws_layouter_remove_widget_by_handle(layouter, NULL,
+            widget);
     assert(retv == PCRDR_SC_OK);
 
     ws_layouter_delete(layouter);
@@ -373,7 +380,7 @@ int main(int argc, char *argv[])
     while (sorted_array_count(ctxt.sa_widget) > 0) {
         struct test_widget *widget;
         widget = INT2PTR(sorted_array_get(ctxt.sa_widget, 0, NULL));
-        my_destroy_widget(&ctxt, NULL, widget, widget->type);
+        my_destroy_widget(&ctxt, NULL, NULL, widget, widget->type);
     }
     sorted_array_destroy(ctxt.sa_widget);
 

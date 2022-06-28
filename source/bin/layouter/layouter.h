@@ -80,15 +80,16 @@ struct ws_widget_info {
 typedef void (*wsltr_convert_style_fn)(struct ws_widget_info *style,
         purc_variant_t toolkit_style);
 
-typedef void *(*wsltr_create_widget_fn)(void *ws_ctxt,
+typedef void *(*wsltr_create_widget_fn)(void *workspace, void *session,
         ws_widget_type_t type, void *window, void *container, void *init_arg,
         const struct ws_widget_info *style);
 
-typedef int  (*wsltr_destroy_widget_fn)(void *ws_ctxt,
+typedef int  (*wsltr_destroy_widget_fn)(void *workspace, void *session,
         void *window, void *widget, ws_widget_type_t type);
 
-typedef void (*wsltr_update_widget_fn)(void *ws_ctxt, void *widget,
-        ws_widget_type_t type, const struct ws_widget_info *style);
+typedef void (*wsltr_update_widget_fn)(void *ws_ctxt, void *session,
+        void *widget, ws_widget_type_t type,
+        const struct ws_widget_info *style);
 
 #ifdef __cplusplus
 extern "C" {
@@ -111,39 +112,39 @@ int ws_layouter_add_widget_groups(struct ws_layouter *layouter,
 
 /* Remove a page group */
 int ws_layouter_remove_widget_group(struct ws_layouter *layouter,
-        const char *group_id);
+        void *session, const char *group_id);
 
 /* Add a plain window into a group */
 void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
-        const char *group_id, const char *window_name,
+        void *session, const char *group_id, const char *window_name,
         const char *class_name, const char *title, const char *layout_style,
         purc_variant_t toolkit_style, void *init_arg, int *retv);
 
 /* Remove a plain window by identifier */
 int ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
-        const char *group_id, const char *window_name);
+        void *sesion, const char *group_id, const char *window_name);
 
 /* Remove a plain window by widget */
 int ws_layouter_remove_plain_window_by_handle(struct ws_layouter *layouter,
-        void *widget);
+        void *session, void *widget);
 
 /* Add a page into a group */
 void *ws_layouter_add_widget(struct ws_layouter *layouter,
-        const char *group_id, const char *page_name,
+        void *session, const char *group_id, const char *page_name,
         const char *class_name, const char *title, const char *layout_style,
         purc_variant_t toolkit_style, void *init_arg, int *retv);
 
 /* Remove a page by identifier */
 int ws_layouter_remove_widget_by_id(struct ws_layouter *layouter,
-        const char *group_id, const char *page_name);
+        void *session, const char *group_id, const char *page_name);
 
 /* Remove a page by widget */
 int ws_layouter_remove_widget_by_handle(struct ws_layouter *layouter,
-        void *widget);
+        void *session, void *widget);
 
 /* Update a widget */
 int ws_layouter_update_widget(struct ws_layouter *layouter,
-        void *widget, const char *property, purc_variant_t value);
+        void *session, void *widget, const char *property, purc_variant_t value);
 
 /* Retrieve a widget */
 ws_widget_type_t ws_layouter_retrieve_widget(struct ws_layouter *layouter,

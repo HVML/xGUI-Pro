@@ -50,8 +50,7 @@
 #define SERVER_FEATURES_FORMAT \
     PCRDR_PURCMC_PROTOCOL_NAME ":" PCRDR_PURCMC_PROTOCOL_VERSION_STRING "\n" \
     "%s\n" \
-    "workspace:%d/tabbedWindow:%d/tabbedPage:%d/plainWindow:%d/windowLevel:2\n" \
-    "windowLevels:normal,topmost"
+    "workspace:%d/tabbedWindow:%d/widgetInTabbedWindow:%d/plainWindow:%d\n" \
 
 /* max clients for each web socket and unix socket */
 #define MAX_CLIENTS_EACH    512

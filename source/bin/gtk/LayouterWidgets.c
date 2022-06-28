@@ -74,11 +74,10 @@ void gtk_imp_convert_style(struct ws_widget_info *style,
     }
 }
 
-static purcmc_plainwin *create_plainwin(purcmc_workspace *workspace,
+static purcmc_plainwin *
+create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
         WebKitWebView *web_view, const struct ws_widget_info *style)
 {
-    purcmc_session *sess = workspace->sess;
-
     BrowserPlainWindow *plainwin;
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(NULL,
                 sess->web_context, style->name, style->title));
@@ -187,11 +186,10 @@ static void on_destroy_container(GtkWidget *container, purcmc_session *sess)
     sorted_array_remove(sess->all_handles, PTR2U64(container));
 }
 
-static BrowserTabbedWindow *create_tabbedwin(purcmc_workspace *workspace,
+static BrowserTabbedWindow *
+create_tabbedwin(purcmc_workspace *workspace, purcmc_session *sess,
         void *init_arg, const struct ws_widget_info *style)
 {
-    purcmc_session *sess = workspace->sess;
-
     BrowserTabbedWindow *window;
     window = BROWSER_TABBED_WINDOW(browser_tabbed_window_new(NULL,
                 sess->web_context, style->name, style->title,
@@ -235,7 +233,8 @@ static BrowserTabbedWindow *create_tabbedwin(purcmc_workspace *workspace,
     return window;
 }
 
-static GtkWidget *create_layout_container(purcmc_workspace *workspace,
+static GtkWidget *
+create_layout_container(purcmc_workspace *workspace, purcmc_session *sess,
         BrowserTabbedWindow *window, GtkWidget *container,
         const struct ws_widget_info *style)
 {
@@ -244,8 +243,6 @@ static GtkWidget *create_layout_container(purcmc_workspace *workspace,
     GtkWidget *widget = browser_tabbed_window_create_layout_container(window,
             container, style->klass, &geometry);
     if (widget) {
-        purcmc_session *sess = workspace->sess;
-
         sorted_array_add(sess->all_handles, PTR2U64(widget),
                 INT2PTR(HT_CONTAINER));
         g_signal_connect(widget, "destroy",
@@ -255,7 +252,8 @@ static GtkWidget *create_layout_container(purcmc_workspace *workspace,
     return widget;
 }
 
-static GtkWidget *create_pane_container(purcmc_workspace *workspace,
+static GtkWidget *
+create_pane_container(purcmc_workspace *workspace, purcmc_session *sess,
         BrowserTabbedWindow *window, GtkWidget *container,
         const struct ws_widget_info *style)
 {
@@ -264,7 +262,6 @@ static GtkWidget *create_pane_container(purcmc_workspace *workspace,
     GtkWidget *widget = browser_tabbed_window_create_pane_container(window,
             container, style->klass, &geometry);
     if (widget) {
-        purcmc_session *sess = workspace->sess;
 
         sorted_array_add(sess->all_handles, PTR2U64(widget),
                 INT2PTR(HT_CONTAINER));
@@ -275,7 +272,8 @@ static GtkWidget *create_pane_container(purcmc_workspace *workspace,
     return widget;
 }
 
-static GtkWidget *create_tab_container(purcmc_workspace *workspace,
+static GtkWidget *
+create_tab_container(purcmc_workspace *workspace, purcmc_session *sess,
         BrowserTabbedWindow *window, GtkWidget *container,
         const struct ws_widget_info *style)
 {
@@ -284,8 +282,6 @@ static GtkWidget *create_tab_container(purcmc_workspace *workspace,
     GtkWidget *widget = browser_tabbed_window_create_tab_container(window,
             container, &geometry);
     if (widget) {
-        purcmc_session *sess = workspace->sess;
-
         sorted_array_add(sess->all_handles, PTR2U64(widget),
                 INT2PTR(HT_CONTAINER));
         g_signal_connect(widget, "destroy",
@@ -295,7 +291,8 @@ static GtkWidget *create_tab_container(purcmc_workspace *workspace,
     return widget;
 }
 
-static GtkWidget *create_pane(purcmc_workspace *workspace,
+static GtkWidget *
+create_pane(purcmc_workspace *workspace, purcmc_session *sess,
         BrowserTabbedWindow *window, GtkWidget *container,
         WebKitWebView *web_view, const struct ws_widget_info *style)
 {
@@ -309,7 +306,8 @@ static GtkWidget *create_pane(purcmc_workspace *workspace,
     return widget;
 }
 
-static GtkWidget *create_tab(purcmc_workspace *workspace,
+static GtkWidget *
+create_tab(purcmc_workspace *workspace, purcmc_session *sess,
         BrowserTabbedWindow *window, GtkWidget *container,
         WebKitWebView *web_view, const struct ws_widget_info *style)
 {
@@ -322,30 +320,35 @@ static GtkWidget *create_tab(purcmc_workspace *workspace,
 }
 
 void *
-gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
+gtk_imp_create_widget(void *workspace, void *session, ws_widget_type_t type, void *window,
         void *container, void *init_arg, const struct ws_widget_info *style)
 {
     switch (type) {
     case WS_WIDGET_TYPE_PLAINWINDOW:
-        return create_plainwin(ws_ctxt, init_arg, style);
+        return create_plainwin(workspace, session, init_arg, style);
 
     case WS_WIDGET_TYPE_TABBEDWINDOW:
-        return create_tabbedwin(ws_ctxt, init_arg, style);
+        return create_tabbedwin(workspace, session, init_arg, style);
 
     case WS_WIDGET_TYPE_CONTAINER:
-        return create_layout_container(ws_ctxt, window, container, style);
+        return create_layout_container(workspace, session,
+                window, container, style);
 
     case WS_WIDGET_TYPE_PANEHOST:
-        return create_pane_container(ws_ctxt, window, container, style);
+        return create_pane_container(workspace, session,
+                window, container, style);
 
     case WS_WIDGET_TYPE_TABHOST:
-        return create_tab_container(ws_ctxt, window, container, style);
+        return create_tab_container(workspace, session,
+                window, container, style);
 
     case WS_WIDGET_TYPE_PANEDPAGE:
-        return create_pane(ws_ctxt, window, container, init_arg, style);
+        return create_pane(workspace, session, window,
+                container, init_arg, style);
 
     case WS_WIDGET_TYPE_TABBEDPAGE:
-        return create_tab(ws_ctxt, window, container, init_arg, style);
+        return create_tab(workspace, session, window,
+                container, init_arg, style);
 
     default:
         break;
@@ -354,11 +357,10 @@ gtk_imp_create_widget(void *ws_ctxt, ws_widget_type_t type, void *window,
     return NULL;
 }
 
-static int destroy_plainwin(purcmc_workspace *workspace,
+static int
+destroy_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
         purcmc_plainwin *plain_win)
 {
-    purcmc_session *sess = workspace->sess;
-
     void *data;
     if (!sorted_array_find(sess->all_handles, PTR2U64(plain_win), &data)) {
         return PCRDR_SC_NOT_FOUND;
@@ -373,11 +375,10 @@ static int destroy_plainwin(purcmc_workspace *workspace,
     return PCRDR_SC_OK;
 }
 
-static int destroy_container_in_tabbedwin(purcmc_workspace *workspace,
-        BrowserTabbedWindow *window, GtkWidget *container)
+static int
+destroy_container_in_tabbedwin(purcmc_workspace *workspace,
+        purcmc_session *sess, BrowserTabbedWindow *window, GtkWidget *container)
 {
-    purcmc_session *sess = workspace->sess;
-
     void *data;
     if (!sorted_array_find(sess->all_handles, PTR2U64(window), &data)) {
         LOG_INFO("The tabbed window (%p) has been destroyed.\n", window);
@@ -398,11 +399,10 @@ static int destroy_container_in_tabbedwin(purcmc_workspace *workspace,
     return PCRDR_SC_OK;
 }
 
-static int destroy_pane_or_tab_in_tabbedwin(purcmc_workspace *workspace,
-        BrowserTabbedWindow *window, GtkWidget *pane_or_tab)
+static int
+destroy_pane_or_tab_in_tabbedwin(purcmc_workspace *workspace,
+        purcmc_session *sess, BrowserTabbedWindow *window, GtkWidget *pane_or_tab)
 {
-    purcmc_session *sess = workspace->sess;
-
     void *data;
     if (!sorted_array_find(sess->all_handles, PTR2U64(window), &data)) {
         LOG_INFO("The tabbed window (%p) has been destroyed.\n", window);
@@ -421,22 +421,24 @@ static int destroy_pane_or_tab_in_tabbedwin(purcmc_workspace *workspace,
 }
 
 int
-gtk_imp_destroy_widget(void *ws_ctxt, void *window, void *widget,
+gtk_imp_destroy_widget(void *workspace, void *session, void *window, void *widget,
         ws_widget_type_t type)
 {
     switch (type) {
     case WS_WIDGET_TYPE_PLAINWINDOW:
-        return destroy_plainwin(ws_ctxt, widget);
+        return destroy_plainwin(workspace, session, widget);
 
     case WS_WIDGET_TYPE_TABBEDWINDOW:
     case WS_WIDGET_TYPE_CONTAINER:
     case WS_WIDGET_TYPE_PANEHOST:
     case WS_WIDGET_TYPE_TABHOST:
-        return destroy_container_in_tabbedwin(ws_ctxt, window, widget);
+        return destroy_container_in_tabbedwin(workspace, session,
+                window, widget);
 
     case WS_WIDGET_TYPE_PANEDPAGE:
     case WS_WIDGET_TYPE_TABBEDPAGE:
-        return destroy_pane_or_tab_in_tabbedwin(ws_ctxt, window, widget);
+        return destroy_pane_or_tab_in_tabbedwin(workspace, session,
+                window, widget);
 
     default:
         break;
@@ -446,7 +448,7 @@ gtk_imp_destroy_widget(void *ws_ctxt, void *window, void *widget,
 }
 
 void
-gtk_imp_update_widget(void *ws_ctxt, void *widget,
+gtk_imp_update_widget(void *workspace, void *session, void *widget,
         ws_widget_type_t type, const struct ws_widget_info *style)
 {
 }

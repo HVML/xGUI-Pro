@@ -72,6 +72,9 @@ typedef struct purcmc_server_config {
 } purcmc_server_config;
 
 typedef struct purcmc_server_callbacks {
+    int  (*prepare)(purcmc_server *);
+    void (*cleanup)(purcmc_server *);
+
     purcmc_session *(*create_session)(purcmc_server *, purcmc_endpoint *);
     int (*remove_session)(purcmc_session *);
 

@@ -900,6 +900,11 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
         goto error;
     }
 
+    if (cbs->prepare && cbs->prepare(&the_server)) {
+        purc_log_error("Error when preparing the renderer\n");
+        goto error;
+    }
+
     if ((the_server.us_srv = us_init((purcmc_server_config *)the_srvcfg)) == NULL) {
         purc_log_error("Error during us_init\n");
         goto error;
@@ -923,6 +928,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
 
     the_server.user_data = user_data;
     the_server.cbs = *cbs;
+
     return &the_server;
 
 error:
@@ -932,6 +938,10 @@ error:
 int
 purcmc_rdrsrv_deinit(purcmc_server *srv)
 {
+    if (srv->cbs.cleanup) {
+        srv->cbs.cleanup(srv);
+    }
+
     deinit_server();
     purc_cleanup();
     return 0;

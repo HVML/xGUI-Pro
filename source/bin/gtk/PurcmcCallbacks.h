@@ -29,6 +29,9 @@
 extern "C" {
 #endif
 
+int  pcmc_gtk_prepare(purcmc_server *);
+void pcmc_gtk_cleanup(purcmc_server *);
+
 purcmc_session *gtk_create_session(purcmc_server *, purcmc_endpoint *);
 int gtk_remove_session(purcmc_session *);
 
