@@ -132,7 +132,7 @@ typedef struct purcmc_server_callbacks {
     int (*update_dom)(purcmc_session *, purcmc_dom *,
             int op, const char *op_name, const char *request_id,
             const char* element_type, const char* element_value,
-            const char* property,
+            const char* property, pcrdr_msg_data_type text_type,
             const char *content, size_t length);
 
     /* nullable */

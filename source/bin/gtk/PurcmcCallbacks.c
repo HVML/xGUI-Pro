@@ -715,7 +715,7 @@ purcmc_dom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
 int gtk_update_dom(purcmc_session *sess, purcmc_dom *dom,
             int op, const char *op_name, const char* request_id,
             const char* element_type, const char* element_value,
-            const char* property,
+            const char* property, pcrdr_msg_data_type text_type,
             const char *content, size_t length)
 {
     int retv = PCRDR_SC_OK;

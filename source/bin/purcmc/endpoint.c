@@ -355,7 +355,7 @@ int send_initial_response(purcmc_server* srv, purcmc_endpoint* endpoint)
 
     msg = pcrdr_make_response_message(PCRDR_REQUESTID_INITIAL, NULL,
             PCRDR_SC_OK, 0,
-            PCRDR_MSG_DATA_TYPE_TEXT, srv->features,
+            PCRDR_MSG_DATA_TYPE_PLAIN, srv->features,
             strlen(srv->features));
     if (msg == NULL) {
         retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
@@ -607,7 +607,7 @@ static int on_update_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
     property = purc_variant_get_string_const(msg->property);
     if (property == NULL ||
             !purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME) ||
-            msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT) {
+            msg->dataType != PCRDR_MSG_DATA_TYPE_PLAIN) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
@@ -705,7 +705,7 @@ static int on_set_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_HTML ||
             msg->data == PURC_VARIANT_INVALID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
@@ -761,7 +761,7 @@ static int on_add_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_HTML ||
             msg->data == PURC_VARIANT_INVALID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
@@ -1277,7 +1277,7 @@ static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
     purcmc_page *page = NULL;
     purcmc_dom *dom = NULL;
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_HTML ||
             msg->data == PURC_VARIANT_INVALID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
@@ -1338,7 +1338,7 @@ static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
     purcmc_page *page = NULL;
     purcmc_dom *dom = NULL;
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
+    if (msg->dataType != PCRDR_MSG_DATA_TYPE_HTML ||
             msg->data == PURC_VARIANT_INVALID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
@@ -1438,7 +1438,8 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char *content = NULL;
     size_t content_len = 0;
     if (op != PCRDR_K_OPERATION_ERASE && op != PCRDR_K_OPERATION_CLEAR) {
-        if (msg->dataType != PCRDR_MSG_DATA_TYPE_TEXT ||
+        if (msg->dataType == PCRDR_MSG_DATA_TYPE_JSON ||
+                msg->dataType == PCRDR_MSG_DATA_TYPE_VOID ||
                 msg->data == PURC_VARIANT_INVALID) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto done;
@@ -1484,7 +1485,7 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
             op, op_name, request_id,
             element_type, element_value,
             purc_variant_get_string_const(msg->property),
-            content, content_len);
+            msg->dataType, content, content_len);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
