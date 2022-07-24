@@ -333,6 +333,7 @@ purcmc_session *gtk_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
     sess->webkit_settings = webkit_settings;
     sess->web_context = web_context;
 
+    kvlist_init(&sess->ug_wins, NULL);
     kvlist_init(&sess->pending_responses, NULL);
     return sess;
 
@@ -494,7 +495,7 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
 
     if (gid == NULL) {
         /* create a ungrouped plain window */
-        LOG_DEBUG("creating a ungrouped plain window with name (%s)\n", name);
+        LOG_DEBUG("creating an ungrouped plain window with name (%s)\n", name);
 
         if (kvlist_get(&sess->ug_wins, name)) {
             LOG_WARN("Duplicated ungrouped plain window: %s\n", name);
@@ -509,6 +510,7 @@ purcmc_plainwin *gtk_create_plainwin(purcmc_session *sess,
         gtk_imp_convert_style(&style, toolkit_style);
         plain_win = gtk_imp_create_widget(workspace, sess,
                 WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, web_view, &style);
+        kvlist_set(&sess->ug_wins, name, &plain_win);
 
     }
     else if (workspace->layouter == NULL) {
@@ -664,10 +666,11 @@ request_ready_callback(GObject* obj, GAsyncResult* result, gpointer user_data)
         if (strcmp(type, "s") == 0) {
             size_t len;
             const char *str = g_variant_get_string(param, &len);
-            handle_response_from_webpage(sess, str, len);
+
             LOG_DEBUG("The parameter of message named (%s): %s\n",
                     webkit_user_message_get_name(message),
                     g_variant_get_string(param, NULL));
+            handle_response_from_webpage(sess, str, len);
         }
         else {
             LOG_DEBUG("Not supported parameter type: %s\n", type);
@@ -700,7 +703,7 @@ purcmc_dom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
     webkit_web_view_send_message_to_page(web_view, message, NULL,
             request_ready_callback, sess);
 
-    *retv = PCRDR_SC_OK;
+    *retv = 0;
     return (purcmc_dom *)web_view;
 }
 
