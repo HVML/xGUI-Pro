@@ -15,13 +15,13 @@
 
   <div class="px-4 my-5 border-bottom">
     <div class="text-center" id="theIntro">
-      <img class="d-block mx-auto mb-4" src="//localhost/_renderer/_builtin/-/assets/hvml.png" alt="" width="100" height="100" />
+      <img class="d-block mx-auto mb-4" src="//localhost/_renderer/_builtin/-/assets/hvml.png" alt="" height="100" />
       <h1 class="display-4 fw-bold">
         xGUI Pro
         <small class="text-muted">V@PROJECT_VERSION@</small>
       </h1>
 
-      <p class="lead">2020 年 5 月，魏永明有了设计一款与众不同的编程语言的想法，后于 2020 年 7 月提出了 HVML 编程语言并公开了第一份规范草案。一年后，即 2021 年 7 月，魏永明成立了一个攻坚团队并正式开始了 HVML 解释器（PurC）的开发。2021 年 12 月 27 日，第一个 HVML 程序成功运行，标志着 HVML 的正式诞生。约八十日后，在 2022 年 3 月 11 日，HVML 解释器完成和字符渲染器的对接。又八十日后，2022 年 5 月 31 日，HVML 图形渲染器 xGUI Pro 就绪。至此，魏永明及其团队完成了 HVML 技术栈的最后一块拼图。</p>
+      <p class="lead">2020 年 5 月，魏永明有了设计一款与众不同的编程语言的想法，后于 2020 年 7 月提出了 HVML 编程语言并公开了第一份规范草案。一年后，即 2021 年 7 月，魏永明成立了一个攻坚团队并正式开始了 HVML 解释器（PurC）的开发。2021 年 12 月 27 日，第一个 HVML 程序成功运行，标志着 HVML 的正式诞生。约八十日后，在 2022 年 3 月 11 日，HVML 解释器完成和字符渲染器的对接。又八十日后，2022 年 5 月 31 日，HVML 图形渲染器 xGUI Pro 就绪。2022 年 7 月 31 日，HVML 1.0 正式发布。</p>
 
       <div class="col-lg-6 mx-auto">
         <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">

@@ -10,6 +10,13 @@ set(assets_SOURCES
     "${xGUIPro_DERIVED_SOURCES_DIR}/webext/hvml.js"
     "${xGUIPro_DERIVED_SOURCES_DIR}/webext/about.html"
     "${XGUIPRO_BIN_DIR}/webext/assets/hvml.png"
+    "${XGUIPRO_BIN_DIR}/webext/assets/hvml-v.png"
+    "${XGUIPRO_BIN_DIR}/webext/assets/hvml-bright.png"
+    "${XGUIPRO_BIN_DIR}/webext/assets/hvml-dark.png"
+    "${XGUIPRO_BIN_DIR}/webext/assets/hvml-v-black.png"
+    "${XGUIPRO_BIN_DIR}/webext/assets/hvml-v-fill-white.png"
+    "${XGUIPRO_BIN_DIR}/webext/assets/hvml-v-fill.svg"
+    "${XGUIPRO_BIN_DIR}/webext/assets/hvml-v.svg"
     "${XGUIPRO_BIN_DIR}/webext/assets/workspace-layouter.css"
 )
 

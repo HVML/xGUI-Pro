@@ -122,7 +122,7 @@ and WebKit. So please wait patiently.
 
 ## Authors and Contributors
 
-- R&D Team of [FMSoft Technologies]
+- Vincent Wei
 
 ## Copying
 
