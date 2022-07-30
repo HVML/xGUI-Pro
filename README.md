@@ -1,7 +1,6 @@
 # xGUI Pro
 
-xGUI Pro is a modern, cross-platform, and advanced [HVML] renderer which is
-based on tailored [WebKit].
+xGUI Pro is a modern, cross-platform, and advanced [HVML] renderer which is based on tailored [WebKit].
 
 **Table of Contents**
 
@@ -22,63 +21,74 @@ based on tailored [WebKit].
 ## Introduction
 
 During the development of [HybridOS], [Vincent Wei] proposed a new-style,
-general-purpose, and easy-to-learn programming language called `HVML`.
+       general-purpose, and easy-to-learn programming language called `HVML`.
 
-HVML provides a totally different framework for GUI applications other than
-C/C++, Java, C#, or Swift. In a complete HVML-based application framework,
-a standalone GUI renderer is usually included.
+HVML provides a totally different framework for GUI applications other than C/C++, Java, C#, or Swift.
+In a complete HVML-based application framework, a standalone GUI renderer is usually included.
 
-xGUI Pro is an open source implementation of the standalone GUI renderer
-for HVML programs. It licensed under GPLv3, and it is free for commercial
-use if you follow the terms of GPLv3.
+xGUI Pro is an open source implementation of the standalone GUI renderer for HVML programs.
+It licensed under GPLv3, and it is free for commercial use if you follow the conditions and terms of GPLv3.
 
-xGUI Pro is based on the mature browser engine - [WebKit]. By using xGUI Pro,
-the developers can use HTML/SVG/MathML and CSS to describe the GUI contents
-in their HVML programs. We reserve the JavaScript engine of WebKit, so it is
-possible to use some popular front-end framwork such as Bootstrap to help
-xGUI Pro to render contents in your user interfaces.
+xGUI Pro is based on the mature browser engine - [WebKit].
+By using xGUI Pro, the developers can use HTML/SVG/MathML and CSS to describe the GUI contents in their HVML programs.
+We reserve the JavaScript engine of WebKit,
+   so it is possible to use some popular front-end framwork such as Bootstrap to help xGUI Pro to render contents in your user interfaces.
 
-For documents and other open source tools of HVML, please refer to the
-following repositories:
+For documents and other open source software around HVML, you can visit the following URLs:
 
-- HVML Specifications: <https://github.com/HVML/hvml-docs>.
-- PurC (the Prime hVml inteRpreter for C language): <https://github.com/HVML/purc>.
-- PurC Fetcher (the remote data fetcher for PurC): <https://github.com/HVML/purc-fetcher>.
-- PurCMC (an HVML renderer in text-mode): <https://github.com/HVML/purc-midnight-commander>.
-- xGUI Pro (an advanced HVML renderer based on WebKit): <https://github.com/HVML/xgui-pro>.
+- <https://github.com/HVML>
+- <https://hvml.fmsoft.cn>
 
 ## Dependencies
 
+xGUI Pro depends on the following software:
 
-## Building xGUI Pro
+- [Tailored WebKit Engine](https://files.fmsoft.cn/hiwebkit/dev/hiwebkitgtk-2.34.1.tar.xz): to support two HVML-specific attributes `hvml-handle` and `hvml-events`.
+- [PurC](https://github.com/HVML/PurC): the HVML interpreter for C language.
+- [DOM Ruler](https://github.com/HVML/DOM-Ruler): a library to maintain a DOM tree, lay out and stylize the DOM elements by using CSS.
+
+Currently, xGUI Pro only runs on Linux system. It is possible to run it on macOS, but we did not test it yet.
+
+Please download of fetch the souce code of the above software, build, and install them by following the instructions included the software.
+
+To build the tailored WebKit engine, you can visit the following URL for a detailed instruction:
+
+<https://trac.webkit.org/wiki/BuildingGtk>
+
+Please make sure that the cmake configuration option `ENABLE_HVML_ATTRS` is enabled when you configuring the tailored WebKit.
+
+We encourage everyone to port xGUI Pro to other platforms, such as Windows, Android, iOS, etc.
+
+## Building and Running xGUI Pro
+
+After building and installing the dependency libraries,
+      you can change to the root directory of the source tree of xGUI Pro and run the following commands:
 
 ```
-rm -rf build && cmake -DCMAKE_BUILD_TYPE=Debug -DPORT=GTK -B build && cmake --build build
+$ rm -rf build && cmake -DCMAKE_BUILD_TYPE=Debug -DPORT=GTK -B build && cmake --build build
 ```
 
-## Debugging xGUI Pro
+You can run the following commands to install xGUI Pro to your system in the `build/` directory:
 
 ```
-$ sudo su
-# echo "/tmp/core-pid_%p.dump" > /proc/sys/kernel/core_pattern
-# exit
-$ ulimit -c unlimited
+$ cd build/
+$ sudo make install
 ```
 
-For security reasons, the core dump is disabled by default on some
-Linux systems. The above command lines specify the core pattern, which will
-be used when dumping the core of an aborted process by the kernel.
+You can also run xGUI Pro in `build/` directory without installing it to the system.
+However, you need to specify the enviornment variable `WEBKIT_WEBEXT_DIR` as follow:
 
 ```
-$ WEBKIT_WEBEXT_DIR=/path/to/your/xgui-pro/build/lib/webext bin/xguipro hvml://localhost/_renderer/_builtin/-/assets/about.html
+$ WEBKIT_WEBEXT_DIR=</path/to/your/xgui-pro/build/lib/webext> bin/xguipro
 ```
 
-In the above command lines, the enviornment variable `WEBKIT_WEBEXT_DIR` can be
-used to specify the directory in which the HVML extension module locates.
+In the above command lines, the enviornment variable `WEBKIT_WEBEXT_DIR` is used to specify the directory in which the HVML extension module locates.
+The building scripts will copy the HVML extension module for WebKit to the `build/` directory,
+    so that you can start xGUI Pro without installing it to your system.
 
-By default, if you do not define the enviornment variable, xGUI Pro will try to
-find the extension module in the sub directory called `xguipro/` in the library
-installation directory. Generally, it is `/usr/local/lib/xguipro` on Linux.
+By default, if you do not define this enviornment variable,
+   xGUI Pro will try to find the extension module in the sub directory called `xguipro/` in the library installation directory.
+Generally, it is `/usr/local/lib/xguipro` on Linux by default.
 
 You can also pass the following options to your command line when running xGUI Pro:
 
@@ -95,16 +105,25 @@ You can also pass the following options to your command line when running xGUI P
   --pcmc-backlog=NUMBER    The maximum length to which the queue of pending connections.
 ```
 
-After this, run `purc` to execute an HVML program:
+After you start xGUI Pro, run `purc` from another terminal to execute an HVML program.
+For example, in the `build/` directory of `PurC`, run the following command to start the arbitrary precision calculator:
+
+```bash
+$ cd <path/to/directory/to/build/purc>
+$ Source/Tools/purc/purc -p purcmc hvml/calculator-bc.hvml
+```
+
+## Debugging xGUI Pro
+
+For security reasons, the core dump is disabled by default on some
+Linux systems. The above command lines specify the core pattern, which will
+be used when dumping the core of an aborted process by the kernel.
 
 ```
-```
-
-Or run `purcsex` in PurC Midnigth Commander in another terminal:
-
-```
-$ cd /path/to/purc-midnight-commander/build/
-$ source/bin/purcsex/purcsex --sample=calculator
+$ sudo su
+# echo "/tmp/core-pid_%p.dump" > /proc/sys/kernel/core_pattern
+# exit
+$ ulimit -c unlimited
 ```
 
 If encounter core dumps, use `gdb`:
@@ -141,30 +160,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-### Commercial License
-
-If you cannot accept GPLv3, you need to be licensed from FMSoft.
-
-For more information about the commercial license, please refer to
-<https://hybridos.fmsoft.cn/blog/hybridos-licensing-policy>.
-
-### Special Statement
-
-The above open source or free software license(s) does
-not apply to any entity in the Exception List published by
-Beijing FMSoft Technologies Co., Ltd.
-
-If you are or the entity you represent is listed in the Exception List,
-the above open source or free software license does not apply to you
-or the entity you represent. Regardless of the purpose, you should not
-use the software in any way whatsoever, including but not limited to
-downloading, viewing, copying, distributing, compiling, and running.
-If you have already downloaded it, you MUST destroy all of its copies.
-
-The Exception List is published by FMSoft and may be updated
-from time to time. For more information, please see
-<https://www.fmsoft.cn/exception-list>.
-
 ## Tradmarks
 
 1) `HVML` is a registered tradmark of [FMSoft Technologies] in China and other contries or regions.
@@ -182,6 +177,10 @@ from time to time. For more information, please see
 4) `PurC` is a tradmark of [FMSoft Technologies] in China and other contries or regions.
 
 ![PurC](https://www.fmsoft.cn/application/files/5716/2813/0470/PurC256132.jpg)
+
+5) `xGUI` is a tradmark of [FMSoft Technologies] in China and other contries or regions.
+
+![xGUI](https://www.fmsoft.cn/application/files/cache/thumbnails/7fbcb150d7d0747e702fd2d63f20017e.jpg)
 
 [Beijing FMSoft Technologies Co., Ltd.]: https://www.fmsoft.cn
 [FMSoft Technologies]: https://www.fmsoft.cn
