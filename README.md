@@ -20,6 +20,8 @@ xGUI Pro is a modern, cross-platform, and advanced [HVML] renderer which is base
 
 ## Introduction
 
+This software is a part of HVML project.
+
 During the development of [HybridOS], [Vincent Wei] proposed a new-style,
        general-purpose, and easy-to-learn programming language called `HVML`.
 
@@ -36,7 +38,7 @@ We reserve the JavaScript engine of WebKit,
 
 For documents and other open source software around HVML, you can visit the following URLs:
 
-- <https://github.com/HVML>
+- <https://github.com/HVML>, or
 - <https://hvml.fmsoft.cn>
 
 ## Dependencies
