@@ -176,10 +176,10 @@ int my_destroy_widget(void *workspace, void *session, void *window, void *widget
         return PCRDR_SC_BAD_REQUEST;
     }
 
+    purc_log_info("Widget (%p) destroyed\n", widget);
     free(w->name);
     free(w->title);
     free(w);
-    purc_log_info("Widget (%p) destroyed\n", widget);
 
     return PCRDR_SC_OK;
 }
