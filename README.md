@@ -45,7 +45,7 @@ For documents and other open source software around HVML, you can visit the foll
 
 xGUI Pro depends on the following software:
 
-- [Tailored WebKit Engine](https://files.fmsoft.cn/hiwebkit/dev/hiwebkitgtk-2.34.1.tar.xz): to support two HVML-specific attributes `hvml-handle` and `hvml-events`.
+- [Tailored WebKit Engine](https://files.fmsoft.cn/hvml/webkitgtk-2.34.1-hvml-220804.tar.bz2): to support two HVML-specific attributes `hvml-handle` and `hvml-events`.
 - [PurC](https://github.com/HVML/PurC): the HVML interpreter for C language.
 - [DOM Ruler](https://github.com/HVML/DOM-Ruler): a library to maintain a DOM tree, lay out and stylize the DOM elements by using CSS.
 
