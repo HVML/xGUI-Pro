@@ -32,8 +32,6 @@ if (checkHVML()) {
               'insertBefore', 'displace'];
 
         msg = JSON.parse(json);
-        console.log("HVML.onrequest operation: " + msg.operation);
-        console.log("HVML.onrequest elementType: " + msg.elementType);
 
         if (msg.operation === 'load') {
             document.open();
@@ -177,6 +175,19 @@ if (checkHVML()) {
             }
         }
         else if (dom_update_ops.indexOf(msg.operation) !== -1) {
+            const dom_update_funcs = {
+                'plain': updateDocumentWithPlain,
+                'html': updateDocumentWithHTML,
+                'svg': updateDocumentWithSVG,
+                'mathml': updateDocumentWithMathML,
+                'xml': updateDocumentWithXML,
+            };
+
+            let update_func = dom_update_funcs[msg.dataType];
+            if (!update_func) {
+                return { requestId: msg.requestId, state: "BadRequest" };
+            }
+
             if (msg.elementType === 'handle' || msg.elementType === 'id') {
                 let elem;
                 if (msg.elementType === 'id')
@@ -185,7 +196,7 @@ if (checkHVML()) {
                     elem = document.getElementByHVMLHandle(msg.element);
 
                 if (elem) {
-                    if (!updateDocument(elem, msg.operation, msg.data))
+                    if (!update_func(elem, msg.operation, msg.data))
                         return { requestId: msg.requestId, state: "BadRequest" };
                 }
                 else {
@@ -363,7 +374,33 @@ function updateProperty(elem, property, data)
     return false;
 }
 
-function updateDocument(elem, op, data)
+function updateDocumentWithPlain(elem, op, data)
+{
+    switch (op) {
+        case 'append':
+            elem.append(data);
+            break;
+        case 'prepend':
+            elem.prepend(data);
+            break;
+        case 'insertBefore':
+            elem.before(data);
+            break;
+        case 'insertAfter':
+            elem.after(data);
+            break;
+        case 'displace':
+            elem.replaceChildren();
+            elem.append(data);
+            break;
+        default:
+            return false;
+    }
+
+    return true;
+}
+
+function updateDocumentWithHTML(elem, op, data)
 {
     let fragment = new DocumentFragment();
     let container = document.createElement("div");
@@ -427,6 +464,108 @@ function updateDocument(elem, op, data)
     }
 
     return true;
+}
+
+function updateDocumentWithDOMParser(elem, op, data, mime)
+{
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(data, mime);
+
+    const errorNode = doc.querySelector('parsererror');
+    if (errorNode) {
+        console.log("Parsing failed: " + data);
+        return false;
+    }
+
+    console.log("parse data with mime: " + mime + data);
+
+    switch (op) {
+        case 'append':
+            while (doc.firstChild) {
+                elem.appendChild(doc.firstChild);
+            }
+            break;
+        case 'prepend':
+            while (doc.firstChild) {
+                elem.insertBefore(doc.firstChild, elem.firstChild);
+            }
+            break;
+        case 'insertBefore':
+            while (doc.firstChild) {
+                elem.parentNode.insertBefore(doc.firstChild, elem);
+            }
+            break;
+        case 'insertAfter':
+            while (doc.firstChild) {
+                elem.parentNode.insertBefore(doc.firstChild, elem.nextSibling)
+            }
+            break;
+        case 'displace':
+            elem.replaceChildren();
+            while (doc.firstChild) {
+                elem.appendChild(doc.firstChild);
+            }
+            break;
+        default:
+            return false;
+    }
+
+    return true;
+}
+
+function updateDocumentWithFragment(elem, op, frag)
+{
+    switch (op) {
+        case 'append':
+            while (frag.firstChild) {
+                elem.appendChild(frag.firstChild);
+            }
+            break;
+        case 'prepend':
+            while (frag.firstChild) {
+                elem.insertBefore(frag.firstChild, elem.firstChild);
+            }
+            break;
+        case 'insertBefore':
+            while (frag.firstChild) {
+                elem.parentNode.insertBefore(frag.firstChild, elem);
+            }
+            break;
+        case 'insertAfter':
+            while (frag.firstChild) {
+                elem.parentNode.insertBefore(frag.firstChild, elem.nextSibling)
+            }
+            break;
+        case 'displace':
+            elem.replaceChildren();
+            while (frag.firstChild) {
+                elem.appendChild(frag.firstChild);
+            }
+            break;
+        default:
+            return false;
+    }
+
+    return true;
+}
+
+function updateDocumentWithSVG(elem, op, data)
+{
+    const content = '<svg xmlns="http://www.w3.org/2000/svg">' + data + '</svg>';
+    const parser = new DOMParser();
+    const fragment = parser.parseFromString(content, 'text/html').body;
+
+    return updateDocumentWithFragment(elem, op, fragment);
+}
+
+function updateDocumentWithMathML(elem, op, data)
+{
+    return updateDocumentWithDOMParser(elem, op, data, "application/mathml+xml");
+}
+
+function updateDocumentWithXML(elem, op, data)
+{
+    return updateDocumentWithDOMParser(elem, op, data, "application/xml");
 }
 
 function clearElement(elem, property)

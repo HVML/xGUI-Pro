@@ -273,7 +273,7 @@ static void
 document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
 {
     if (g_object_get_data(G_OBJECT(web_page), "hvml-js-injected")) {
-        LOG_INFO("hvml.js injected\n");
+        LOG_DEBUG("hvml.js injected\n");
         return;
     }
 
@@ -306,7 +306,7 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
         free(code);
 
         char *json = jsc_value_to_json(result, 0);
-        LOG_INFO("result of injected script: (%s)\n", json);
+        LOG_DEBUG("result of injected script: (%s)\n", json);
         if (json)
             free(json);
 
@@ -368,7 +368,7 @@ user_message_received_callback(WebKitWebPage *web_page,
             G_TYPE_NONE);
 
     char *result_in_json = jsc_value_to_json(result, 0);
-    LOG_INFO("result of onrequest: (%s)\n", result_in_json);
+    LOG_DEBUG("result of onrequest: (%s)\n", result_in_json);
     if (result_in_json) {
         webkit_user_message_send_reply(message,
                 webkit_user_message_new(name,
@@ -434,17 +434,17 @@ webkit_web_extension_initialize_with_user_data(WebKitWebExtension *extension,
     my_log_enable(true, NULL);
 
     if (user_data == NULL) {
-        LOG_INFO("no user data\n");
+        LOG_DEBUG("no user data\n");
         goto failed;
     }
     else {
         const char* type = g_variant_get_type_string(user_data);
         if (strcmp(type, "s") == 0) {
-            LOG_INFO("got desired user data: %s\n",
+            LOG_DEBUG("got desired user data: %s\n",
                     g_variant_get_string(user_data, NULL));
         }
         else {
-            LOG_INFO("not desired user data type: %s\n", type);
+            LOG_DEBUG("not desired user data type: %s\n", type);
             goto failed;
         }
     }

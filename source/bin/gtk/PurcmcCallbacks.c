@@ -711,8 +711,9 @@ purcmc_dom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
         "\"operation\":\"%s\","     \
         "\"requestId\":\"%s\","     \
         "\"elementType\":\"%s\","   \
-        "\"element\":\"%s\","  \
-        "\"property\":\"%s\","  \
+        "\"element\":\"%s\","       \
+        "\"property\":\"%s\","      \
+        "\"dataType\":\"%s\","      \
         "\"data\":\"%s\"}"
 
 int gtk_update_dom(purcmc_session *sess, purcmc_dom *dom,
@@ -748,7 +749,8 @@ int gtk_update_dom(purcmc_session *sess, purcmc_dom *dom,
 
     gchar *json = g_strdup_printf(DOM_MESSAGE_FORMAT, op_name, request_id,
             element_type, element_escaped ? element_escaped : "",
-            property ? property : "", escaped ? escaped : "");
+            property ? property : "", pcrdr_data_type_name(text_type),
+            escaped ? escaped : "");
     if (element_escaped)
         free(element_escaped);
     if (escaped)

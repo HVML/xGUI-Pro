@@ -51,9 +51,9 @@ xGUI Pro depends on the following software:
 
 Currently, xGUI Pro only runs on Linux system. It is possible to run it on macOS, but we did not test it yet.
 
-Please download of fetch the souce code of the above software, build, and install them by following the instructions included the software.
+Please download or fetch the source code of the above software, build and install them by following the instructions included in the software.
 
-To build the tailored WebKit engine, you can visit the following URL for a detailed instruction:
+To build the tailored WebKit engine, you can visit the following URL for detailed instructions:
 
 <https://trac.webkit.org/wiki/BuildingGtk>
 
