@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_auto_configure:
+	cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr -DPORT=GTK -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_LIBEXECDIR=lib -B .
+
+override_dh_auto_build:
+	cmake --build .
+override_dh_dwz:
+#override_dh_installdocs:
+# Do not install a copyright file
+# no /usr/share/docs/* needed!
+#dh_installdocs --exclude=debian/copyright
+# Do not install changelogs for space conservation
+#override_dh_installchangelogs:
