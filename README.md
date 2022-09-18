@@ -70,6 +70,13 @@ After building and installing the dependency libraries,
 $ rm -rf build && cmake -DCMAKE_BUILD_TYPE=Debug -DPORT=GTK -B build && cmake --build build
 ```
 
+__NOTE__  
+You may need to use the following additional options for `cmake` to use Gtk3 and Libsoup1:
+
+```
+-DUSE_GTK4=OFF -DUSE_SOUP2=OFF
+```
+
 You can run the following commands to install xGUI Pro to your system in the `build/` directory:
 
 ```
