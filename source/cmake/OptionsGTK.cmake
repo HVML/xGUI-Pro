@@ -16,7 +16,7 @@ add_definitions(-DBUILDING_LINUX__=1)
 add_definitions(-DXGUIPRO_API_VERSION_STRING="${XGUIPRO_API_VERSION}")
 
 find_package(GLIB 2.44.0 REQUIRED COMPONENTS gio gio-unix gmodule gobject)
-find_package(PurC 0.8.0 REQUIRED)
+find_package(PurC 0.8.1 REQUIRED)
 find_package(DOMRuler 1.2.1 REQUIRED)
 
 find_package(OpenSSL)
