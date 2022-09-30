@@ -182,8 +182,10 @@ static void webViewTitleChanged(WebKitWebView *webView,
 
 static gboolean resetEntryProgress(BrowserPlainWindow *window)
 {
-    gtk_entry_set_progress_fraction(GTK_ENTRY(window->uriEntry), 0);
-    window->resetEntryProgressTimeoutId = 0;
+    if (window->uriEntry) {
+        gtk_entry_set_progress_fraction(GTK_ENTRY(window->uriEntry), 0);
+        window->resetEntryProgressTimeoutId = 0;
+    }
     return FALSE;
 }
 
@@ -427,6 +429,9 @@ static void webViewClose(WebKitWebView *webView, BrowserPlainWindow *window)
 #else
     gtk_widget_destroy(GTK_WIDGET(window));
 #endif
+
+    /* VW: mark uriEntry is destroyed */
+    window->uriEntry = NULL;
 }
 
 static void webViewRunAsModal(WebKitWebView *webView, BrowserPlainWindow *window)
