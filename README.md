@@ -47,7 +47,7 @@ xGUI Pro depends on the following software:
 
 - [Tailored WebKit Engine](https://files.fmsoft.cn/hvml/webkitgtk-2.34.1-hvml-220804.tar.bz2): to support two HVML-specific attributes `hvml-handle` and `hvml-events`.
 - [PurC](https://github.com/HVML/PurC): the HVML interpreter for C language.
-- [DOM Ruler](https://github.com/HVML/DOM-Ruler): a library to maintain a DOM tree, lay out and stylize the DOM elements by using CSS.
+- [CSS Engine and DOM Ruler](https://github.com/HVML/PurC): two libraries to maintain a DOM tree, lay out and stylize the DOM elements by using CSS. Note that these libraries are already integreted into the repository of PurC.
 
 Currently, xGUI Pro only runs on Linux system. It is possible to run it on macOS, but we did not test it yet.
 
