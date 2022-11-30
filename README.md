@@ -85,19 +85,20 @@ $ sudo make install
 ```
 
 You can also run xGUI Pro in `build/` directory without installing it to the system.
-However, you need to specify the enviornment variable `WEBKIT_WEBEXT_DIR` as follow:
+However, you need to specify the environment variable `WEBKIT_WEBEXT_DIR` as follow:
 
 ```
 $ WEBKIT_WEBEXT_DIR=</path/to/your/xgui-pro/build/lib/webext> bin/xguipro
 ```
 
-In the above command lines, the enviornment variable `WEBKIT_WEBEXT_DIR` is used to specify the directory in which the HVML extension module locates.
+In the above command lines, the environment variable `WEBKIT_WEBEXT_DIR` is used to specify the directory in which the HVML extension module locates.
 The building scripts will copy the HVML extension module for WebKit to the `build/` directory,
     so that you can start xGUI Pro without installing it to your system.
 
-By default, if you do not define this enviornment variable,
+By default, if you do not define this environment variable,
    xGUI Pro will try to find the extension module in the sub directory called `xguipro/` in the library installation directory.
 Generally, it is `/usr/local/lib/xguipro` on Linux by default.
+Therefore, if you have installed xGUI Pro into your system, you can run xGUI Pro without defining this environment variable.
 
 You can also pass the following options to your command line when running xGUI Pro:
 
@@ -119,7 +120,7 @@ For example, in the `build/` directory of `PurC`, run the following command to s
 
 ```bash
 $ cd <path/to/directory/to/build/purc>
-$ Source/Tools/purc/purc -p purcmc hvml/calculator-bc.hvml
+$ bin/purc -c socket hvml/calculator-bc.hvml
 ```
 
 ## Debugging xGUI Pro
