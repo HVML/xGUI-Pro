@@ -53,7 +53,34 @@ Currently, xGUI Pro only runs on Linux system. It is possible to run it on macOS
 
 Please download or fetch the source code of the above software, build and install them by following the instructions included in the software.
 
-To build the tailored WebKit engine, you can visit the following URL for detailed instructions:
+If you are using Ubuntu Linux, you can use the following commands to build and install the Tailored WebKit to your system:
+
+1) When using Gtk3 and Soup2 (Ubuntu 20.04):
+
+```bash
+$ mkdir -p WebKitBuild/Release && cd WebKitBuild/Release
+$ cmake ../.. -DPORT=GTK -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_GAMEPAD=OFF -DENABLE_INTROSPECTION=OFF -DUSE_SOUP2=ON -DUSE_WPE_RENDERER=OFF -DUSE_LCMS=OFF -GNinja
+$ ninja -j2
+$ sudo ninja install
+```
+
+2) When using Gtk4 and Soup3 (Ubuntu 22.04):
+
+```bash
+$ mkdir -p WebKitBuild/Release && cd WebKitBuild/Release
+$ cmake ../.. -DPORT=GTK -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_GAMEPAD=OFF -DENABLE_INTROSPECTION=OFF -DUSE_SOUP3=ON -DUSE_WPE_RENDERER=OFF -DUSE_LCMS=OFF -GNinja
+$ ninja -j2
+$ sudo ninja install
+```
+
+Note that you may need to install the following packages on your Ubuntu Linux:
+
+- libenchant
+- libsoup2/libsoup3
+- gperf
+- git-svn
+
+For other distributions, you can visit the following URL for detailed instructions:
 
 <https://trac.webkit.org/wiki/BuildingGtk>
 
