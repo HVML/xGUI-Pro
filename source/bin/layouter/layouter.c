@@ -28,7 +28,7 @@
 #include "utils/load-asset.h"
 #include "utils/sorted-array.h"
 
-#include <domruler.h>
+#include <domruler/domruler.h>
 #include <glib.h>
 #include <assert.h>
 
