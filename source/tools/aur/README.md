@@ -19,13 +19,19 @@ $ updpkgsums && makepkg --printsrcinfo > .SRCINFO
 $ makepkg -sf
 
 # Install the xGUI-Pro package
-$ yay -U xguipro-*.tar.zst
+$ yay -U xguipro-gtk3*.tar.zst
+
+# or
+$ yay -U xguipro-gtk4*.tar.zst
 
 # Compile, package and install
 $ makepkg -sfi
 
-# Online installation via AUR: [xguipro](https://aur.archlinux.org/packages/xguipro)
-$ yay -S xguipro
+# Online installation via AUR: [xguipro](https://aur.archlinux.org/pkgbase/xguipro)
+$ yay -S xguipro-gtk3
+
+# or
+$ yay -S xguipro-gtk4
 ```
 
 ## xGUI-Pro development version Packaging script
@@ -44,11 +50,17 @@ $ updpkgsums && makepkg --printsrcinfo > .SRCINFO
 $ makepkg -sf
 
 # Install the xGUI-Pro package
-$ yay -U xguipro-git-*.tar.zst
+$ yay -U xguipro-gtk3-git-*.tar.zst
+
+# or
+$ yay -U xguipro-gtk4-git-*.tar.zst
 
 # Compile, package and install
 $ makepkg -sfi
 
-# Online installation via AUR: [xguipro-git](https://aur.archlinux.org/packages/xguipro-git)
-$ yay -S xguipro-git
+# Online installation via AUR: [xguipro-git](https://aur.archlinux.org/pkgbase/xguipro-git)
+$ yay -S xguipro-gtk3-git
+
+# or
+$ yay -S xguipro-gtk4-git
 ```
