@@ -799,7 +799,7 @@ gtk_call_method_in_dom(purcmc_session *sess, const char *request_id,
                 PCRDR_MAX_INMEM_PAYLOAD_SIZE);
 
         if (purc_variant_serialize(arg, buffer, 0,
-                PCVARIANT_SERIALIZE_OPT_PLAIN, NULL) < 0) {
+                PCVRNT_SERIALIZE_OPT_PLAIN, NULL) < 0) {
             *retv = PCRDR_SC_INSUFFICIENT_STORAGE;
             return PURC_VARIANT_INVALID;
         }
@@ -910,7 +910,7 @@ gtk_set_property_in_dom(purcmc_session *sess, const char *request_id,
                 PCRDR_MAX_INMEM_PAYLOAD_SIZE);
 
         if (purc_variant_serialize(value, buffer, 0,
-                PCVARIANT_SERIALIZE_OPT_PLAIN, NULL) < 0) {
+                PCVRNT_SERIALIZE_OPT_PLAIN, NULL) < 0) {
             *retv = PCRDR_SC_INSUFFICIENT_STORAGE;
             return PURC_VARIANT_INVALID;
         }
