@@ -635,14 +635,14 @@ function callMethod(elem, method, arg)
         funcBody = method.substring(5);
     }
     else if (arg) {
-        funcBody = 'return ELEM.' + method + '(ARG)';
+        funcBody = 'return ELEMENT.' + method + '(ARG)';
     }
     else {
-        funcBody = 'return ELEM.' + method + '()';
+        funcBody = 'return ELEMENT.' + method + '()';
     }
 
     try {
-        const func = new Function('ELEM', 'ARG', funcBody);
+        const func = new Function('ELEMENT', 'ARG', funcBody);
         return func(elem, arg);
     } catch (error) {
         console.error(error);
