@@ -634,6 +634,14 @@ function callMethod(elem, method, arg)
     if (method.startsWith("call:")) {
         funcBody = method.substring(5);
     }
+    else if (method.startsWith("set:")) {
+        property = method.substring(4);
+        funcBody = 'ELEMENT.' + property + '=ARG; return ELEMENT.' + property;
+    }
+    else if (method.startsWith("get:")) {
+        property = method.substring(4);
+        funcBody = 'return ELEMENT.' + property;
+    }
     else if (arg) {
         funcBody = 'return ELEMENT.' + method + '(ARG)';
     }
