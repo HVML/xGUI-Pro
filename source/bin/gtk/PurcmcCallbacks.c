@@ -771,8 +771,9 @@ int gtk_update_dom(purcmc_session *sess, purcmc_dom *dom,
         "\"requestId\":\"%s\","                 \
         "\"elementType\":\"%s\","               \
         "\"element\":\"%s\","                   \
+        "\"data\":{"                            \
         "\"method\":\"%s\","                    \
-        "\"arg\":%s}"
+        "\"arg\":%s}}"
 
 purc_variant_t
 gtk_call_method_in_dom(purcmc_session *sess, const char *request_id,
