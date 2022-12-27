@@ -356,11 +356,11 @@ int gtk_remove_session(purcmc_session *sess)
 
     LOG_DEBUG("removing session (%p)...\n", sess);
 
-#if 0
     LOG_DEBUG("deleting layouter ...\n");
-    if (sess->workspace.layouter)
-        ws_layouter_delete(sess->workspace.layouter);
-#endif
+    if (sess->workspace->layouter) {
+        ws_layouter_delete(sess->workspace->layouter);
+        sess->workspace->layouter = NULL;
+    }
 
     LOG_DEBUG("destroy all ungrouped plain windows...\n");
     kvlist_for_each_safe(&sess->ug_wins, name, next, data) {
