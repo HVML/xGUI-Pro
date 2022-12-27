@@ -705,7 +705,8 @@ static int on_set_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_HTML ||
+    if (((msg->dataType != PCRDR_MSG_DATA_TYPE_HTML) &&
+                (msg->dataType != PCRDR_MSG_DATA_TYPE_PLAIN)) ||
             msg->data == PURC_VARIANT_INVALID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
@@ -761,7 +762,8 @@ static int on_add_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_HTML ||
+    if (((msg->dataType != PCRDR_MSG_DATA_TYPE_HTML) &&
+                (msg->dataType != PCRDR_MSG_DATA_TYPE_PLAIN)) ||
             msg->data == PURC_VARIANT_INVALID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
@@ -1277,7 +1279,8 @@ static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
     purcmc_page *page = NULL;
     purcmc_dom *dom = NULL;
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_HTML ||
+    if (((msg->dataType != PCRDR_MSG_DATA_TYPE_HTML) &&
+                (msg->dataType != PCRDR_MSG_DATA_TYPE_PLAIN)) ||
             msg->data == PURC_VARIANT_INVALID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
@@ -1338,7 +1341,8 @@ static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
     purcmc_page *page = NULL;
     purcmc_dom *dom = NULL;
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_HTML ||
+    if (((msg->dataType != PCRDR_MSG_DATA_TYPE_HTML) &&
+                (msg->dataType != PCRDR_MSG_DATA_TYPE_PLAIN)) ||
             msg->data == PURC_VARIANT_INVALID) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
