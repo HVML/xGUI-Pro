@@ -174,11 +174,13 @@ and WebKit. So please wait patiently.
 
 ## Current Status
 
-- July 2022: Version 0.6.0.
+- Dec. 2022: Version 0.6.2.
 
 ## Authors and Contributors
 
-- Vincent Wei
+- Vincent Wei (<https://github.com/VincentWei>)
+- @ninexue
+- @taotieren
 
 ## Copying
 
