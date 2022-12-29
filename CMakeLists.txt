@@ -131,7 +131,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE True)
 #------------------------------------------------------------------------------
 include(GlobalCommon)
 
-SET_PROJECT_VERSION(0 6 1)
+SET_PROJECT_VERSION(0 6 2)
 set(HVMLJS_VERSION 10)
 set(XGUIPRO_API_VERSION 0.0)
 
