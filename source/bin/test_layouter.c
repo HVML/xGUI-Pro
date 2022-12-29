@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
     }
 
     if (argc > 1) {
-        ws_layouter_delete(layouter);
+        ws_layouter_delete(layouter, NULL);
         sorted_array_destroy(ctxt.sa_widget);
         return 0;
     }
@@ -372,7 +372,7 @@ int main(int argc, char *argv[])
             widget);
     assert(retv == PCRDR_SC_OK);
 
-    ws_layouter_delete(layouter);
+    ws_layouter_delete(layouter, NULL);
 
     purc_log_info("Cleaning up widgets (%u)\n",
             (unsigned)sorted_array_count(ctxt.sa_widget));

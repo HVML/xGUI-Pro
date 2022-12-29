@@ -569,11 +569,11 @@ struct destroy_widget_ctxt {
 static pchtml_action_t
 destroy_widget_walker(pcdom_node_t *node, void *ctxt);
 
-void ws_layouter_delete(struct ws_layouter *layouter)
+void ws_layouter_delete(struct ws_layouter *layouter, void *sess)
 {
     pcdom_element_t *body = pchtml_doc_get_body(layouter->dom_doc);
 
-    struct destroy_widget_ctxt ctxt = { 0, layouter };
+    struct destroy_widget_ctxt ctxt = { 0, layouter, sess };
     pcdom_node_t *node = pcdom_interface_node(body);
     pcdom_node_simple_walk(node, destroy_widget_walker, &ctxt);
     purc_log_info("destroyed windows: %u\n", ctxt.nr_destroyed);

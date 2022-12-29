@@ -54,7 +54,7 @@ void pcmc_gtk_cleanup(purcmc_server *srv)
     kvlist_for_each_safe(&kv_app_workspace, name, next, data) {
         purcmc_workspace *workspace = *(purcmc_workspace **)data;
         if (workspace->layouter) {
-            ws_layouter_delete(workspace->layouter);
+            ws_layouter_delete(workspace->layouter, NULL);
         }
     }
 }
@@ -358,7 +358,7 @@ int gtk_remove_session(purcmc_session *sess)
 
     LOG_DEBUG("deleting layouter ...\n");
     if (sess->workspace->layouter) {
-        ws_layouter_delete(sess->workspace->layouter);
+        ws_layouter_delete(sess->workspace->layouter, sess);
         sess->workspace->layouter = NULL;
     }
 

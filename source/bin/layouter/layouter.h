@@ -104,7 +104,7 @@ struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
         wsltr_update_widget_fn cb_update_widget, int *retv);
 
 /* Destroy a layouter */
-void ws_layouter_delete(struct ws_layouter *layouter);
+void ws_layouter_delete(struct ws_layouter *layouter, void *sess);
 
 /* Add new page groups */
 int ws_layouter_add_widget_groups(struct ws_layouter *layouter,
