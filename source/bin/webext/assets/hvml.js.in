@@ -390,8 +390,13 @@ function updateDocumentWithPlain(elem, op, data)
             elem.after(data);
             break;
         case 'displace':
-            elem.replaceChildren();
-            elem.append(data);
+            if (msg.property) {
+                updateProperty(elem, msg.property, msg.data);
+            }
+            else {
+                elem.replaceChildren();
+                elem.append(data);
+            }
             break;
         default:
             return false;
