@@ -414,7 +414,7 @@ function updateDocumentWithHTML(elem, op, data)
     let nr_elements = container.children.length;
     if (nr_elements > 0) {
 
-        const interestedElements = container.querySelectorAll(".hvml-events");
+        const interestedElements = container.querySelectorAll("[hvml-events]");
         if (interestedElements.length > 0)
             registerEventsListener(interestedElements);
 
