@@ -106,6 +106,11 @@ purcmc_endpoint* purcmc_get_endpoint_by_session(purcmc_session *sess)
 bool gtk_pend_response(purcmc_session* sess, const char *operation,
         const char *request_id, void *result_value)
 {
+    if (strcmp(request_id, PCRDR_REQUESTID_NORETURN) == 0) {
+        LOG_WARN("Trying to pend a noreturn request\n");
+        return false;
+    }
+
     if (kvlist_get(&sess->pending_responses, request_id)) {
         LOG_ERROR("Duplicated requestId (%s) to pend.\n", request_id);
         return false;
@@ -196,7 +201,7 @@ static void handle_response_from_webpage(purcmc_session *sess,
 
     purc_variant_t ret_data;
     ret_data = purc_variant_object_get_by_ckey(result, "data");
-    if (request_id) {
+    if (request_id && strcmp(request_id, PCRDR_REQUESTID_NORETURN)) {
         finish_response(sess, request_id,
                 state_string_to_value(state), ret_data);
     }

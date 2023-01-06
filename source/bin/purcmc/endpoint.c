@@ -1491,10 +1491,12 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
             purc_variant_get_string_const(msg->property),
             msg->dataType, content, content_len);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
-                purc_variant_get_string_const(msg->operation),
-                request_id,
-                dom);
+        // Check if requestId is `noreturn`
+        if (strcmp(request_id, PCRDR_REQUESTID_NORETURN)) {
+            srv->cbs.pend_response(endpoint->session,
+                    purc_variant_get_string_const(msg->operation),
+                    request_id, dom);
+        }
         return PCRDR_SC_OK;
     }
 
@@ -1659,10 +1661,13 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
-                purc_variant_get_string_const(msg->operation),
-                request_id,
-                (void *)(uintptr_t)msg->targetValue);
+        // Check if requestId is `noreturn`
+        if (strcmp(request_id, PCRDR_REQUESTID_NORETURN)) {
+            srv->cbs.pend_response(endpoint->session,
+                    purc_variant_get_string_const(msg->operation),
+                    request_id,
+                    (void *)(uintptr_t)msg->targetValue);
+        }
         return PCRDR_SC_OK;
     }
 
@@ -1860,10 +1865,13 @@ static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
-                purc_variant_get_string_const(msg->operation),
-                request_id,
-                (void *)(uintptr_t)msg->targetValue);
+        // Check if requestId is `noreturn`
+        if (strcmp(request_id, PCRDR_REQUESTID_NORETURN)) {
+            srv->cbs.pend_response(endpoint->session,
+                    purc_variant_get_string_const(msg->operation),
+                    request_id,
+                    (void *)(uintptr_t)msg->targetValue);
+        }
         return PCRDR_SC_OK;
     }
 
