@@ -954,13 +954,17 @@ static void get_monitor_geometry(struct ws_metrics *ws_geometry)
     assert(dsp);
 
     GdkMonitor* monitor = gdk_display_get_primary_monitor(dsp);
-    assert(monitor);
+    if (monitor) {
+        GdkRectangle geometry;
+        gdk_monitor_get_geometry(monitor, &geometry);
+        ws_geometry->width  = geometry.width;
+        ws_geometry->height = geometry.height;
+    }
+    else {
+        ws_geometry->width  = 1920;
+        ws_geometry->height = 1080;
+    }
 
-    GdkRectangle geometry;
-    gdk_monitor_get_geometry(monitor, &geometry);
-
-    ws_geometry->width  = geometry.width;
-    ws_geometry->height = geometry.height;
     ws_geometry->dpi = 72; /* TODO: calculate from physical width and height */
     ws_geometry->density = 27;
 }
