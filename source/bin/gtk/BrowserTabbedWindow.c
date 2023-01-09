@@ -1409,13 +1409,22 @@ browser_tabbed_window_new(GtkWindow *parent, WebKitWebContext *webContext,
     if (name)
         window->name = g_strdup(name);
 
-    if (title)
+    if (title) {
         window->title = g_strdup(title);
+        gtk_window_set_title(GTK_WINDOW(window),
+                window->title ? window->title : BROWSER_DEFAULT_TITLE);
+    }
 
     if (width > 0)
         window->width = width;
     if (height > 0)
         window->height = height;
+
+    if (width > 0 || height > 0) {
+        gtk_window_set_default_size(GTK_WINDOW(window),
+                (window->width > 0) ? window->width : 1024,
+                (window->height > 0) ? window->height : 768);
+    }
 
     return GTK_WIDGET(window);
 }
