@@ -174,6 +174,7 @@ and WebKit. So please wait patiently.
 
 ## Current Status
 
+- Jan. 2023: Version 0.6.3.
 - Dec. 2022: Version 0.6.2.
 
 ## Authors and Contributors
