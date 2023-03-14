@@ -45,7 +45,7 @@ For documents and other open source software around HVML, you can visit the foll
 
 xGUI Pro depends on the following software:
 
-- [WebKitGTK 2.34.0+]: Use the package `libwebkit2gtk-4.0-dev` or `libwebkit2gtk-4.1-dev` on popular Linux distribution. For more information, please refer to <https://webkitgtk.org/>.
+- [WebKitGTK 2.34.0+]: Use the package `libwebkit2gtk-4.0-dev` or `libwebkit2gtk-4.1-dev` on popular Linux distributions. For more information, please refer to <https://webkitgtk.org/>.
 - [PurC 0.9.7+](https://github.com/HVML/PurC): the HVML interpreter for C language. This repository also includes two libraries to maintain a DOM tree, lay out and stylize the DOM elements by using CSS. xGUI Pro needs these libraries.
 
 Currently, xGUI Pro only runs on Linux system. It is possible to run it on macOS, but we did not test it yet.
