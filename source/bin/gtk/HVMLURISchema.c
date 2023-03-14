@@ -233,6 +233,40 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             content_type = NULL;
         }
     }
+    else if (strcmp(host, PCRDR_LOCALHOST) == 0 &&
+            strcmp(app, PCRDR_APP_SYSTEM) == 0 &&
+            strcmp(runner, PCRDR_RUNNER_FILESYSTEM) == 0) {
+        /* try to load asset from the system filesystem */
+        char prefix[PURC_LEN_APP_NAME + 32];
+        if (strcmp(group, PCRDR_GROUP_NULL) == 0)
+            strcpy(prefix, "/");
+        else
+            snprintf(prefix, sizeof(prefix), "/app/%s/_public/", group);
+
+        contents = load_asset_content(NULL, prefix, page, &content_length);
+        if (contents == NULL) {
+            error = g_error_new(XGUI_PRO_ERROR,
+                    XGUI_PRO_ERROR_INVALID_HVML_URI,
+                    "Can not load contents from file system (%s/%s)",
+                    prefix, page);
+            webkit_uri_scheme_request_finish_error(request, error);
+            goto failed;
+        }
+
+        gboolean result_uncertain;
+        content_type = g_content_type_guess(page,
+                (const guchar *)contents, content_length, &result_uncertain);
+
+        LOG_DEBUG("content type of page (%s): %s (%s)\n",
+                page, content_type,
+                result_uncertain ? "uncertain" : "certain");
+
+        if (result_uncertain) {
+            if (content_type)
+                free(content_type);
+            content_type = NULL;
+        }
+    }
     else {
         if (!purc_hvml_uri_get_query_value_alloc(uri,
                     "irId", &initial_request_id) ||
