@@ -1,29 +1,36 @@
+var get_element_by_hvml_handle;
 function checkHVML() {
     if (typeof(document.getElementByHVMLHandle) == "function") {
-        if (typeof(HVML) == "object" && HVML.version >= @HVMLJS_VERSION@) {
-            let elemStatus = document.getElementByHVMLHandle('731128');
-            let elemRunner = document.getElementByHVMLHandle('790715');
-            if (elemStatus && elemRunner) {
-                elemStatus.textContent = 'Ready';
-                elemRunner.textContent = '@' + HVML.hostName + '/' +
-                    HVML.appName + '/' + HVML.runnerName;
-                return true;
-            }
-            else {
-                console.log("A new HVML content loaded");
-            }
-        }
-        else {
-            console.log("Make sure to use the correct version of xGUI Pro");
+        get_element_by_hvml_handle = function (handle) {
+            return document.getElementByHVMLHandle(handle);
         }
     }
     else {
-        console.log("Make sure to use the tailored WebKit (2.34.1 or later) " +
-                "released by HVML community and " +
-                "the configuration option `ENABLE_HVML_ATTRS` is ON.");
+        get_element_by_hvml_handle = function(handle) {
+            return document.querySelector("[hvml-handle='" + handle + "']");
+        }
+
+        console.log("You are not using the tailored WebKit developed by HVML community. " +
+               "This may slightly affect the performance of xGUI Pro. ");
     }
 
-    return false;
+    if (typeof(HVML) == "object" && HVML.version >= @HVMLJS_VERSION@) {
+        let elemStatus = document.getElementByHVMLHandle('731128');
+        let elemRunner = document.getElementByHVMLHandle('790715');
+        if (elemStatus && elemRunner) {
+            elemStatus.textContent = 'Ready';
+            elemRunner.textContent = '@' + HVML.hostName + '/' +
+                HVML.appName + '/' + HVML.runnerName;
+        }
+        else {
+            console.log("A new HVML content loaded");
+        }
+    }
+    else {
+        console.log("Make sure to use the correct version of xGUI Pro");
+    }
+
+    return true;
 }
 
 if (checkHVML()) {
@@ -69,7 +76,7 @@ if (checkHVML()) {
                 if (msg.elementType === 'id')
                     elem = document.getElementById(msg.element);
                 else
-                    elem = document.getElementByHVMLHandle(msg.element);
+                    elem = get_element_by_hvml_handle(msg.element);
 
                 if (elem) {
                     if (!updateProperty(elem, msg.property, msg.data))
@@ -85,7 +92,7 @@ if (checkHVML()) {
                 let handles = msg.element.split(',');
                 let nr_updated = 0;
                 for (let i = 0; i < handles.length; i++) {
-                    let elem = document.getElementByHVMLHandle(handles[i]);
+                    let elem = get_element_by_hvml_handle(handles[i]);
                     if (elem) {
                         if (updateProperty(elem, msg.property, msg.data))
                             nr_updated++;
@@ -106,7 +113,7 @@ if (checkHVML()) {
                 if (msg.elementType === 'id')
                     elem = document.getElementById(msg.element);
                 else
-                    elem = document.getElementByHVMLHandle(msg.element);
+                    elem = get_element_by_hvml_handle(msg.element);
 
                 if (elem) {
                     if (!clearElement(elem, msg.property))
@@ -122,7 +129,7 @@ if (checkHVML()) {
                 let handles = msg.element.split(',');
                 let nr_cleared = 0;
                 for (let i = 0; i < handles.length; i++) {
-                    let elem = document.getElementByHVMLHandle(handles[i]);
+                    let elem = get_element_by_hvml_handle(handles[i]);
                     if (elem) {
                         if (clearElement(elem, msg.property))
                             nr_cleared++;
@@ -143,7 +150,7 @@ if (checkHVML()) {
                 if (msg.elementType === 'id')
                     elem = document.getElementById(msg.element);
                 else
-                    elem = document.getElementByHVMLHandle(msg.element);
+                    elem = get_element_by_hvml_handle(msg.element);
 
                 if (elem) {
                     if (!eraseElement(elem, msg.property))
@@ -159,7 +166,7 @@ if (checkHVML()) {
                 let handles = msg.element.split(',');
                 let nr_erased = 0;
                 for (let i = 0; i < handles.length; i++) {
-                    let elem = document.getElementByHVMLHandle(handles[i]);
+                    let elem = get_element_by_hvml_handle(handles[i]);
                     if (elem) {
                         if (eraseElement(elem, msg.property))
                             nr_erased++;
@@ -193,7 +200,7 @@ if (checkHVML()) {
                 if (msg.elementType === 'id')
                     elem = document.getElementById(msg.element);
                 else
-                    elem = document.getElementByHVMLHandle(msg.element);
+                    elem = get_element_by_hvml_handle(msg.element);
 
                 if (elem) {
                     if (!update_func(elem, msg.operation, msg.data))
@@ -214,7 +221,7 @@ if (checkHVML()) {
                 if (msg.elementType === 'id')
                     elem = document.getElementById(msg.element);
                 else
-                    elem = document.getElementByHVMLHandle(msg.element);
+                    elem = get_element_by_hvml_handle(msg.element);
 
                 if (elem) {
                     if (typeof(msg.data.method) != 'string')
@@ -245,7 +252,7 @@ if (checkHVML()) {
                 if (msg.elementType === 'id')
                     elem = document.getElementById(msg.element);
                 else
-                    elem = document.getElementByHVMLHandle(msg.element);
+                    elem = get_element_by_hvml_handle(msg.element);
 
                 if (elem) {
                     data = getProperty(elem, msg.property);
@@ -270,7 +277,7 @@ if (checkHVML()) {
                 if (msg.elementType === 'id')
                     elem = document.getElementById(msg.element);
                 else
-                    elem = document.getElementByHVMLHandle(msg.element);
+                    elem = get_element_by_hvml_handle(msg.element);
 
                 if (elem) {
                     if (typeof(msg.property) != 'string')
