@@ -45,15 +45,20 @@ For documents and other open source software around HVML, you can visit the foll
 
 xGUI Pro depends on the following software:
 
-- [Tailored WebKit Engine](https://files.fmsoft.cn/hvml/webkitgtk-2.34.1-hvml-220804.tar.bz2): to support two HVML-specific attributes `hvml-handle` and `hvml-events`.
-- [PurC](https://github.com/HVML/PurC): the HVML interpreter for C language.
-- [CSS Engine and DOM Ruler](https://github.com/HVML/PurC): two libraries to maintain a DOM tree, lay out and stylize the DOM elements by using CSS. Note that these libraries are already integreted into the repository of PurC.
+- [WebKitGTK 2.34.0+]: Use the package `libwebkit2gtk-4.0-dev` or `libwebkit2gtk-4.1-dev` on popular Linux distribution. For more information, please refer to <https://webkitgtk.org/>.
+- [PurC 0.9.7+](https://github.com/HVML/PurC): the HVML interpreter for C language. This repository also includes two libraries to maintain a DOM tree, lay out and stylize the DOM elements by using CSS. xGUI Pro needs these libraries.
 
 Currently, xGUI Pro only runs on Linux system. It is possible to run it on macOS, but we did not test it yet.
 
 Please download or fetch the source code of the above software, build and install them by following the instructions included in the software.
 
-If you are using Ubuntu Linux, you can use the following commands to build and install the Tailored WebKit to your system:
+### Tailored WebKit
+
+You can also try our tailored WebKit engine instead of the package shipped with the distribution. The tailored WebKit engine provide a new JavaScript API to support two HVML-specific attributes `hvml-handle` and `hvml-events`. You may obtain better performance by using the tailored WebKit engine.
+
+- [Tailored WebKit Engine](https://files.fmsoft.cn/hvml/webkitgtk-2.34.1-hvml-220804.tar.bz2): to support two HVML-specific attributes `hvml-handle` and `hvml-events`.
+
+If you are using Ubuntu Linux, you can use the following commands to build and install the tailored WebKit to your system:
 
 1) When using Gtk3 and Soup2 (Ubuntu 20.04):
 
@@ -98,7 +103,7 @@ $ rm -rf build && cmake -DCMAKE_BUILD_TYPE=Debug -DPORT=GTK -B build && cmake --
 ```
 
 __NOTE__  
-You may need to use the following additional options for `cmake` to use Gtk3 and Libsoup1:
+You may need to use the following additional options for `cmake` to use Gtk3 and Libsoup3:
 
 ```
 -DUSE_GTK4=OFF -DUSE_SOUP2=OFF
