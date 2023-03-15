@@ -500,7 +500,7 @@ struct ws_layouter *ws_layouter_new(struct ws_metrics *metrics,
     char *def_css;
     size_t len_def_css;
     def_css = load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
-                DEF_LAYOUT_CSS, &len_def_css);
+                DEF_LAYOUT_CSS, &len_def_css, 0);
     if (def_css) {
         domruler_append_css(layouter->ruler, def_css, len_def_css);
         free(def_css);

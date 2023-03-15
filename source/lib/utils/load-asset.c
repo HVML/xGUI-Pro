@@ -27,9 +27,10 @@
 #include <glib.h>
 
 #include "hvml-uri.h"
+#include "load-asset.h"
 
 char *load_asset_content(const char* env, const char *prefix,
-        const char *file, size_t *length)
+        const char *file, size_t *length, unsigned flags)
 {
     char *buf = NULL;
 
@@ -42,7 +43,6 @@ char *load_asset_content(const char* env, const char *prefix,
 
     if (path) {
         FILE *f = fopen(path, "r");
-        free(path);
 
         if (f) {
             if (fseek(f, 0, SEEK_END))
@@ -67,12 +67,19 @@ char *load_asset_content(const char* env, const char *prefix,
                 *length = (size_t)len;
 failed:
             fclose(f);
+
+            if (flags & ASSET_FLAG_ONCE)
+                remove(path);
         }
         else {
-            return NULL;
+            goto done;
         }
+
     }
 
+done:
+    if (path)
+        free(path);
     return buf;
 }
 

@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
     char *html;
     size_t len_html;
     html = load_asset_content(NULL, NULL,
-                (argc > 1) ? argv[1] : "test_layouter.html", &len_html);
+                (argc > 1) ? argv[1] : "test_layouter.html", &len_html, 0);
     assert(html);
 
     struct ws_layouter *layouter;

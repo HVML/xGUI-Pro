@@ -290,7 +290,7 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
 
     /* inject hvml.js */
     char *code = load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
-            "assets/hvml.js", NULL);
+            "assets/hvml.js", NULL, 0);
 
     if (code) {
         WebKitFrame *frame;

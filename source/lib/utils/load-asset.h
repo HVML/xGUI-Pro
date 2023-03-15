@@ -23,12 +23,14 @@
 
 #include <stddef.h>
 
+#define ASSET_FLAG_ONCE             0x01
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 char *load_asset_content(const char *env, const char *prefix,
-        const char *file, size_t *length);
+        const char *file, size_t *length, unsigned flags);
 
 #ifdef __cplusplus
 }

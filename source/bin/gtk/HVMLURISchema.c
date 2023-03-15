@@ -216,7 +216,7 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             strcmp(group, PCRDR_GROUP_NULL) == 0) {
 
         contents = load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
-                page, &content_length);
+                page, &content_length, false);
 
         if (contents == NULL) {
             error = g_error_new(XGUI_PRO_ERROR,
@@ -250,7 +250,17 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         else
             snprintf(prefix, sizeof(prefix), "/app/%s/_public/", group);
 
-        contents = load_asset_content(NULL, prefix, page, &content_length);
+        bool asset_flags = 0;
+        char *once_val = NULL;
+        if (purc_hvml_uri_get_query_value_alloc(uri,
+                    "once", &once_val) && strcmp(once_val, "yes") == 0) {
+            asset_flags |= ASSET_FLAG_ONCE;
+        }
+        if (once_val)
+            free(once_val);
+
+        contents = load_asset_content(NULL, prefix, page, &content_length,
+                asset_flags);
         if (contents == NULL) {
             error = g_error_new(XGUI_PRO_ERROR,
                     XGUI_PRO_ERROR_INVALID_HVML_URI,
