@@ -35,6 +35,13 @@
 
 #include <assert.h>
 
+#ifndef WEBKIT_VERSION_STRING
+#   define STR(x)                  #x
+#   define STR2(x)                 STR(x)
+#   define WEBKIT_VERSION_STRING   \
+        STR2(WEBKIT_MAJOR_VERSION) "." STR2(WEBKIT_MAJOR_VERSION)
+#endif
+
 void initializeWebExtensionsCallback(WebKitWebContext *context,
         gpointer user_data)
 {
