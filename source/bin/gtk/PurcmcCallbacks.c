@@ -206,7 +206,7 @@ static void handle_response_from_webpage(purcmc_session *sess,
                 state_string_to_value(state), ret_data);
     }
     else {
-        LOG_ERROR("No requestId in the user message from webPage.\n");
+        LOG_DEBUG("No normal requestId in the user message from webPage.\n");
     }
 
     purc_variant_unref(result);
