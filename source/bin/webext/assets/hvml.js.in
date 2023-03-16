@@ -203,7 +203,7 @@ if (checkHVML()) {
                     elem = get_element_by_hvml_handle(msg.element);
 
                 if (elem) {
-                    if (!update_func(elem, msg.operation, msg.data))
+                    if (!update_func(elem, msg.operation, msg))
                         return { requestId: msg.requestId, state: "BadRequest" };
                 }
                 else {
@@ -381,20 +381,20 @@ function updateProperty(elem, property, data)
     return false;
 }
 
-function updateDocumentWithPlain(elem, op, data)
+function updateDocumentWithPlain(elem, op, msg)
 {
     switch (op) {
         case 'append':
-            elem.append(data);
+            elem.append(msg.data);
             break;
         case 'prepend':
-            elem.prepend(data);
+            elem.prepend(msg.data);
             break;
         case 'insertBefore':
-            elem.before(data);
+            elem.before(msg.data);
             break;
         case 'insertAfter':
-            elem.after(data);
+            elem.after(msg.data);
             break;
         case 'displace':
             if (msg.property) {
@@ -402,7 +402,7 @@ function updateDocumentWithPlain(elem, op, data)
             }
             else {
                 elem.replaceChildren();
-                elem.append(data);
+                elem.append(msg.data);
             }
             break;
         default:
@@ -412,11 +412,11 @@ function updateDocumentWithPlain(elem, op, data)
     return true;
 }
 
-function updateDocumentWithHTML(elem, op, data)
+function updateDocumentWithHTML(elem, op, msg)
 {
     let fragment = new DocumentFragment();
     let container = document.createElement("div");
-    container.innerHTML = data;
+    container.innerHTML = msg.data;
 
     let nr_elements = container.children.length;
     if (nr_elements > 0) {
@@ -455,16 +455,16 @@ function updateDocumentWithHTML(elem, op, data)
         /* no child elements, treat as Text node. */
         switch (op) {
             case 'append':
-                elem.append(data);
+                elem.append(msg.data);
                 break;
             case 'prepend':
-                elem.prepend(data);
+                elem.prepend(msg.data);
                 break;
             case 'insertBefore':
-                elem.before(data);
+                elem.before(msg.data);
                 break;
             case 'insertAfter':
-                elem.after(data);
+                elem.after(msg.data);
                 break;
             case 'displace':
                 if (msg.property) {
@@ -472,7 +472,7 @@ function updateDocumentWithHTML(elem, op, data)
                 }
                 else {
                     elem.replaceChildren();
-                    elem.append(data);
+                    elem.append(msg.data);
                 }
                 break;
             default:
@@ -566,23 +566,23 @@ function updateDocumentWithFragment(elem, op, frag)
     return true;
 }
 
-function updateDocumentWithSVG(elem, op, data)
+function updateDocumentWithSVG(elem, op, msg)
 {
-    const content = '<svg xmlns="http://www.w3.org/2000/svg">' + data + '</svg>';
+    const content = '<svg xmlns="http://www.w3.org/2000/svg">' + msg.data + '</svg>';
     const parser = new DOMParser();
     const fragment = parser.parseFromString(content, 'text/html').body;
 
     return updateDocumentWithFragment(elem, op, fragment);
 }
 
-function updateDocumentWithMathML(elem, op, data)
+function updateDocumentWithMathML(elem, op, msg)
 {
-    return updateDocumentWithDOMParser(elem, op, data, "application/mathml+xml");
+    return updateDocumentWithDOMParser(elem, op, msg.data, "application/mathml+xml");
 }
 
-function updateDocumentWithXML(elem, op, data)
+function updateDocumentWithXML(elem, op, msg)
 {
-    return updateDocumentWithDOMParser(elem, op, data, "application/xml");
+    return updateDocumentWithDOMParser(elem, op, msg.data, "application/xml");
 }
 
 function clearElement(elem, property)
