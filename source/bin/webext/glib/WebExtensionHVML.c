@@ -423,9 +423,25 @@ static void
 web_page_created_callback(WebKitWebExtension *extension,
         WebKitWebPage *web_page, gpointer user_data)
 {
+#if !WEBKIT_CHECK_VERSION(2, 33, 2)
+    g_autoptr (JSCContext) js_context = NULL;
+
+    /* Enforce the creation of the script world global context in the main frame */
+    js_context = webkit_frame_get_js_context_for_script_world(
+            webkit_web_page_get_main_frame(web_page),
+            webkit_script_world_get_default());
+    (void)js_context;
+#endif
+
     LOG_DEBUG("Page %llu created for %s\n",
             (unsigned long long)webkit_web_page_get_id(web_page),
             webkit_web_page_get_uri(web_page));
+
+    LOG_DEBUG("Script world: %p\n", webkit_script_world_get_default());
+    g_signal_connect(webkit_script_world_get_default(),
+            "window-object-cleared",
+            G_CALLBACK(window_object_cleared_callback),
+            extension);
 }
 
 G_MODULE_EXPORT void
@@ -453,11 +469,6 @@ webkit_web_extension_initialize_with_user_data(WebKitWebExtension *extension,
     g_signal_connect(extension, "page-created",
             G_CALLBACK(web_page_created_callback),
             NULL);
-    LOG_DEBUG("Script world: %p\n", webkit_script_world_get_default());
-    g_signal_connect(webkit_script_world_get_default(),
-            "window-object-cleared",
-            G_CALLBACK(window_object_cleared_callback),
-            extension);
 
 failed:
     return;
