@@ -48,7 +48,9 @@ struct _BrowserTab {
     GtkWidget *titleBox;
     GtkWidget *titleLabel;
     GtkWidget *titleSpinner;
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
     GtkWidget *titleAudioButton;
+#endif
     GtkWidget *titleCloseButton;
 };
 
@@ -76,6 +78,7 @@ static void isLoadingChanged(WebKitWebView *webView, GParamSpec *paramSpec, Brow
     }
 }
 
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
 static void audioClicked(GtkButton *button, gpointer userData)
 {
     BrowserTab *tab = BROWSER_TAB(userData);
@@ -95,6 +98,7 @@ static void audioMutedChanged(WebKitWebView *webView, GParamSpec *pspec, gpointe
     gtk_button_set_image(GTK_BUTTON(tab->titleAudioButton), gtk_image_new_from_icon_name(muted ? "audio-volume-muted-symbolic" : "audio-volume-high-symbolic", GTK_ICON_SIZE_MENU));
 #endif
 }
+#endif /* check WebKit version >= 2.30.0 */
 
 #if GTK_CHECK_VERSION(3, 98, 5)
 static void tabCloseClicked(BrowserTab *tab)
@@ -154,6 +158,7 @@ static void browserTabConstructed(GObject *gObject)
     gtk_widget_show(hbox);
 #endif
 
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
 #if GTK_CHECK_VERSION(3, 98, 5)
     tab->titleAudioButton = gtk_button_new_from_icon_name("audio-volume-high-symbolic");
     gtk_button_set_has_frame(GTK_BUTTON(tab->titleAudioButton), FALSE);
@@ -169,6 +174,7 @@ static void browserTabConstructed(GObject *gObject)
 #else
     gtk_box_pack_start(GTK_BOX(tab->titleBox), tab->titleAudioButton, FALSE, FALSE, 0);
 #endif
+#endif  /* WEBKIT_VERSION > 2.30.0 */
 
 #if GTK_CHECK_VERSION(3, 98, 5)
     tab->titleCloseButton = gtk_button_new_from_icon_name("window-close-symbolic");
@@ -191,8 +197,10 @@ static void browserTabConstructed(GObject *gObject)
     g_signal_connect(BROWSER_PANE(tab)->webView, "notify::title", G_CALLBACK(titleChanged), tab);
     g_signal_connect(BROWSER_PANE(tab)->webView, "notify::is-loading", G_CALLBACK(isLoadingChanged), tab);
 
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
     g_object_bind_property(BROWSER_PANE(tab)->webView, "is-playing-audio", tab->titleAudioButton, "visible", G_BINDING_DEFAULT | G_BINDING_SYNC_CREATE);
     g_signal_connect(BROWSER_PANE(tab)->webView, "notify::is-muted", G_CALLBACK(audioMutedChanged), tab);
+#endif
 }
 
 static void browser_tab_class_init(BrowserTabClass *klass)
