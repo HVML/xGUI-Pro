@@ -616,8 +616,10 @@ webViewDecidePolicy(WebKitWebView *webView, WebKitPolicyDecision *decision,
                     webkit_web_view_get_user_content_manager(webView),
                 "is-controlled-by-automation",
                     webkit_web_view_is_controlled_by_automation(webView),
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
                 "website-policies",
                     webkit_web_view_get_website_policies(webView),
+#endif
         NULL));
     browser_tabbed_window_append_view_tab(window, NULL, newWebView);
     webkit_web_view_load_request(newWebView,
@@ -790,6 +792,7 @@ faviconChanged(WebKitWebView *webView, GParamSpec *paramSpec,
     updateUriEntryIcon(window);
 }
 
+#if WEBKIT_CHECK_VERSION(2, 34, 0)
 static void
 webViewMediaCaptureStateChanged(WebKitWebView* webView, GParamSpec* paramSpec,
         BrowserTabbedWindow* window)
@@ -847,6 +850,7 @@ webViewMediaCaptureStateChanged(WebKitWebView* webView, GParamSpec* paramSpec,
         }
     }
 }
+#endif /* WebKit >= 2.34.0 */
 
 static void
 webViewUriEntryIconPressed(GtkEntry* entry, GtkEntryIconPosition position,
@@ -855,6 +859,7 @@ webViewUriEntryIconPressed(GtkEntry* entry, GtkEntryIconPosition position,
     if (position != GTK_ENTRY_ICON_SECONDARY)
         return;
 
+#if WEBKIT_CHECK_VERSION(2, 34, 0)
     // FIXME: What about audio/video?
     WebKitWebView *webView = BRW_TAB2VIEW(window->activeTab);
     switch (webkit_web_view_get_display_capture_state(webView)) {
@@ -869,6 +874,7 @@ webViewUriEntryIconPressed(GtkEntry* entry, GtkEntryIconPosition position,
                 WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
         break;
     }
+#endif /* WebKit >= 2.34.0 */
 }
 
 static void
@@ -929,7 +935,9 @@ newTabCallback(GSimpleAction *action, GVariant *parameter, gpointer userData)
             webkit_web_view_get_user_content_manager(webView),
         "is-controlled-by-automation",
             webkit_web_view_is_controlled_by_automation(webView),
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
         "website-policies", webkit_web_view_get_website_policies(webView),
+#endif
         NULL)));
     gtk_widget_grab_focus(window->uriEntry);
     gtk_notebook_set_current_page(GTK_NOTEBOOK(window->notebook), -1);
@@ -955,7 +963,9 @@ openPrivateWindow(GSimpleAction *action, GVariant *parameter, gpointer userData)
             "is-ephemeral", TRUE,
             "is-controlled-by-automation",
                 webkit_web_view_is_controlled_by_automation(webView),
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
             "website-policies", webkit_web_view_get_website_policies(webView),
+#endif
         NULL));
 
     GtkWidget *newWindow =
@@ -1211,12 +1221,14 @@ static void browserTabbedWindowSwitchTab(GtkNotebook *notebook,
     g_signal_connect(webView, "scroll-event",
             G_CALLBACK(scrollEventCallback), window);
 #endif
+#if WEBKIT_CHECK_VERSION(2, 34, 0)
     g_signal_connect_object(webView, "notify::camera-capture-state",
             G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
     g_signal_connect_object(webView, "notify::microphone-capture-state",
             G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
     g_signal_connect_object(webView, "notify::display-capture-state",
             G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
+#endif /* WebKit >= 2.34.0 */
 
     g_object_set(window->uriEntry, "secondary-icon-activatable", TRUE, NULL);
     g_signal_connect(window->uriEntry, "icon-press",
@@ -1679,8 +1691,8 @@ GtkWidget *
 browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
         GtkWidget *container, WebKitWebView *webView)
 {
-    g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
-    g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
+    g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
+    g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), NULL);
 
     if (webkit_web_view_is_editable(webView)) {
         g_warning("Editable webView is not allowed");

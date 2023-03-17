@@ -92,7 +92,7 @@ else ()
     set(WEBKIT2GTK_API_DOC_VERSION 4.0)
 endif ()
 
-find_package(WebKit2Gtk 2.34.1 REQUIRED)
+find_package(WebKit2Gtk 2.28.0 REQUIRED)
 
 # CMake does not automatically add --whole-archive when building shared objects from
 # a list of convenience libraries. This can lead to missing symbols in the final output.

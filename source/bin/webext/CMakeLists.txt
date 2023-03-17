@@ -42,13 +42,11 @@ add_dependencies(WebExtensionHVML assets)
 
 file(ARCHIVE_EXTRACT
         INPUT "${XGUIPRO_BIN_DIR}/webext/assets/bootstrap-5.1.3-dist.zip"
-        DESTINATION "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}"
-        VERBOSE)
+        DESTINATION "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}")
 
 file(ARCHIVE_EXTRACT
         INPUT "${XGUIPRO_BIN_DIR}/webext/assets/bootstrap-icons-1.8.3.zip"
-        DESTINATION "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}"
-        VERBOSE)
+        DESTINATION "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}")
 
 install(FILES ${assets_SOURCES}
         DESTINATION ${XGUIPRO_WEBEXT_ASSETS_INSTALL_DIR})

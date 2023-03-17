@@ -245,9 +245,11 @@ static void permissionRequestDialogResponse(GtkWidget *dialog,
         if (WEBKIT_IS_USER_MEDIA_PERMISSION_REQUEST(requestData->request))
             g_hash_table_add(userMediaPermissionGrantedOrigins,
                     g_strdup(requestData->origin));
+#if WEBKIT_CHECK_VERSION(2,30,0)
         if (WEBKIT_IS_MEDIA_KEY_SYSTEM_PERMISSION_REQUEST(requestData->request))
             g_hash_table_add(mediaKeySystemPermissionGrantedOrigins,
                     g_strdup(requestData->origin));
+#endif
 
         webkit_permission_request_allow(requestData->request);
         break;
@@ -255,9 +257,11 @@ static void permissionRequestDialogResponse(GtkWidget *dialog,
         if (WEBKIT_IS_USER_MEDIA_PERMISSION_REQUEST(requestData->request))
             g_hash_table_remove(userMediaPermissionGrantedOrigins,
                     requestData->origin);
+#if WEBKIT_CHECK_VERSION(2,30,0)
         if (WEBKIT_IS_MEDIA_KEY_SYSTEM_PERMISSION_REQUEST(requestData->request))
             g_hash_table_remove(mediaKeySystemPermissionGrantedOrigins,
                     requestData->origin);
+#endif
 
         webkit_permission_request_deny(requestData->request);
         break;
@@ -287,7 +291,11 @@ static gboolean decidePermissionRequest(WebKitWebView *webView,
         title = "UserMedia request";
         gboolean isForAudioDevice = webkit_user_media_permission_is_for_audio_device(WEBKIT_USER_MEDIA_PERMISSION_REQUEST(request));
         gboolean isForVideoDevice = webkit_user_media_permission_is_for_video_device(WEBKIT_USER_MEDIA_PERMISSION_REQUEST(request));
+#if WEBKIT_CHECK_VERSION(2,34,0)
         gboolean isForDisplayDevice = webkit_user_media_permission_is_for_display_device(WEBKIT_USER_MEDIA_PERMISSION_REQUEST(request));
+#else
+        gboolean isForDisplayDevice = false;
+#endif
 
         const char *mediaType = NULL;
         if (isForAudioDevice) {
@@ -326,14 +334,17 @@ static gboolean decidePermissionRequest(WebKitWebView *webView,
         pane->pointerLockMessageLabelId = g_timeout_add_seconds(2, (GSourceFunc)pointerLockMessageTimeoutCallback, pane);
         g_source_set_name_by_id(pane->pointerLockMessageLabelId, "[WebKit]pointerLockMessageTimeoutCallback");
         return TRUE;
-    } else if (WEBKIT_IS_WEBSITE_DATA_ACCESS_PERMISSION_REQUEST(request)) {
+    }
+#if WEBKIT_CHECK_VERSION(2,30,0)
+    else if (WEBKIT_IS_WEBSITE_DATA_ACCESS_PERMISSION_REQUEST(request)) {
         title = "WebsiteData access request";
         WebKitWebsiteDataAccessPermissionRequest *websiteDataAccessRequest = WEBKIT_WEBSITE_DATA_ACCESS_PERMISSION_REQUEST(request);
         const gchar *requestingDomain = webkit_website_data_access_permission_request_get_requesting_domain(websiteDataAccessRequest);
         const gchar *currentDomain = webkit_website_data_access_permission_request_get_current_domain(websiteDataAccessRequest);
         text = g_strdup_printf("Do you want to allow \"%s\" to use cookies while browsing \"%s\"? This will allow \"%s\" to track your activity",
             requestingDomain, currentDomain, requestingDomain);
-    } else if (WEBKIT_IS_MEDIA_KEY_SYSTEM_PERMISSION_REQUEST(request)) {
+    }
+    else if (WEBKIT_IS_MEDIA_KEY_SYSTEM_PERMISSION_REQUEST(request)) {
         char *origin = getWebViewOrigin(webView);
         if (g_hash_table_contains(mediaKeySystemPermissionGrantedOrigins, origin)) {
             webkit_permission_request_allow(request);
@@ -343,7 +354,9 @@ static gboolean decidePermissionRequest(WebKitWebView *webView,
         g_free(origin);
         title = "DRM system access request";
         text = g_strdup_printf("Allow to use a CDM providing access to %s?", webkit_media_key_system_permission_get_name(WEBKIT_MEDIA_KEY_SYSTEM_PERMISSION_REQUEST(request)));
-    } else {
+    }
+#endif /* WebKit > 2.30.0 */
+    else {
         g_print("%s request not handled\n", G_OBJECT_TYPE_NAME(request));
         return FALSE;
     }
@@ -444,11 +457,16 @@ static void certificateDialogResponse(GtkDialog *dialog,
             GTlsCertificate *certificate =
                 g_tls_certificate_new_from_file(path, &error);
             if (certificate) {
+#if WEBKIT_CHECK_VERSION(2, 34, 0)
                 WebKitCredential *credential =
                     webkit_credential_new_for_certificate(certificate,
                             WEBKIT_CREDENTIAL_PERSISTENCE_FOR_SESSION);
                 webkit_authentication_request_authenticate(request, credential);
                 webkit_credential_free(credential);
+#else
+                g_warning("WebKit 2.34+ required to use certificate from %s", path);
+                webkit_authentication_request_authenticate(request, NULL);
+#endif
                 g_object_unref(certificate);
             } else {
                 g_warning("Failed to create certificate for %s", path);

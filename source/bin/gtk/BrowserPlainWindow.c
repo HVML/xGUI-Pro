@@ -672,6 +672,7 @@ static void faviconChanged(WebKitWebView *webView, GParamSpec *paramSpec, Browse
     updateUriEntryIcon(window);
 }
 
+#if WEBKIT_CHECK_VERSION(2, 34, 0)
 static void webViewMediaCaptureStateChanged(WebKitWebView* webView, GParamSpec* paramSpec, BrowserPlainWindow* window)
 {
     const gchar* name = g_param_spec_get_name(paramSpec);
@@ -718,12 +719,14 @@ static void webViewMediaCaptureStateChanged(WebKitWebView* webView, GParamSpec* 
         }
     }
 }
+#endif /* WebKit >= 2.34.0 */
 
 static void webViewUriEntryIconPressed(GtkEntry* entry, GtkEntryIconPosition position, GdkEvent* event, BrowserPlainWindow* window)
 {
     if (position != GTK_ENTRY_ICON_SECONDARY)
         return;
 
+#if WEBKIT_CHECK_VERSION(2, 34, 0)
     // FIXME: What about audio/video?
     WebKitWebView *webView = browser_pane_get_web_view(window->browserPane);
     switch (webkit_web_view_get_display_capture_state(webView)) {
@@ -736,6 +739,7 @@ static void webViewUriEntryIconPressed(GtkEntry* entry, GtkEntryIconPosition pos
         webkit_web_view_set_display_capture_state(webView, WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
         break;
     }
+#endif /* WebKit >= 2.34.0 */
 }
 
 static void webViewIsLoadingChanged(WebKitWebView *webView, GParamSpec *paramSpec, BrowserPlainWindow *window)
@@ -1335,12 +1339,15 @@ static void browserPlainWindowSetupSignalHandlers(BrowserPlainWindow *window)
     g_signal_connect(webView, "scroll-event",
             G_CALLBACK(scrollEventCallback), window);
 #endif
+
+#if WEBKIT_CHECK_VERSION(2, 34, 0)
     g_signal_connect_object(webView, "notify::camera-capture-state",
             G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
     g_signal_connect_object(webView, "notify::microphone-capture-state",
             G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
     g_signal_connect_object(webView, "notify::display-capture-state",
             G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
+#endif
 
     g_object_set(window->uriEntry, "secondary-icon-activatable",
             TRUE, NULL);
@@ -1646,7 +1653,7 @@ void browser_plain_window_set_view(BrowserPlainWindow *window,
 
 WebKitWebView *browser_plain_window_get_view(BrowserPlainWindow *window)
 {
-    g_return_if_fail(BROWSER_IS_PLAIN_WINDOW(window));
+    g_return_val_if_fail(BROWSER_IS_PLAIN_WINDOW(window), NULL);
     if (window->browserPane)
         return browser_pane_get_web_view(window->browserPane);
 
@@ -1712,8 +1719,10 @@ void browser_plain_window_load_session(BrowserPlainWindow *window,
             webkit_web_view_get_settings(previousWebView),
             "user-content-manager",
             webkit_web_view_get_user_content_manager(previousWebView),
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
             "website-policies",
             webkit_web_view_get_website_policies(previousWebView),
+#endif
             NULL));
         browser_plain_window_set_view(window, webView);
     }

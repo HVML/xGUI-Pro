@@ -444,9 +444,11 @@ static gboolean on_webview_close(WebKitWebView *web_view, purcmc_session *sess)
 
 static WebKitWebView *create_web_view(purcmc_session *sess)
 {
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
     WebKitWebsitePolicies *website_policies;
     website_policies = g_object_get_data(G_OBJECT(sess->webkit_settings),
             "default-website-policies");
+#endif
 
     WebKitUserContentManager *uc_manager;
     uc_manager = g_object_get_data(G_OBJECT(sess->webkit_settings),
@@ -457,7 +459,9 @@ static WebKitWebView *create_web_view(purcmc_session *sess)
                 "settings", sess->webkit_settings,
                 "user-content-manager", uc_manager,
                 "is-controlled-by-automation", FALSE,
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
                 "website-policies", website_policies,
+#endif
                 NULL));
 }
 

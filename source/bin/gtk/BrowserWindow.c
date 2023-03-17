@@ -517,7 +517,9 @@ static gboolean webViewDecidePolicy(WebKitWebView *webView, WebKitPolicyDecision
         "settings", webkit_web_view_get_settings(webView),
         "user-content-manager", webkit_web_view_get_user_content_manager(webView),
         "is-controlled-by-automation", webkit_web_view_is_controlled_by_automation(webView),
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
         "website-policies", webkit_web_view_get_website_policies(webView),
+#endif
         NULL));
     browser_window_append_view(window, newWebView);
     webkit_web_view_load_request(newWebView, webkit_navigation_action_get_request(navigationAction));
@@ -659,6 +661,7 @@ static void faviconChanged(WebKitWebView *webView, GParamSpec *paramSpec, Browse
     updateUriEntryIcon(window);
 }
 
+#if WEBKIT_CHECK_VERSION(2, 34, 0)
 static void webViewMediaCaptureStateChanged(WebKitWebView* webView, GParamSpec* paramSpec, BrowserWindow* window)
 {
     const gchar* name = g_param_spec_get_name(paramSpec);
@@ -705,12 +708,14 @@ static void webViewMediaCaptureStateChanged(WebKitWebView* webView, GParamSpec* 
         }
     }
 }
+#endif /* WebKit >= 2.34.0 */
 
 static void webViewUriEntryIconPressed(GtkEntry* entry, GtkEntryIconPosition position, GdkEvent* event, BrowserWindow* window)
 {
     if (position != GTK_ENTRY_ICON_SECONDARY)
         return;
 
+#if WEBKIT_CHECK_VERSION(2, 34, 0)
     // FIXME: What about audio/video?
     WebKitWebView *webView = browser_tab_get_web_view(window->activeTab);
     switch (webkit_web_view_get_display_capture_state(webView)) {
@@ -723,6 +728,7 @@ static void webViewUriEntryIconPressed(GtkEntry* entry, GtkEntryIconPosition pos
         webkit_web_view_set_display_capture_state(webView, WEBKIT_MEDIA_CAPTURE_STATE_MUTED);
         break;
     }
+#endif /* WebKit >= 2.34.0 */
 }
 
 static void webViewIsLoadingChanged(WebKitWebView *webView, GParamSpec *paramSpec, BrowserWindow *window)
@@ -769,7 +775,9 @@ static void newTabCallback(GSimpleAction *action, GVariant *parameter, gpointer 
         "settings", webkit_web_view_get_settings(webView),
         "user-content-manager", webkit_web_view_get_user_content_manager(webView),
         "is-controlled-by-automation", webkit_web_view_is_controlled_by_automation(webView),
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
         "website-policies", webkit_web_view_get_website_policies(webView),
+#endif
         NULL)));
     gtk_widget_grab_focus(window->uriEntry);
     gtk_notebook_set_current_page(GTK_NOTEBOOK(window->notebook), -1);
@@ -790,7 +798,9 @@ static void openPrivateWindow(GSimpleAction *action, GVariant *parameter, gpoint
         "user-content-manager", webkit_web_view_get_user_content_manager(webView),
         "is-ephemeral", TRUE,
         "is-controlled-by-automation", webkit_web_view_is_controlled_by_automation(webView),
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
         "website-policies", webkit_web_view_get_website_policies(webView),
+#endif
         NULL));
     GtkWidget *newWindow = browser_window_new(GTK_WINDOW(window), window->webContext);
     gtk_window_set_application(GTK_WINDOW(newWindow), gtk_window_get_application(GTK_WINDOW(window)));
@@ -1257,9 +1267,11 @@ static void browserWindowSwitchTab(GtkNotebook *notebook, BrowserTab *tab, guint
 #if !GTK_CHECK_VERSION(3, 98, 0)
     g_signal_connect(webView, "scroll-event", G_CALLBACK(scrollEventCallback), window);
 #endif
+#if WEBKIT_CHECK_VERSION(2, 34, 0)
     g_signal_connect_object(webView, "notify::camera-capture-state", G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
     g_signal_connect_object(webView, "notify::microphone-capture-state", G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
     g_signal_connect_object(webView, "notify::display-capture-state", G_CALLBACK(webViewMediaCaptureStateChanged), window, 0);
+#endif
 
     g_object_set(window->uriEntry, "secondary-icon-activatable", TRUE, NULL);
     g_signal_connect(window->uriEntry, "icon-press", G_CALLBACK(webViewUriEntryIconPressed), window);
@@ -1581,7 +1593,9 @@ void browser_window_load_session(BrowserWindow *window, const char *sessionFile)
                 "web-context", webkit_web_view_get_context(previousWebView),
                 "settings", webkit_web_view_get_settings(previousWebView),
                 "user-content-manager", webkit_web_view_get_user_content_manager(previousWebView),
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
                 "website-policies", webkit_web_view_get_website_policies(previousWebView),
+#endif
                 NULL));
             browser_window_append_view(window, webView);
         }
@@ -1646,7 +1660,9 @@ WebKitWebView *browser_window_get_or_create_web_view_for_automation(BrowserWindo
         "settings", webkit_web_view_get_settings(webView),
         "user-content-manager", webkit_web_view_get_user_content_manager(webView),
         "is-controlled-by-automation", TRUE,
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
         "website-policies", webkit_web_view_get_website_policies(webView),
+#endif
         NULL));
     GtkWidget *newWindow = browser_window_new(GTK_WINDOW(window), window->webContext);
     gtk_window_set_application(GTK_WINDOW(newWindow), gtk_window_get_application(GTK_WINDOW(window)));
@@ -1668,7 +1684,9 @@ WebKitWebView *browser_window_create_web_view_in_new_tab_for_automation(BrowserW
         "user-content-manager", webkit_web_view_get_user_content_manager(webView),
         "is-controlled-by-automation", TRUE,
         "automation-presentation-type", WEBKIT_AUTOMATION_BROWSING_CONTEXT_PRESENTATION_TAB,
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
         "website-policies", webkit_web_view_get_website_policies(webView),
+#endif
         NULL));
     browser_window_append_view(window, newWebView);
     webkit_web_view_load_uri(newWebView, "about:blank");
