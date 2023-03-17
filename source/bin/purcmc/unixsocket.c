@@ -74,7 +74,7 @@ int us_listen (USServer* server)
     memset (&unix_addr, 0, sizeof(unix_addr));
     unix_addr.sun_family = AF_UNIX;
     strcpy (unix_addr.sun_path, server->config->unixsocket);
-    len = sizeof (unix_addr.sun_family) + strlen (unix_addr.sun_path);
+    len = sizeof (unix_addr.sun_family) + strlen (unix_addr.sun_path) + 1;
 
     /* bind the name to the descriptor */
     if (bind (fd, (struct sockaddr *) &unix_addr, len) < 0) {
@@ -82,7 +82,8 @@ int us_listen (USServer* server)
         goto error;
     }
     if (chmod (server->config->unixsocket, 0666) < 0) {
-        purc_log_error ("Error duing calling `chmod` in us_listen: %s\n", strerror (errno));
+        purc_log_error ("Error duing calling `chmod` on %s in us_listen: %s\n",
+                server->config->unixsocket, strerror (errno));
         goto error;
     }
 
