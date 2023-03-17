@@ -575,7 +575,7 @@ static int on_update_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    purcmc_workspace *workspace;
+    purcmc_workspace *workspace = NULL;
     pcrdr_msg response = { };
 
     if (srv->cbs.create_workspace == NULL || srv->cbs.update_workspace) {
@@ -637,7 +637,7 @@ static int on_destroy_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
-    purcmc_workspace *workspace;
+    purcmc_workspace *workspace = NULL;
     pcrdr_msg response = { };
 
     if (srv->cbs.create_workspace == NULL || srv->cbs.destroy_workspace) {
@@ -1582,7 +1582,7 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
     purc_variant_t result = PURC_VARIANT_INVALID;
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
-    const char *method;
+    const char *method = NULL;
     purc_variant_t arg = PURC_VARIANT_INVALID;
 
     if (msg->dataType != PCRDR_MSG_DATA_TYPE_JSON) {

@@ -29,7 +29,7 @@ set(WebExtensionHVML_SOURCES
 )
 
 macro(ADD_WK2_WEB_EXTENSION extension_name)
-    add_library(${extension_name} MODULE ${ARGN})
+    add_library(${extension_name} SHARED ${ARGN})
     add_dependencies(${extension_name} xguipro)
     set_property(
         TARGET ${extension_name}

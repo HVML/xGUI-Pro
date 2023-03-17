@@ -320,7 +320,7 @@ purcmc_session *gtk_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
     WebKitWebContext *web_context = g_object_new(WEBKIT_TYPE_WEB_CONTEXT,
             "website-data-manager", manager,
             "process-swap-on-cross-site-navigation-enabled", TRUE,
-#if !GTK_CHECK_VERSION(3, 98, 0)
+#if !GTK_CHECK_VERSION(3, 98, 0) && WEBKIT_CHECK_VERSION(2, 30, 0)
             "use-system-appearance-for-scrollbars", FALSE,
 #endif
             NULL);

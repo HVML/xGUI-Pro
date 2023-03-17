@@ -130,7 +130,7 @@ static int us_accept (int listenfd, pid_t *pidptr, uid_t *uidptr)
         goto error;
     }
 
-    unix_addr.sun_path[len] = 0;            /* null terminate */
+    unix_addr.sun_path[len - 1] = 0;            /* null terminate */
     purc_log_info ("The peer address in us_accept: %s\n", unix_addr.sun_path);
     if (stat (unix_addr.sun_path, &statbuf) < 0) {
         purc_log_error ("Failed `stat` in us_accept: %s\n", strerror (errno));

@@ -385,6 +385,7 @@ window_object_cleared_callback(WebKitScriptWorld* world,
         WebKitWebExtension* extension)
 {
     const gchar *uri = webkit_web_page_get_uri(web_page);
+    LOG_DEBUG("%s called: uri (%s)\n", __func__, uri);
 
     char *host = NULL, *app = NULL, *runner = NULL, *group = NULL, *page = NULL;
     char *request_id = NULL;
@@ -452,6 +453,7 @@ webkit_web_extension_initialize_with_user_data(WebKitWebExtension *extension,
     g_signal_connect(extension, "page-created",
             G_CALLBACK(web_page_created_callback),
             NULL);
+    LOG_DEBUG("Script world: %p\n", webkit_script_world_get_default());
     g_signal_connect(webkit_script_world_get_default(),
             "window-object-cleared",
             G_CALLBACK(window_object_cleared_callback),
