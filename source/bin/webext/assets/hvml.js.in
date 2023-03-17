@@ -1,8 +1,17 @@
 var get_element_by_hvml_handle;
+var get_element_hvml_handle;
+var get_element_hvml_event_list;
 function checkHVML() {
     if (typeof(document.getElementByHVMLHandle) == "function") {
         get_element_by_hvml_handle = function (handle) {
             return document.getElementByHVMLHandle(handle);
+        }
+
+        get_element_hvml_handle = function (elem) {
+            return elem.hvmlHandleText;
+        }
+        get_element_hvml_event_list = function (elem) {
+            return elem.hvmlEventList;
         }
     }
     else {
@@ -10,13 +19,21 @@ function checkHVML() {
             return document.querySelector("[hvml-handle='" + handle + "']");
         }
 
+        get_element_hvml_handle = function (elem) {
+            return elem.getAttribute("hvml-handle");
+        }
+
+        get_element_hvml_event_list = function (elem) {
+            let events = elem.getAttribute("hvml-events");
+            return events.split(' ');
+        }
         console.log("You are not using the tailored WebKit developed by HVML community. " +
                "This may slightly affect the performance of xGUI Pro. ");
     }
 
     if (typeof(HVML) == "object" && HVML.version >= @HVMLJS_VERSION@) {
-        let elemStatus = document.getElementByHVMLHandle('731128');
-        let elemRunner = document.getElementByHVMLHandle('790715');
+        let elemStatus = get_element_by_hvml_handle('731128');
+        let elemRunner = get_element_by_hvml_handle('790715');
         if (elemStatus && elemRunner) {
             elemStatus.textContent = 'Ready';
             elemRunner.textContent = '@' + HVML.hostName + '/' +
@@ -45,7 +62,6 @@ if (checkHVML()) {
             document.write(msg.data);
             document.close();
 
-            console.log("checking elements with hvml-events attribute...");
             const interestedElements = document.querySelectorAll("[hvml-events]");
             if (interestedElements.length > 0)
                 registerEventsListener(interestedElements);
@@ -64,7 +80,6 @@ if (checkHVML()) {
             document.write(msg.data);
             document.close();
 
-            console.log("checking elements with hvml-events attribute...");
             const interestedElements = document.querySelectorAll("[hvml-events]");
             if (interestedElements.length > 0)
                 registerEventsListener(interestedElements);
@@ -304,13 +319,11 @@ if (checkHVML()) {
 
 function registerEventsListener(elems)
 {
-    console.log("registerEventsListener called");
-
     elems.forEach (function (elem) {
-        if (elem.hvmlHandle !== 0 || elem.id != "") {
-            console.log("elem.hvmlEventList: " + elem.hvmlEventList.length);
-            for (let i = 0; i < elem.hvmlEventList.length; i++) {
-                let eventTokens = elem.hvmlEventList.item(i).split(':');
+        if (get_element_hvml_handle(elem) != "" || elem.id != "") {
+            let event_list = get_element_hvml_event_list(elem);
+            for (let i = 0; i < event_list.length; i++) {
+                let eventTokens = event_list[i].split(':');
                 let eventName = eventTokens[0];
                 let eventOpts = eventTokens[1];
 
@@ -318,10 +331,11 @@ function registerEventsListener(elems)
                 if (eventOpts)
                     optList = eventOpts.split(',');
 
+                //console.log("eventName:eventOpts " + eventName + ":" + eventOpts);
                 elem.addEventListener(eventName, function (evt) {
                     let data = {
                         targetTagName: evt.target.tagName,
-                        targetHandle: evt.target.hvmlHandleText,
+                        targetHandle: get_element_hvml_handle(evt.target),
                         targetId: evt.target.id,
                         targetClass: evt.target.className,
                         targetValue: evt.target.value,
@@ -334,14 +348,14 @@ function registerEventsListener(elems)
                     if (optList.includes('stop'))
                         evt.stopPropagation();
 
-                    if (evt.currentTarget.hvmlHandle == 0) {
+                    if (get_element_hvml_handle(evt.currentTarget) == "") {
                         HVML.post(evt.type, "id",
                                 evt.currentTarget.id,
                                 JSON.stringify(data));
                     }
                     else {
                         HVML.post(evt.type, "handle",
-                                evt.currentTarget.hvmlHandleText,
+                                get_element_hvml_handle(evt.currentTarget),
                                 JSON.stringify(data));
                     }
                 });
@@ -494,8 +508,6 @@ function updateDocumentWithDOMParser(elem, op, data, mime)
         return false;
     }
 
-    console.log("parse data with mime: " + mime + data);
-
     switch (op) {
         case 'append':
             while (doc.firstChild) {
@@ -634,11 +646,12 @@ function getProperty(obj, property)
 function setProperty(obj, property, value)
 {
     try {
-        console.log("about to set property `" + property + "` of an element with Id is " + obj.id + " to `" + value + "`");
 
         const func = new Function('OBJ', 'VALUE', 'OBJ.' + property + '=VALUE; return OBJ.' + property);
         return func(obj, value);
-    } catch (error) {
+    }
+    catch (error) {
+        console.log("about to set property `" + property + "` of an element with Id is " + obj.id + " to `" + value + "`");
         console.error(error);
         return null;
     }
