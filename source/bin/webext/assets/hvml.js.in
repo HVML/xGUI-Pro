@@ -374,6 +374,11 @@ function updateProperty(elem, property, data)
         elem.textContent = data;
         return true;
     }
+    else if (property == "content") {
+        elem.replaceChildren();
+        elem.append(data);
+        return true;
+    }
     else if (property.startsWith("attr.")) {
         let attr = property.substring(5);
         elem.setAttribute(attr, data);
