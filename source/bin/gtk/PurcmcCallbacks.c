@@ -20,6 +20,8 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
+#undef NDEBUG
+
 #include "config.h"
 #include "main.h"
 #include "BrowserPane.h"
@@ -380,13 +382,12 @@ static int on_each_ostack(void *ctxt, const char *name, void *data)
         // TODO: send reloadPage request to another endpoint
     }
 
-    purcmc_page *page = purc_page_ostack_get_page(ostack);
-    if (sorted_array_find(sess->all_handles, PTR2U64(page), &data)) {
+    WebKitWebView *webview = purc_page_ostack_get_page(ostack);
+    if (sorted_array_find(sess->all_handles, PTR2U64(webview), &data)) {
         assert((uintptr_t)data == HT_WEBVIEW);
-        webkit_web_view_try_close((WebKitWebView *)page);
+        webkit_web_view_try_close(webview);
     }
 
-    purc_page_ostack_delete(sess->workspace->page_owners, ostack);
     return 0;
 }
 
@@ -445,7 +446,7 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
             if (endpoint) {
                 /* post `destroy` event for the plainwindow */
                 event.target = PCRDR_MSG_TARGET_PLAINWINDOW;
-                event.targetValue = PTR2U64(webview);
+                event.targetValue = PTR2U64(container);
                 purcmc_endpoint_post_event(sess->srv, endpoint, &event);
             }
 
@@ -461,7 +462,7 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
             if (endpoint) {
                 /* post `destroy` event for the page */
                 event.target = PCRDR_MSG_TARGET_WIDGET;
-                event.targetValue = PTR2U64(webview);
+                event.targetValue = PTR2U64(container);
                 purcmc_endpoint_post_event(sess->srv, endpoint, &event);
             }
         }
