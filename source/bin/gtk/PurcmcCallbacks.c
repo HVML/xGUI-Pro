@@ -763,7 +763,8 @@ purcmc_page *gtk_find_page(purcmc_session *sess,
     void *data;
     data = pcutils_kvlist_get(workspace->page_owners, page_id);
     if (data != NULL) {
-        WebKitWebView *webview = *(WebKitWebView **)data;
+        purc_page_ostack_t ostack = *(purc_page_ostack_t *)data;
+        WebKitWebView *webview = purc_page_ostack_get_page(ostack);
         void *page = g_object_get_data(G_OBJECT(webview), "purcmc-container");
         return page;
     }

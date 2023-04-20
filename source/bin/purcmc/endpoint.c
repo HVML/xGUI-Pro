@@ -20,6 +20,8 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
+#undef NDEBUG
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -1110,13 +1112,18 @@ static int on_create_widget(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto done;
     }
 
+    purc_log_info("name of widget to create: %s\n", name_group);
+
     char idbuf[PURC_MAX_WIDGET_ID];
     char name[PURC_LEN_IDENTIFIER + 1];
     const char *group = purc_check_and_make_widget_id(idbuf, name, name_group);
     if (group == NULL) {
+        purc_log_warn("no group specified when creating widget\n");
         retv = PCRDR_SC_BAD_REQUEST;
         goto done;
     }
+
+    purc_log_info("group of widget to create: %s\n", group);
 
     /* Since PURCMC-120, support the special page name. */
     if (name[0] == '_') {    // reserved name
@@ -1144,22 +1151,28 @@ static int on_create_widget(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char* class = NULL;
     const char* title = NULL;
     const char* layout_style = NULL;
-    purc_variant_t toolkit_style;
-    purc_variant_t tmp;
+    purc_variant_t toolkit_style = PURC_VARIANT_INVALID;
 
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "class"))) {
-        class = purc_variant_get_string_const(tmp);
+    if (msg->dataType == PCRDR_MSG_DATA_TYPE_JSON
+           && purc_variant_is_object(msg->data)) {
+        purc_variant_t tmp;
+
+        if ((tmp = purc_variant_object_get_by_ckey(msg->data, "class"))) {
+            class = purc_variant_get_string_const(tmp);
+        }
+
+        if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {
+            title = purc_variant_get_string_const(tmp);
+        }
+
+        if ((tmp = purc_variant_object_get_by_ckey(msg->data,
+                        "layoutStyle"))) {
+            layout_style = purc_variant_get_string_const(tmp);
+        }
+
+        toolkit_style =
+            purc_variant_object_get_by_ckey(msg->data, "toolkitStyle");
     }
-
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {
-        title = purc_variant_get_string_const(tmp);
-    }
-
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "layoutStyle"))) {
-        layout_style = purc_variant_get_string_const(tmp);
-    }
-
-    toolkit_style = purc_variant_object_get_by_ckey(msg->data, "toolkitStyle");
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
     page = srv->cbs.create_widget(endpoint->session, workspace,
