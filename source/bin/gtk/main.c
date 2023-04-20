@@ -763,21 +763,26 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
         .create_session = gtk_create_session,
         .remove_session = gtk_remove_session,
 
+        .find_page = gtk_find_page,
+
+        .get_special_plainwin = gtk_get_special_plainwin,
         .create_plainwin = gtk_create_plainwin,
         .update_plainwin = gtk_update_plainwin,
         .destroy_plainwin = gtk_destroy_plainwin,
-        .get_plainwin_page = gtk_get_plainwin_page,
 
         .set_page_groups = gtk_set_page_groups,
         .add_page_groups = gtk_add_page_groups,
         .remove_page_group = gtk_remove_page_group,
 
-        .create_page = gtk_create_widget,
-        .update_page = gtk_update_widget,
-        .destroy_page = gtk_destroy_widget,
+        .get_special_widget = gtk_get_special_widget,
+        .create_widget = gtk_create_widget,
+        .update_widget = gtk_update_widget,
+        .destroy_widget = gtk_destroy_widget,
 
         .load = gtk_load_or_write,
         .write = gtk_load_or_write,
+        .register_crtn = gtk_register_crtn,
+        .revoke_crtn = gtk_revoke_crtn,
 
         .update_dom = gtk_update_dom,
 

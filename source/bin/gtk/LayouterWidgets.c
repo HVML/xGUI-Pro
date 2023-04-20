@@ -74,7 +74,7 @@ void gtk_imp_convert_style(struct ws_widget_info *style,
     }
 }
 
-static purcmc_plainwin *
+static GtkWidget *
 create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
         WebKitWebView *web_view, const struct ws_widget_info *style)
 {
@@ -129,7 +129,7 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
 
     browser_plain_window_set_view(plainwin, web_view);
 
-    return (struct purcmc_plainwin *)plainwin;
+    return GTK_WIDGET(plainwin);
 }
 
 static void post_tabbedwindow_event(purcmc_session *sess, void *window,
@@ -320,8 +320,9 @@ create_tab(purcmc_workspace *workspace, purcmc_session *sess,
 }
 
 void *
-gtk_imp_create_widget(void *workspace, void *session, ws_widget_type_t type, void *window,
-        void *container, void *init_arg, const struct ws_widget_info *style)
+gtk_imp_create_widget(void *workspace, void *session, ws_widget_type_t type,
+        void *window, void *container, void *init_arg,
+        const struct ws_widget_info *style)
 {
     switch (type) {
     case WS_WIDGET_TYPE_PLAINWINDOW:
@@ -359,7 +360,7 @@ gtk_imp_create_widget(void *workspace, void *session, ws_widget_type_t type, voi
 
 static int
 destroy_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
-        purcmc_plainwin *plain_win)
+        GtkWidget *plain_win)
 {
     void *data;
     if (!sorted_array_find(sess->all_handles, PTR2U64(plain_win), &data)) {

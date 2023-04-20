@@ -41,6 +41,9 @@ enum {
 };
 
 struct purcmc_workspace {
+    /* page to owners map */
+    pcutils_kvlist_t    page_owners;
+
     /* manager of grouped plain windows and pages */
     struct ws_layouter *layouter;
 };
@@ -50,9 +53,6 @@ struct purcmc_session {
 
     WebKitSettings *webkit_settings;
     WebKitWebContext *web_context;
-
-    /* ungrouped plain windows */
-    struct kvlist       ug_wins;
 
     /* the sorted array of all valid handles */
     struct sorted_array *all_handles;

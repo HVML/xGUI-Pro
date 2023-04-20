@@ -35,16 +35,21 @@ void pcmc_gtk_cleanup(purcmc_server *);
 purcmc_session *gtk_create_session(purcmc_server *, purcmc_endpoint *);
 int gtk_remove_session(purcmc_session *);
 
-purcmc_plainwin *gtk_create_plainwin(purcmc_session *, purcmc_workspace *,
-        const char *request_id, const char *gid, const char *name,
-        const char *class_name, const char *title, const char *layout_style,
+purcmc_page *gtk_find_page(purcmc_session *sess,
+        purcmc_workspace *workspace, const char *page_id);
+
+purcmc_page *gtk_get_special_plainwin(purcmc_session *sess,
+        purcmc_workspace *workspace, const char *group,
+        pcrdr_resname_page_k page_type);
+purcmc_page *gtk_create_plainwin(purcmc_session *, purcmc_workspace *,
+        const char *request_id,
+        const char *page_id, const char *group, const char *name,
+        const char *klass, const char *title, const char *layout_style,
         purc_variant_t toolkit_style, int *retv);
 int gtk_update_plainwin(purcmc_session *, purcmc_workspace *,
-        purcmc_plainwin *win, const char *property, purc_variant_t value);
+        purcmc_page *win, const char *property, purc_variant_t value);
 int gtk_destroy_plainwin(purcmc_session *, purcmc_workspace *,
-        purcmc_plainwin *win);
-purcmc_page *gtk_get_plainwin_page(purcmc_session *,
-        purcmc_plainwin *win, int *retv);
+        purcmc_page *win);
 
 int gtk_set_page_groups(purcmc_session *, purcmc_workspace *,
         const char *content, size_t length);
@@ -53,34 +58,45 @@ int gtk_add_page_groups(purcmc_session *, purcmc_workspace *,
 int gtk_remove_page_group(purcmc_session *, purcmc_workspace *,
         const char* gid);
 
+purcmc_page *gtk_get_special_widget(purcmc_session *sess,
+        purcmc_workspace *workspace, const char *group,
+        pcrdr_resname_page_k page_type);
+
 purcmc_page *gtk_create_widget(purcmc_session *, purcmc_workspace *,
-            const char *request_id, const char *gid, const char *name,
-            const char *class_name, const char *title, const char *layout_style,
+            const char *request_id,
+            const char *page_id, const char *group, const char *name,
+            const char *klass, const char *title, const char *layout_style,
             purc_variant_t toolkit_style, int *retv);
 int gtk_update_widget(purcmc_session *, purcmc_workspace *,
             purcmc_page *page, const char *property, purc_variant_t value);
 int gtk_destroy_widget(purcmc_session *, purcmc_workspace *,
             purcmc_page *page);
 
-purcmc_dom *gtk_load_or_write(purcmc_session *, purcmc_page *,
+purcmc_udom *gtk_load_or_write(purcmc_session *, purcmc_page *,
             int op, const char *op_name, const char *request_id,
-            const char *content, size_t length, int *retv);
-int gtk_update_dom(purcmc_session *, purcmc_dom *,
+            const char *content, size_t length,
+            uint64_t crtn, char *suppressed, int *retv);
+uint64_t gtk_register_crtn(purcmc_session *, purcmc_page *,
+        uint64_t crtn, int *retv);
+uint64_t gtk_revoke_crtn(purcmc_session *, purcmc_page *,
+        uint64_t crtn, int *retv);
+
+int gtk_update_dom(purcmc_session *, purcmc_udom *,
             int op, const char *op_name, const char* request_id,
             const char* element_type, const char* element_value,
             const char* property, pcrdr_msg_data_type text_type,
             const char *content, size_t length);
 
 purc_variant_t gtk_call_method_in_dom(purcmc_session *, const char *,
-        purcmc_dom *, const char* element_type, const char* element_value,
+        purcmc_udom *, const char* element_type, const char* element_value,
         const char *method, purc_variant_t arg, int* retv);
 
 purc_variant_t gtk_get_property_in_dom(purcmc_session *, const char *,
-        purcmc_dom *, const char* element_type, const char* element_value,
+        purcmc_udom *, const char* element_type, const char* element_value,
         const char *property, int *retv);
 
 purc_variant_t gtk_set_property_in_dom(purcmc_session *, const char *,
-        purcmc_dom *, const char* element_type, const char* element_value,
+        purcmc_udom *, const char* element_type, const char* element_value,
         const char *property, purc_variant_t value, int *retv);
 
 bool gtk_pend_response(purcmc_session* sess, const char *operation,

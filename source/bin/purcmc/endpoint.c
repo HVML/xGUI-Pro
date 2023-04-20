@@ -859,80 +859,102 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
     pcrdr_msg response = { };
 
     purcmc_workspace* workspace = NULL;
-    purcmc_plainwin* win = NULL;
-
-    const char* gid = NULL;
-    const char* name = NULL;
-    const char* class = NULL;
-    const char* title = NULL;
-    const char* layout_style = NULL;
-    purc_variant_t toolkit_style;
+    purcmc_page* page = NULL;
 
     if (msg->target == PCRDR_MSG_TARGET_WORKSPACE) {
         workspace = (void *)(uintptr_t)msg->targetValue;
     }
     else {
         retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
+        goto done;
     }
 
-    purc_variant_t tmp;
-
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_JSON ||
-            !purc_variant_is_object(msg->data)) {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
+    /* Since PURCMC-120, use element to specify the window name and group name:
+        <window_name>[@<group_name>]
+     */
+    const char *name_group = NULL;
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_ID) {
-        gid = purc_variant_get_string_const(msg->elementValue);
-        if (gid == NULL) {
+        name_group = purc_variant_get_string_const(msg->elementValue);
+    }
+
+    if (name_group == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto done;
+    }
+
+    char idbuf[PURC_MAX_WIDGET_ID];
+    char name[PURC_LEN_IDENTIFIER + 1];
+    const char *group;
+    group = purc_check_and_make_plainwin_id(idbuf, name, name_group);
+    if (group == PURC_INVPTR) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto done;
+    }
+
+    /* Since PURCMC-120, support the special page name. */
+    if (name[0] == '_') {    // reserved name
+        int v = pcrdr_check_reserved_page_name(name);
+        if (v < 0) {
             retv = PCRDR_SC_BAD_REQUEST;
-            goto failed;
+            goto done;
+        }
+
+        /* support for reserved name */
+        if (srv->cbs.get_special_plainwin) {
+            page = srv->cbs.get_special_plainwin(endpoint->session, workspace,
+                    group, (pcrdr_resname_page_k)v);
+            retv = PCRDR_SC_OK;
+            goto done;
         }
     }
 
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "name"))) {
-        name = purc_variant_get_string_const(tmp);
+    page = srv->cbs.find_page(endpoint->session, workspace, idbuf);
+    if (page) {
+        retv = PCRDR_SC_OK;
+        goto done;
     }
 
-    if (name == NULL || !purc_is_valid_identifier(name)) {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
+    purc_variant_t tmp;
+    const char* class = NULL;
+    const char* title = NULL;
+    const char* layout_style = NULL;
+    purc_variant_t toolkit_style = PURC_VARIANT_INVALID;
+
+    if (msg->dataType == PCRDR_MSG_DATA_TYPE_JSON
+           && purc_variant_is_object(msg->data)) {
+        if ((tmp = purc_variant_object_get_by_ckey(msg->data, "class"))) {
+            class = purc_variant_get_string_const(tmp);
+        }
+
+        if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {
+            title = purc_variant_get_string_const(tmp);
+        }
+
+        if ((tmp = purc_variant_object_get_by_ckey(msg->data,
+                        "layoutStyle"))) {
+            layout_style = purc_variant_get_string_const(tmp);
+        }
+
+        toolkit_style =
+            purc_variant_object_get_by_ckey(msg->data, "toolkitStyle");
     }
-
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "class"))) {
-        class = purc_variant_get_string_const(tmp);
-    }
-
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {
-        title = purc_variant_get_string_const(tmp);
-    }
-
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "layoutStyle"))) {
-        layout_style = purc_variant_get_string_const(tmp);
-    }
-
-    toolkit_style = purc_variant_object_get_by_ckey(msg->data, "toolkitStyle");
-
     const char *request_id = purc_variant_get_string_const(msg->requestId);
-    win = srv->cbs.create_plainwin(endpoint->session, workspace,
-            request_id, gid, name, class, title, layout_style,
+    page = srv->cbs.create_plainwin(endpoint->session, workspace,
+            request_id, idbuf, group, name, class, title, layout_style,
             toolkit_style, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
-                request_id,
-                win);
+                request_id, page);
         return PCRDR_SC_OK;
     }
 
-failed:
+done:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
     response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
-    response.resultValue = (uint64_t)(uintptr_t)win;
+    response.resultValue = (uint64_t)(uintptr_t)page;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
@@ -943,7 +965,7 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
 {
     int retv = PCRDR_SC_OK;
     purcmc_workspace *workspace = NULL;
-    purcmc_plainwin *win = NULL;
+    purcmc_page *page = NULL;
     pcrdr_msg response = { };
 
     if (msg->target == PCRDR_MSG_TARGET_WORKSPACE) {
@@ -963,10 +985,10 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
 
         unsigned long long int handle;
         handle = strtoull(element, NULL, 16);
-        win = (void *)(uintptr_t)handle;
+        page = (void *)(uintptr_t)handle;
     }
 
-    if (win == NULL) {
+    if (page == NULL) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
@@ -980,13 +1002,13 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    retv = srv->cbs.update_plainwin(endpoint->session, workspace, win,
+    retv = srv->cbs.update_plainwin(endpoint->session, workspace, page,
             property, msg->data);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
-                win);
+                page);
         return PCRDR_SC_OK;
     }
 
@@ -995,7 +1017,7 @@ failed:
     response.requestId = purc_variant_ref(msg->requestId);
     response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
-    response.resultValue = (uint64_t)win;
+    response.resultValue = (uint64_t)page;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
@@ -1006,7 +1028,7 @@ static int on_destroy_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint
 {
     int retv = PCRDR_SC_OK;
     purcmc_workspace *workspace = NULL;
-    purcmc_plainwin *win = NULL;
+    purcmc_page *page = NULL;
     pcrdr_msg response = { };
 
     if (msg->target == PCRDR_MSG_TARGET_WORKSPACE) {
@@ -1026,108 +1048,19 @@ static int on_destroy_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint
 
         unsigned long long int handle;
         handle = strtoull(element, NULL, 16);
-        win = (purcmc_plainwin *)(uintptr_t)handle;
+        page = (purcmc_page *)(uintptr_t)handle;
     }
 
-    if (win == NULL) {
+    if (page == NULL) {
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
 
-    retv = srv->cbs.destroy_plainwin(endpoint->session, workspace, win);
+    retv = srv->cbs.destroy_plainwin(endpoint->session, workspace, page);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
-                win);
-        return PCRDR_SC_OK;
-    }
-
-failed:
-    response.type = PCRDR_MSG_TYPE_RESPONSE;
-    response.requestId = purc_variant_ref(msg->requestId);
-    response.sourceURI = PURC_VARIANT_INVALID;
-    response.retCode = retv;
-    response.resultValue = (uint64_t)(uintptr_t)win;
-    response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
-
-    return purcmc_endpoint_send_response(srv, endpoint, &response);
-}
-
-static int on_create_page(purcmc_server* srv, purcmc_endpoint* endpoint,
-        const pcrdr_msg *msg)
-{
-    int retv = PCRDR_SC_OK;
-    pcrdr_msg response = { };
-    purcmc_workspace* workspace = NULL;
-    purcmc_page* page = NULL;
-
-    if (srv->cbs.create_page == NULL) {
-        retv = PCRDR_SC_NOT_IMPLEMENTED;
-        goto failed;
-    }
-
-    if (msg->target == PCRDR_MSG_TARGET_WORKSPACE) {
-        workspace = (void *)(uintptr_t)msg->targetValue;
-    }
-    else {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_JSON ||
-            !purc_variant_is_object(msg->data)) {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
-    const char* gid = NULL;
-    if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_ID) {
-        gid = purc_variant_get_string_const(msg->elementValue);
-    }
-
-    if (gid == NULL) {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
-    const char* name = NULL;
-    const char* class = NULL;
-    const char* title = NULL;
-    const char* layout_style = NULL;
-    purc_variant_t toolkit_style;
-    purc_variant_t tmp;
-
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "name"))) {
-        name = purc_variant_get_string_const(tmp);
-        if (name == NULL || !purc_is_valid_identifier(name)) {
-            retv = PCRDR_SC_BAD_REQUEST;
-            goto failed;
-        }
-    }
-
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "class"))) {
-        class = purc_variant_get_string_const(tmp);
-    }
-
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {
-        title = purc_variant_get_string_const(tmp);
-    }
-
-    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "layoutStyle"))) {
-        layout_style = purc_variant_get_string_const(tmp);
-    }
-
-    toolkit_style = purc_variant_object_get_by_ckey(msg->data, "toolkitStyle");
-
-    const char *request_id = purc_variant_get_string_const(msg->requestId);
-    page = srv->cbs.create_page(endpoint->session, workspace,
-            request_id, gid, name, class, title, layout_style,
-            toolkit_style, &retv);
-    if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
-                purc_variant_get_string_const(msg->operation),
-                request_id,
                 page);
         return PCRDR_SC_OK;
     }
@@ -1143,7 +1076,115 @@ failed:
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
 
-static int on_update_page(purcmc_server* srv, purcmc_endpoint* endpoint,
+static int on_create_widget(purcmc_server* srv, purcmc_endpoint* endpoint,
+        const pcrdr_msg *msg)
+{
+    int retv = PCRDR_SC_OK;
+    pcrdr_msg response = { };
+    purcmc_workspace* workspace = NULL;
+    purcmc_page* page = NULL;
+
+    if (srv->cbs.create_widget == NULL) {
+        retv = PCRDR_SC_NOT_IMPLEMENTED;
+        goto done;
+    }
+
+    if (msg->target == PCRDR_MSG_TARGET_WORKSPACE) {
+        workspace = (void *)(uintptr_t)msg->targetValue;
+    }
+    else {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto done;
+    }
+
+    const char* name_group = NULL;
+    /* Since PURCMC-120, use element to specify the widget name and group name:
+            <widget_name>@<group_name>
+     */
+    if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_ID) {
+        name_group = purc_variant_get_string_const(msg->elementValue);
+    }
+
+    if (name_group == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto done;
+    }
+
+    char idbuf[PURC_MAX_WIDGET_ID];
+    char name[PURC_LEN_IDENTIFIER + 1];
+    const char *group = purc_check_and_make_widget_id(idbuf, name, name_group);
+    if (group == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto done;
+    }
+
+    /* Since PURCMC-120, support the special page name. */
+    if (name[0] == '_') {    // reserved name
+        int v = pcrdr_check_reserved_page_name(name);
+        if (v < 0) {
+            retv = PCRDR_SC_BAD_REQUEST;
+            goto done;
+        }
+
+        if (srv->cbs.get_special_widget) {
+            page = srv->cbs.get_special_widget(endpoint->session, workspace,
+                    group, (pcrdr_resname_page_k)v);
+            retv = PCRDR_SC_OK;
+            goto done;
+        }
+    }
+
+    /* Since PURCMC-120, returns the page if it exists already. */
+    page = srv->cbs.find_page(endpoint->session, workspace, idbuf);
+    if (page) {
+        retv = PCRDR_SC_OK;
+        goto done;
+    }
+
+    const char* class = NULL;
+    const char* title = NULL;
+    const char* layout_style = NULL;
+    purc_variant_t toolkit_style;
+    purc_variant_t tmp;
+
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "class"))) {
+        class = purc_variant_get_string_const(tmp);
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "title"))) {
+        title = purc_variant_get_string_const(tmp);
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(msg->data, "layoutStyle"))) {
+        layout_style = purc_variant_get_string_const(tmp);
+    }
+
+    toolkit_style = purc_variant_object_get_by_ckey(msg->data, "toolkitStyle");
+
+    const char *request_id = purc_variant_get_string_const(msg->requestId);
+    page = srv->cbs.create_widget(endpoint->session, workspace,
+            request_id, idbuf, group, name, class, title, layout_style,
+            toolkit_style, &retv);
+    if (retv == 0) {
+        srv->cbs.pend_response(endpoint->session,
+                purc_variant_get_string_const(msg->operation),
+                request_id,
+                page);
+        return PCRDR_SC_OK;
+    }
+
+done:
+    response.type = PCRDR_MSG_TYPE_RESPONSE;
+    response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
+    response.retCode = retv;
+    response.resultValue = (uint64_t)(uintptr_t)page;
+    response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+
+    return purcmc_endpoint_send_response(srv, endpoint, &response);
+}
+
+static int on_update_widget(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
@@ -1151,7 +1192,7 @@ static int on_update_page(purcmc_server* srv, purcmc_endpoint* endpoint,
     purcmc_page *page = NULL;
     pcrdr_msg response = { };
 
-    if (srv->cbs.create_page == NULL || srv->cbs.update_page == NULL) {
+    if (srv->cbs.create_widget == NULL || srv->cbs.update_widget == NULL) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
         goto failed;
     }
@@ -1190,7 +1231,7 @@ static int on_update_page(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    retv = srv->cbs.update_page(endpoint->session, workspace,
+    retv = srv->cbs.update_widget(endpoint->session, workspace,
             page, property, msg->data);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
@@ -1211,7 +1252,7 @@ failed:
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
 
-static int on_destroy_page(purcmc_server* srv, purcmc_endpoint* endpoint,
+static int on_destroy_widget(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     int retv = PCRDR_SC_OK;
@@ -1219,7 +1260,7 @@ static int on_destroy_page(purcmc_server* srv, purcmc_endpoint* endpoint,
     purcmc_page *page = NULL;
     pcrdr_msg response = { };
 
-    if (srv->cbs.create_page == NULL || srv->cbs.destroy_page == NULL) {
+    if (srv->cbs.create_widget == NULL || srv->cbs.destroy_widget == NULL) {
         retv = PCRDR_SC_NOT_IMPLEMENTED;
         goto failed;
     }
@@ -1249,7 +1290,7 @@ static int on_destroy_page(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    retv = srv->cbs.destroy_page(endpoint->session, workspace, page);
+    retv = srv->cbs.destroy_widget(endpoint->session, workspace, page);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -1269,6 +1310,8 @@ failed:
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
 
+#define LEN_BUFF_LONGLONGINT 128
+
 static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
@@ -1277,7 +1320,8 @@ static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char *doc_text;
     size_t doc_len;
     purcmc_page *page = NULL;
-    purcmc_dom *dom = NULL;
+    purcmc_udom *dom = NULL;
+    char suppressed[LEN_BUFF_LONGLONGINT] = { };
 
     if (((msg->dataType != PCRDR_MSG_DATA_TYPE_HTML) &&
                 (msg->dataType != PCRDR_MSG_DATA_TYPE_PLAIN)) ||
@@ -1292,26 +1336,28 @@ static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW) {
-        purcmc_plainwin *win = (void *)(uintptr_t)msg->targetValue;
-        page = srv->cbs.get_plainwin_page(endpoint->session, win, &retv);
-
-        if (page == NULL) {
-            goto failed;
-        }
-    }
-    else if (msg->target == PCRDR_MSG_TARGET_WIDGET) {
+    if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW ||
+            msg->target == PCRDR_MSG_TARGET_WIDGET) {
         page = (void *)(uintptr_t)msg->targetValue;
-        if (page == NULL) {
-            retv = PCRDR_SC_BAD_REQUEST;
-            goto failed;
-        }
     }
 
+    if (page == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    /* Since PURCMC-120, pass the coroutine handle */
+    if (msg->elementType != PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    uint64_t crtn = (uint64_t)strtoull(
+            purc_variant_get_string_const(msg->elementValue), NULL, 16);
     dom = srv->cbs.load(endpoint->session, page,
             PCRDR_K_OPERATION_LOAD, PCRDR_OPERATION_LOAD,
             purc_variant_get_string_const(msg->requestId),
-            doc_text, doc_len, &retv);
+            doc_text, doc_len, crtn, suppressed, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -1326,7 +1372,14 @@ failed:
     response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)dom;
-    response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+    /* Since PURCMC-120, return the coroutine handle which is suppressed */
+    if (suppressed[0]) {
+        response.dataType = PCRDR_MSG_DATA_TYPE_PLAIN;
+        response.data = purc_variant_make_string(suppressed, false);
+    }
+    else {
+        response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+    }
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
@@ -1339,7 +1392,9 @@ static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char *doc_text;
     size_t doc_len;
     purcmc_page *page = NULL;
-    purcmc_dom *dom = NULL;
+    purcmc_udom *dom = NULL;
+    uint64_t crtn = 0;
+    char suppressed[LEN_BUFF_LONGLONGINT] = { };
 
     if (((msg->dataType != PCRDR_MSG_DATA_TYPE_HTML) &&
                 (msg->dataType != PCRDR_MSG_DATA_TYPE_PLAIN)) ||
@@ -1354,25 +1409,30 @@ static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
-    if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW) {
-        purcmc_plainwin *win = (void *)(uintptr_t)msg->targetValue;
-        page = srv->cbs.get_plainwin_page(endpoint->session, win, &retv);
-
-        if (page == NULL) {
-            goto failed;
-        }
-    }
-    else if (msg->target == PCRDR_MSG_TARGET_WIDGET) {
+    if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW ||
+            msg->target == PCRDR_MSG_TARGET_WIDGET) {
         page = (void *)(uintptr_t)msg->targetValue;
-        if (page == NULL) {
+    }
+
+    if (page == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    /* Since PURCMC-120, pass the coroutine handle */
+    if (op == PCRDR_K_OPERATION_WRITEBEGIN) {
+        if (msg->elementType != PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
         }
+
+        crtn = (uint64_t)strtoull(
+                purc_variant_get_string_const(msg->elementValue), NULL, 16);
     }
 
     dom = srv->cbs.write(endpoint->session, page, op, op_name,
             purc_variant_get_string_const(msg->requestId),
-            doc_text, doc_len, &retv);
+            doc_text, doc_len, crtn, suppressed, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
@@ -1387,7 +1447,15 @@ failed:
     response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)(uintptr_t)dom;
-    response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+    /* Since PURCMC-120, return the coroutine handle which is suppressed */
+    if (suppressed[0]) {
+        response.dataType = PCRDR_MSG_DATA_TYPE_PLAIN;
+        response.data = purc_variant_make_string(suppressed, false);
+    }
+    else {
+        response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+    }
+
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
@@ -1424,49 +1492,37 @@ static int on_register(purcmc_server* srv, purcmc_endpoint* endpoint,
 {
     pcrdr_msg response = { };
     int retv = PCRDR_SC_OK;
-    const char *doc_text;
-    size_t doc_len;
-    purcmc_page *page = NULL;
-    purcmc_dom *dom = NULL;
+    purcmc_page *page = 0;
+    uint64_t suppressed = 0;
 
-    if (((msg->dataType != PCRDR_MSG_DATA_TYPE_HTML) &&
-                (msg->dataType != PCRDR_MSG_DATA_TYPE_PLAIN)) ||
-            msg->data == PURC_VARIANT_INVALID) {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
-    doc_text = purc_variant_get_string_const_ex(msg->data, &doc_len);
-    if (doc_text == NULL || doc_len == 0) {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
-    if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW) {
-        purcmc_plainwin *win = (void *)(uintptr_t)msg->targetValue;
-        page = srv->cbs.get_plainwin_page(endpoint->session, win, &retv);
-
-        if (page == NULL) {
-            goto failed;
-        }
-    }
-    else if (msg->target == PCRDR_MSG_TARGET_WIDGET) {
+    if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW ||
+            msg->target == PCRDR_MSG_TARGET_WIDGET) {
         page = (void *)(uintptr_t)msg->targetValue;
-        if (page == NULL) {
-            retv = PCRDR_SC_BAD_REQUEST;
-            goto failed;
-        }
     }
 
-    dom = srv->cbs.load(endpoint->session, page,
-            PCRDR_K_OPERATION_LOAD, PCRDR_OPERATION_LOAD,
-            purc_variant_get_string_const(msg->requestId),
-            doc_text, doc_len, &retv);
+    if (page == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    if (msg->elementType != PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    uint64_t crtn = (uint64_t)strtoull(
+            purc_variant_get_string_const(msg->elementValue), NULL, 16);
+    if (crtn == 0) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    suppressed = srv->cbs.register_crtn(endpoint->session, page, crtn, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
-                dom);
+                page);
         return PCRDR_SC_OK;
     }
 
@@ -1475,7 +1531,7 @@ failed:
     response.requestId = purc_variant_ref(msg->requestId);
     response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
-    response.resultValue = (uint64_t)(uintptr_t)dom;
+    response.resultValue = suppressed;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
@@ -1486,49 +1542,37 @@ static int on_revoke(purcmc_server* srv, purcmc_endpoint* endpoint,
 {
     pcrdr_msg response = { };
     int retv = PCRDR_SC_OK;
-    const char *doc_text;
-    size_t doc_len;
-    purcmc_page *page = NULL;
-    purcmc_dom *dom = NULL;
+    purcmc_page *page = 0;
+    uint64_t to_reload = 0;
 
-    if (((msg->dataType != PCRDR_MSG_DATA_TYPE_HTML) &&
-                (msg->dataType != PCRDR_MSG_DATA_TYPE_PLAIN)) ||
-            msg->data == PURC_VARIANT_INVALID) {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
-    doc_text = purc_variant_get_string_const_ex(msg->data, &doc_len);
-    if (doc_text == NULL || doc_len == 0) {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
-    if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW) {
-        purcmc_plainwin *win = (void *)(uintptr_t)msg->targetValue;
-        page = srv->cbs.get_plainwin_page(endpoint->session, win, &retv);
-
-        if (page == NULL) {
-            goto failed;
-        }
-    }
-    else if (msg->target == PCRDR_MSG_TARGET_WIDGET) {
+    if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW ||
+            msg->target == PCRDR_MSG_TARGET_WIDGET) {
         page = (void *)(uintptr_t)msg->targetValue;
-        if (page == NULL) {
-            retv = PCRDR_SC_BAD_REQUEST;
-            goto failed;
-        }
     }
 
-    dom = srv->cbs.load(endpoint->session, page,
-            PCRDR_K_OPERATION_LOAD, PCRDR_OPERATION_LOAD,
-            purc_variant_get_string_const(msg->requestId),
-            doc_text, doc_len, &retv);
+    if (page == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    if (msg->elementType != PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    uint64_t crtn = (uint64_t)strtoull(
+            purc_variant_get_string_const(msg->elementValue), NULL, 16);
+    if (crtn == 0) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    to_reload = srv->cbs.revoke_crtn(endpoint->session, page, crtn, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
-                dom);
+                page);
         return PCRDR_SC_OK;
     }
 
@@ -1537,7 +1581,7 @@ failed:
     response.requestId = purc_variant_ref(msg->requestId);
     response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
-    response.resultValue = (uint64_t)(uintptr_t)dom;
+    response.resultValue = to_reload;
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
@@ -1547,11 +1591,11 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg, int op, const char *op_name)
 {
     int retv;
-    purcmc_dom *dom = NULL;
+    purcmc_udom *dom = NULL;
     pcrdr_msg response = { };
 
     if (msg->target == PCRDR_MSG_TARGET_DOM) {
-        dom = (purcmc_dom *)(uintptr_t)msg->targetValue;
+        dom = (purcmc_udom *)(uintptr_t)msg->targetValue;
     }
     else {
         retv = PCRDR_SC_BAD_REQUEST;
@@ -1755,8 +1799,8 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
             goto failed;
         }
 
-        purcmc_dom *dom = NULL;
-        dom = (purcmc_dom *)(uintptr_t)msg->targetValue;
+        purcmc_udom *dom = NULL;
+        dom = (purcmc_udom *)(uintptr_t)msg->targetValue;
         if (dom == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
@@ -1860,8 +1904,8 @@ static int on_get_property(purcmc_server* srv, purcmc_endpoint* endpoint,
             goto failed;
         }
 
-        purcmc_dom *dom = NULL;
-        dom = (purcmc_dom *)(uintptr_t)msg->targetValue;
+        purcmc_udom *dom = NULL;
+        dom = (purcmc_udom *)(uintptr_t)msg->targetValue;
         if (dom == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
@@ -1960,8 +2004,8 @@ static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
             goto failed;
         }
 
-        purcmc_dom *dom = NULL;
-        dom = (purcmc_dom *)(uintptr_t)msg->targetValue;
+        purcmc_udom *dom = NULL;
+        dom = (purcmc_udom *)(uintptr_t)msg->targetValue;
         if (dom == NULL) {
             retv = PCRDR_SC_BAD_REQUEST;
             goto failed;
@@ -2021,10 +2065,10 @@ static struct request_handler {
     { PCRDR_OPERATION_CALLMETHOD, on_call_method },
     { PCRDR_OPERATION_CLEAR, on_clear },
     { PCRDR_OPERATION_CREATEPLAINWINDOW, on_create_plain_window },
-    { PCRDR_OPERATION_CREATEWIDGET, on_create_page },
+    { PCRDR_OPERATION_CREATEWIDGET, on_create_widget },
     { PCRDR_OPERATION_CREATEWORKSPACE, on_create_workspace },
     { PCRDR_OPERATION_DESTROYPLAINWINDOW, on_destroy_plain_window },
-    { PCRDR_OPERATION_DESTROYWIDGET, on_destroy_page },
+    { PCRDR_OPERATION_DESTROYWIDGET, on_destroy_widget },
     { PCRDR_OPERATION_DESTROYWORKSPACE, on_destroy_workspace },
     { PCRDR_OPERATION_DISPLACE, on_displace },
     { PCRDR_OPERATION_ENDSESSION, on_end_session },
@@ -2042,7 +2086,7 @@ static struct request_handler {
     { PCRDR_OPERATION_STARTSESSION, on_start_session },
     { PCRDR_OPERATION_UPDATE, on_update },
     { PCRDR_OPERATION_UPDATEPLAINWINDOW, on_update_plain_window },
-    { PCRDR_OPERATION_UPDATEWIDGET, on_update_page },
+    { PCRDR_OPERATION_UPDATEWIDGET, on_update_widget },
     { PCRDR_OPERATION_UPDATEWORKSPACE, on_update_workspace },
     { PCRDR_OPERATION_WRITEBEGIN, on_write_begin },
     { PCRDR_OPERATION_WRITEEND, on_write_end },

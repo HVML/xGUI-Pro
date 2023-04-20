@@ -41,17 +41,13 @@ typedef struct purcmc_session purcmc_session;
 struct purcmc_workspace;
 typedef struct purcmc_workspace purcmc_workspace;
 
-/* The PurcMC plain window */
-struct purcmc_plainwin;
-typedef struct purcmc_plainwin purcmc_plainwin;
-
-/* The PurcMC page */
+/* The PurcMC page (a plainwin or widget) */
 struct purcmc_page;
 typedef struct purcmc_page purcmc_page;
 
 /* The PurcMC dom */
-struct purcmc_dom;
-typedef struct purcmc_dom purcmc_dom;
+struct purcmc_udom;
+typedef struct purcmc_udom purcmc_udom;
 
 /* Config Options */
 typedef struct purcmc_server_config {
@@ -87,6 +83,12 @@ typedef struct purcmc_server_callbacks {
             const char *property, const char *value);
     /* null if create_workspace is null */
     int (*destroy_workspace)(purcmc_session *, purcmc_workspace *);
+    /* Since PURMC-120; null if create_workspace is null */
+    purcmc_workspace *(*find_workspace)(purcmc_session *sess,
+            const char *name);
+    /* Since PURMC-120; null if create_workspace is null */
+    purcmc_workspace *(*get_special_workspace)(purcmc_session *sess,
+            pcrdr_resname_workspace_k v);
 
     /* nullable */
     int (*set_page_groups)(purcmc_session *, purcmc_workspace *,
@@ -98,38 +100,58 @@ typedef struct purcmc_server_callbacks {
     int (*remove_page_group)(purcmc_session *, purcmc_workspace *,
             const char* gid);
 
-    purcmc_plainwin *(*create_plainwin)(purcmc_session *, purcmc_workspace *,
-            const char *request_id, const char *gid, const char *name,
-            const char *class_name, const char *title, const char *layout_style,
+    /* Since PURMC-120 */
+    purcmc_page *(*find_page)(purcmc_session *sess,
+            purcmc_workspace *workspace, const char *page_id);
+
+    purcmc_page *(*create_plainwin)(purcmc_session *, purcmc_workspace *,
+            const char *request_id,
+            const char *page_id, const char *group, const char *name,
+            const char *klass, const char *title, const char *layout_style,
             purc_variant_t toolkit_style, int *retv);
     int (*update_plainwin)(purcmc_session *, purcmc_workspace *,
-            purcmc_plainwin *win, const char *property, purc_variant_t value);
+            purcmc_page *page, const char *property, purc_variant_t value);
     int (*destroy_plainwin)(purcmc_session *, purcmc_workspace *,
-            purcmc_plainwin *win);
-
-    purcmc_page *(*get_plainwin_page)(purcmc_session *,
-            purcmc_plainwin *plainWin, int *retv);
+            purcmc_page *page);
+    /* Since PURMC-120; nullable */
+    purcmc_page *(*get_special_plainwin)(purcmc_session *sess,
+            purcmc_workspace *workspace, const char *group,
+            pcrdr_resname_page_k v);
 
     /* nullable */
-    purcmc_page *(*create_page)(purcmc_session *, purcmc_workspace *,
-            const char *request_id, const char *gid, const char *name,
-            const char *class_name, const char *title, const char *layout_style,
+    purcmc_page *(*create_widget)(purcmc_session *, purcmc_workspace *,
+            const char *request_id,
+            const char *page_id, const char *group, const char *name,
+            const char *klass, const char *title, const char *layout_style,
             purc_variant_t toolkit_style, int *retv);
-    /* null if create_page is null */
-    int (*update_page)(purcmc_session *, purcmc_workspace *,
+    /* null if create_widget is null */
+    int (*update_widget)(purcmc_session *, purcmc_workspace *,
             purcmc_page *page, const char *property, purc_variant_t value);
-    /* null if create_page is null */
-    int (*destroy_page)(purcmc_session *, purcmc_workspace *,
+    /* null if create_widget is null */
+    int (*destroy_widget)(purcmc_session *, purcmc_workspace *,
             purcmc_page *page);
+    /* Since PURMC-120; null if create_widget is null */
+    purcmc_page *(*get_special_widget)(purcmc_session *sess,
+            purcmc_workspace *workspace, const char *group,
+            pcrdr_resname_page_k v);
 
-    purcmc_dom *(*load)(purcmc_session *, purcmc_page *,
+    purcmc_udom *(*load)(purcmc_session *, purcmc_page *,
             int op, const char *op_name, const char *request_id,
-            const char *content, size_t length, int *retv);
-    purcmc_dom *(*write)(purcmc_session *, purcmc_page *,
+            const char *content, size_t length,
+            uint64_t crtn, char *suppressed, int *retv);
+    purcmc_udom *(*write)(purcmc_session *, purcmc_page *,
             int op, const char *op_name, const char *request_id,
-            const char *content, size_t length, int *retv);
+            const char *content, size_t length,
+            uint64_t crtn, char *suppressed, int *retv);
 
-    int (*update_dom)(purcmc_session *, purcmc_dom *,
+    /* Since PURMC-120 */
+    uint64_t (*register_crtn)(purcmc_session *sess, purcmc_page *,
+            uint64_t crtn, int *retv);
+    /* Since PURMC-120 */
+    uint64_t (*revoke_crtn)(purcmc_session *sess, purcmc_page *,
+            uint64_t crtn, int *retv);
+
+    int (*update_dom)(purcmc_session *, purcmc_udom *,
             int op, const char *op_name, const char *request_id,
             const char* element_type, const char* element_value,
             const char* property, pcrdr_msg_data_type text_type,
@@ -143,7 +165,7 @@ typedef struct purcmc_server_callbacks {
             int* retv);
     /* nullable */
     purc_variant_t (*call_method_in_dom)(purcmc_session *, const char *,
-            purcmc_dom *, const char* element_type, const char* element_value,
+            purcmc_udom *, const char* element_type, const char* element_value,
             const char *method, purc_variant_t arg, int* retv);
 
     /* nullable */
@@ -153,7 +175,7 @@ typedef struct purcmc_server_callbacks {
             const char *property, int *retv);
     /* nullable */
     purc_variant_t (*get_property_in_dom)(purcmc_session *, const char *,
-            purcmc_dom *, const char* element_type, const char* element_value,
+            purcmc_udom *, const char* element_type, const char* element_value,
             const char *property, int *retv);
 
     /* nullable */
@@ -163,7 +185,7 @@ typedef struct purcmc_server_callbacks {
             const char *property, purc_variant_t value, int *retv);
     /* nullable */
     purc_variant_t (*set_property_in_dom)(purcmc_session *, const char *,
-            purcmc_dom *, const char* element_type, const char* element_value,
+            purcmc_udom *, const char* element_type, const char* element_value,
             const char *property, purc_variant_t value, int *retv);
 
     bool (*pend_response)(purcmc_session *, const char *operation,
