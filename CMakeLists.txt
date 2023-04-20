@@ -26,7 +26,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/source/cmake")
 # -----------------------------------------------------------------------------
 set(ALL_PORTS
     GTK
-    Mac
+    MiniGUI
 )
 set(PORT "NOPORT" CACHE STRING "choose which xGUI Pro port to build (one of ${ALL_PORTS})")
 
@@ -131,8 +131,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE True)
 #------------------------------------------------------------------------------
 include(GlobalCommon)
 
-SET_PROJECT_VERSION(0 6 4)
-set(HVMLJS_VERSION 10)
+SET_PROJECT_VERSION(0 7 0)
+set(HVMLJS_VERSION 12)
 set(XGUIPRO_API_VERSION 0.0)
 
 set(PACKAGE xguipro)
