@@ -189,7 +189,7 @@ typedef struct purcmc_server_callbacks {
             const char *property, purc_variant_t value, int *retv);
 
     bool (*pend_response)(purcmc_session *, const char *operation,
-            const char *request_id, void *result_value);
+            const char *request_id, void *result_value, const char *plain);
 } purcmc_server_callbacks;
 
 #ifdef __cplusplus

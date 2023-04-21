@@ -118,8 +118,14 @@ purcmc_endpoint* purcmc_get_endpoint_by_session(purcmc_session *sess)
     return purcmc_endpoint_from_name(sess->srv, endpoint_name);
 }
 
+struct packed_result {
+    void *result_value;
+    size_t plain_len;
+    char plain[0];
+};
+
 bool gtk_pend_response(purcmc_session* sess, const char *operation,
-        const char *request_id, void *result_value)
+        const char *request_id, void *result_value, const char *plain)
 {
     if (strcmp(request_id, PCRDR_REQUESTID_NORETURN) == 0) {
         LOG_WARN("Trying to pend a noreturn request\n");
@@ -130,8 +136,19 @@ bool gtk_pend_response(purcmc_session* sess, const char *operation,
         LOG_ERROR("Duplicated requestId (%s) to pend.\n", request_id);
         return false;
     }
-    else
-        kvlist_set(&sess->pending_responses, request_id, &result_value);
+    else {
+        struct packed_result *packed;
+        size_t plain_len = plain ? strlen(plain) + 1 : 0;
+        size_t sz = sizeof(*packed) + plain_len;
+        packed = malloc(sz);
+        packed->result_value = result_value;
+        packed->plain_len = plain_len;
+        if (plain_len > 0) {
+            memcpy(packed->plain, plain, plain_len);
+        }
+
+        kvlist_set(&sess->pending_responses, request_id, &packed);
+    }
 
     return true;
 }
@@ -142,8 +159,8 @@ static void finish_response(purcmc_session* sess, const char *request_id,
     void *data;
 
     if ((data = kvlist_get(&sess->pending_responses, request_id))) {
-        void *result_value;
-        result_value = *(void **)data;
+        struct packed_result *packed;
+        packed = *(struct packed_result **)data;
 
         purcmc_endpoint* endpoint;
         endpoint = purcmc_get_endpoint_by_session(sess);
@@ -154,10 +171,15 @@ static void finish_response(purcmc_session* sess, const char *request_id,
             response.requestId =
                 purc_variant_make_string_static(request_id, false);
             response.retCode = ret_code;
-            response.resultValue = PTR2U64(result_value);
+            response.resultValue = PTR2U64(packed->result_value);
             if (ret_code == PCRDR_SC_OK && ret_data) {
                 response.dataType = PCRDR_MSG_DATA_TYPE_JSON;
                 response.data = purc_variant_ref(ret_data);
+            }
+            else if (packed->plain_len > 0) {
+                response.dataType = PCRDR_MSG_DATA_TYPE_PLAIN;
+                response.data = purc_variant_make_string_static(packed->plain,
+                        false);
             }
             else {
                 response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
@@ -166,6 +188,7 @@ static void finish_response(purcmc_session* sess, const char *request_id,
             purcmc_endpoint_send_response(sess->srv, endpoint, &response);
         }
 
+        free(packed);
         kvlist_delete(&sess->pending_responses, request_id);
     }
 }
@@ -409,6 +432,13 @@ int gtk_remove_session(purcmc_session *sess)
     sorted_array_destroy(sess->all_handles);
 
     LOG_DEBUG("destroy kvlist for pending responses...\n");
+    const char *name;
+    void *data;
+    kvlist_for_each(&sess->pending_responses, name, data) {
+        struct packed_result *packed;
+        packed = *(struct packed_result **)data;
+        free(packed);
+    }
     kvlist_free(&sess->pending_responses);
 
     LOG_DEBUG("free session...\n");
@@ -1080,6 +1110,7 @@ purcmc_udom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
                 "purcmc-owner-stack");
         struct purc_page_owner owner = { sess, crtn }, suppressed;
         suppressed = purc_page_ostack_register(ostack, owner);
+
         if (suppressed.corh) {
             if (suppressed.sess == sess) {
                 sprintf(buff,
