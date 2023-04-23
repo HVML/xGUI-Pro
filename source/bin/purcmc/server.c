@@ -695,10 +695,10 @@ comp_living_time(const void *k1, const void *k2, void *ptr)
 
 #if !HAVE(SYS_EPOLL_H) && HAVE(SYS_SELECT_H)
 static int
-intcmp(const void *sortv1, const void *sortv2)
+intcmp(uint64_t sortv1, uint64_t sortv2)
 {
-    int fd1 = (int)(intptr_t)sortv1;
-    int fd2 = (int)(intptr_t)sortv2;
+    int fd1 = (int)sortv1;
+    int fd2 = (int)sortv2;
 
     return fd1 - fd2;
 }
