@@ -104,7 +104,7 @@ on_packet(void* sock_srv, SockClient* client,
 static int
 listen_new_client(int fd, void *ptr, bool rw)
 {
-    if (sorted_array_add(the_server.fd2clients, (void *)(intptr_t)fd, ptr)) {
+    if (sorted_array_add(the_server.fd2clients, (uint64_t)fd, ptr)) {
         return -1;
     }
 
@@ -121,7 +121,7 @@ listen_new_client(int fd, void *ptr, bool rw)
 static int
 remove_listening_client(int fd)
 {
-    if (sorted_array_remove(the_server.fd2clients, (void *)(intptr_t)fd)) {
+    if (sorted_array_remove(the_server.fd2clients, (uint64_t)fd)) {
         FD_CLR(fd, &the_server.rfdset);
         FD_CLR(fd, &the_server.wfdset);
         return 0;
@@ -586,7 +586,7 @@ again:
         int *fds = alloca(sizeof(int) * nr_fds);
 
         for (i = 0; i < nr_fds; i++) {
-            fds[i] = (int)(intptr_t)sorted_array_get(the_server.fd2clients, i, NULL);
+            fds[i] = (int)sorted_array_get(the_server.fd2clients, i, NULL);
         }
 
         for (i = 0; i < nr_fds; i++) {
@@ -594,7 +594,7 @@ again:
             void *cli_node;
 
             if (FD_ISSET(fd, rsetptr)) {
-                sorted_array_find(the_server.fd2clients, (void *)(intptr_t)fd, &cli_node);
+                sorted_array_find(the_server.fd2clients, (uint64_t)fd, &cli_node);
                 if (cli_node == PTR_FOR_US_LISTENER) {
                     USClient * client = us_handle_accept(the_server.us_srv);
                     if (client == NULL) {
