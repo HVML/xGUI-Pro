@@ -10,10 +10,8 @@ xGUI Pro is a modern, cross-platform, and advanced [HVML] renderer which is base
 - [Dependencies](#dependencies)
 - [Building xGUI Pro](#building-xgui-pro)
 - [Current Status](#current-status)
-- [TODO List](#todo-list)
+- [Authors and Contributors](#authors-and-contributors)
 - [Copying](#copying)
-   + [Commercial License](#commercial-license)
-   + [Special Statement](#special-statement)
 - [Tradmarks](#tradmarks)
 
 [//]:# (END OF TOC)
@@ -179,6 +177,7 @@ and WebKit. So please wait patiently.
 
 ## Current Status
 
+- Apr. 2023: Version 0.7.0. (PurC 0.9.10+)
 - Feb. 2023: Version 0.6.4. (PurC 0.9.7+)
 - Jan. 2023: Version 0.6.3. (PurC 0.9.5+)
 - Dec. 2022: Version 0.6.2.
