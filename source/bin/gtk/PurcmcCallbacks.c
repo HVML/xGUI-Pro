@@ -547,6 +547,8 @@ static void web_view_load_uri(WebKitWebView *webview,
     strcat(uri, name);
     strcat(uri, "?irId=");
     strcat(uri, request_id);
+
+    g_object_set_data(G_OBJECT(webview), "purcmc-session", sess);
     webkit_web_view_load_uri(webview, uri);
 }
 

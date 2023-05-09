@@ -675,9 +675,9 @@ static void setDefaultWebsiteDataManager(WebKitSettings *webkitSettings)
     WebKitWebsiteDataManager *manager;
 
     char *dataDirectory = g_build_filename(g_get_user_data_dir(),
-            "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "-xguipro", NULL);
+            "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "xGUIPro", NULL);
     char *cacheDirectory = g_build_filename(g_get_user_cache_dir(),
-            "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "-xguipro", NULL);
+            "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "xGUIPro", NULL);
     manager = webkit_website_data_manager_new(
             "base-data-directory", dataDirectory,
             "base-cache-directory", cacheDirectory,
