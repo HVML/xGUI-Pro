@@ -22,12 +22,16 @@
 #define __LIB_UTILS_LOAD_ASSET_H
 
 #include <stddef.h>
+#include <sys/types.h>
 
 #define ASSET_FLAG_ONCE             0x01
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+char *open_and_load_asset(const char *env, const char *prefix,
+        const char *file, ssize_t *max_to_load, int *fd, size_t *length);
 
 char *load_asset_content(const char *env, const char *prefix,
         const char *file, size_t *length, unsigned flags);
