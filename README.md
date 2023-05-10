@@ -7,6 +7,7 @@ xGUI Pro is a modern, cross-platform, and advanced [HVML] renderer which is base
 [//]:# (START OF TOC)
 
 - [Introduction](#introduction)
+- [Release Status](#release-status)
 - [Dependencies](#dependencies)
 - [Building xGUI Pro](#building-xgui-pro)
 - [Current Status](#current-status)
@@ -39,6 +40,12 @@ For documents and other open source software around HVML, you can visit the foll
 - <https://github.com/HVML>, or
 - <https://www.hvml.org>, or
 - <https://hvml.fmsoft.cn>
+
+## Release Status
+
+[![Packaging status xguipro](https://repology.org/badge/vertical-allrepos/xguipro.svg)](https://repology.org/project/xguipro/versions)
+
+[![Packaging status hvml-xguipro](https://repology.org/badge/vertical-allrepos/hvml-xgui-pro.svg)](https://repology.org/project/hvml-xgui-pro/versions)
 
 ## Dependencies
 
