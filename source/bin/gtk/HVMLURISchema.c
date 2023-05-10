@@ -20,8 +20,6 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#undef NDEBUG
-
 #include "config.h"
 
 #include "main.h"
@@ -304,7 +302,6 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             goto error;
         }
 
-#if 0
         unsigned asset_flags = 0;
         char *once_val = NULL;
         if (purc_hvml_uri_get_query_value_alloc(uri,
@@ -314,12 +311,17 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         if (once_val)
             free(once_val);
 
-        contents = load_asset_content(NULL, prefix, page, &content_length,
-                asset_flags);
-#else
-        contents = open_and_load_asset(NULL, prefix,
-                page, &max_to_load, &fd, &content_length);
-#endif
+        if (asset_flags & ASSET_FLAG_ONCE) {
+            /* If having ASSET_FLAG_ONCE load whole contents, and remove
+               the asset file. */
+            contents = load_asset_content(NULL, prefix, page, &content_length,
+                    asset_flags);
+            max_to_load = content_length;
+        }
+        else {
+            contents = open_and_load_asset(NULL, prefix, page, &max_to_load,
+                    &fd, &content_length);
+        }
 
         if (contents == NULL) {
             error = g_error_new(XGUI_PRO_ERROR,
