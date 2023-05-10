@@ -38,6 +38,7 @@ We reserve the JavaScript engine of WebKit,
 For documents and other open source software around HVML, you can visit the following URLs:
 
 - <https://github.com/HVML>, or
+- <https://www.hvml.org>, or
 - <https://hvml.fmsoft.cn>
 
 ## Release Status
@@ -51,7 +52,7 @@ For documents and other open source software around HVML, you can visit the foll
 xGUI Pro depends on the following software:
 
 - [WebKit2GTK 2.28.0+](https://webkitgtk.org): Use the package `libwebkit2gtk-4.0-dev` on popular Linux distributions; Use the package [webkit2-gtk-devel](https://ports.macports.org/port/webkit2-gtk-devel/) on macOS.
-- [PurC 0.9.7+](https://github.com/HVML/PurC): the HVML interpreter for C language. This repository also includes two libraries to maintain a DOM tree, lay out and stylize the DOM elements by using CSS. xGUI Pro needs these libraries.
+- [PurC 0.9.12+](https://github.com/HVML/PurC): the HVML interpreter for C language. This repository also includes two libraries to maintain a DOM tree, lay out and stylize the DOM elements by using CSS. xGUI Pro needs these libraries.
 
 Currently, xGUI Pro can run on Linux and macOS.
 
@@ -61,7 +62,7 @@ Please download or fetch the source code of the above software, build and instal
 
 You can also try our tailored WebKit engine instead of the package shipped with the distribution. The tailored WebKit engine provide a new JavaScript API to support two HVML-specific attributes `hvml-handle` and `hvml-events`. You may obtain better performance by using the tailored WebKit engine.
 
-- [Tailored WebKit Engine](https://files.fmsoft.cn/hvml/webkitgtk-2.34.1-hvml-220804.tar.bz2): to support two HVML-specific attributes `hvml-handle` and `hvml-events`.
+- [Tailored WebKit Engine](https://www.hvml.org/software): to support two HVML-specific attributes `hvml-handle` and `hvml-events`. This tailored WebKit engine provides support for two ports: GTK+ and HybridOS.
 
 If you are using Ubuntu Linux, you can use the following commands to build and install the tailored WebKit to your system:
 
@@ -99,6 +100,15 @@ Please make sure that the cmake configuration option `ENABLE_HVML_ATTRS` is enab
 We encourage everyone to port xGUI Pro to other platforms, such as Windows, Android, iOS, etc.
 
 ## Building and Running xGUI Pro
+
+To build xGUI Pro from source code, please make sure that the following tools or libraries are available on your Linux or macOS system:
+
+1. The cross-platform build system generator: CMake 3.18 or later
+1. A C11 and CXX17 compliant compiler: GCC 8+ or Clang 6+
+1. Glib 2.44.0 or later (the package `libglib2.0-dev` on most Linux distributions)
+1. WebKit2GTK 2.28.0+ (the package `libwebkit2gtk-4.0-dev` on popular Linux distributions; the package `webkit2-gtk-devel` of macPorts on macOS).
+1. WebKit2HBD 2.34.1+ as an alternative WebKit engine instead of WebKit2GTK.
+1. The HVML interpterter PurC 0.9.12+.
 
 After building and installing the dependency libraries,
       you can change to the root directory of the source tree of xGUI Pro and run the following commands:
@@ -184,6 +194,7 @@ and WebKit. So please wait patiently.
 
 ## Current Status
 
+- May 2023: Version 0.7.2. (PurC 0.9.12+)
 - Apr. 2023: Version 0.7.0. (PurC 0.9.10+)
 - Feb. 2023: Version 0.6.4. (PurC 0.9.7+)
 - Jan. 2023: Version 0.6.3. (PurC 0.9.5+)

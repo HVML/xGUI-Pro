@@ -8,7 +8,7 @@
 # and loading the cross-compilation settings from CMAKE_TOOLCHAIN_FILE.
 #
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.18)
 
 project(xGUIPro C CXX)
 
@@ -131,7 +131,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE True)
 #------------------------------------------------------------------------------
 include(GlobalCommon)
 
-SET_PROJECT_VERSION(0 7 0)
+SET_PROJECT_VERSION(0 7 2)
 set(HVMLJS_VERSION 12)
 set(XGUIPRO_API_VERSION 0.0)
 

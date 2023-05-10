@@ -20,11 +20,14 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
+#undef NDEBUG
+
 #include "config.h"
 
 #include "main.h"
 #include "HVMLURISchema.h"
 #include "BuildRevision.h"
+#include "LayouterWidgets.h"
 
 #include "utils/hvml-uri.h"
 #include "utils/load-asset.h"
@@ -32,6 +35,7 @@
 #include <webkit2/webkit2.h>
 #include <purc/purc-pcrdr.h>
 #include <purc/purc-helpers.h>
+#include <gio/gunixinputstream.h>
 
 #include <assert.h>
 
@@ -54,6 +58,8 @@ void initializeWebExtensionsCallback(WebKitWebContext *context,
     webkit_web_context_set_web_extensions_initialization_user_data(context,
             g_variant_new_string("HVML"));
 }
+
+static const char *blank_page = "<html></html>";
 
 static const char *cover_page = ""
     "<!DOCTYPE html>"
@@ -187,7 +193,10 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
     char *group = NULL;
     char *page = NULL;
     char *initial_request_id = NULL;
-    gchar *contents = NULL, *content_type = NULL;
+
+    ssize_t max_to_load = 1024 * 4;
+    int fd = -1;
+    gchar *contents = (gchar *)cover_page, *content_type = NULL;
     gsize content_length;
 
     GError *error = NULL;
@@ -209,48 +218,94 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         goto error;
     }
 
+    LOG_DEBUG("Try to load asset for URI: %s\n", uri);
+
     /* check if it is an asset which was built in the renderer */
     if (strcmp(host, PCRDR_LOCALHOST) == 0 &&
             strcmp(app, PCRDR_APP_RENDERER) == 0 &&
             strcmp(runner, PCRDR_RUNNER_BUILTIN) == 0 &&
             strcmp(group, PCRDR_GROUP_NULL) == 0) {
 
+#if 0
         contents = load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
-                page, &content_length, false);
+                page, &content_length, 0);
+        max_to_load = content_length;
+#else
+        contents = open_and_load_asset("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
+                page, &max_to_load, &fd, &content_length);
+#endif
 
         if (contents == NULL) {
             error = g_error_new(XGUI_PRO_ERROR,
                     XGUI_PRO_ERROR_INVALID_HVML_URI,
                     "Can not load contents from asset file (%s)", page);
             webkit_uri_scheme_request_finish_error(request, error);
-            goto failed;
-        }
-
-        gboolean result_uncertain;
-        content_type = g_content_type_guess(page,
-                (const guchar *)contents, content_length, &result_uncertain);
-
-        LOG_DEBUG("content type of page (%s): %s (%s)\n",
-                page, content_type,
-                result_uncertain ? "uncertain" : "certain");
-
-        if (result_uncertain) {
-            if (content_type)
-                free(content_type);
-            content_type = NULL;
+            goto done;
         }
     }
-    else if (strcmp(host, PCRDR_LOCALHOST) == 0 &&
-            strcmp(app, PCRDR_APP_SYSTEM) == 0 &&
-            strcmp(runner, PCRDR_RUNNER_FILESYSTEM) == 0) {
-        /* try to load asset from the system filesystem */
-        char prefix[PURC_LEN_APP_NAME + 32];
-        if (strcmp(group, PCRDR_GROUP_NULL) == 0)
-            strcpy(prefix, "/");
-        else
-            snprintf(prefix, sizeof(prefix), "/app/%s/_public/", group);
+    else if (strcmp(host, PCRDR_LOCALHOST) == 0) {
+        char prefix[PURC_LEN_APP_NAME + PURC_LEN_RUNNER_NAME + 32];
 
-        bool asset_flags = 0;
+        if (strcmp(app, PCRDR_APP_SYSTEM) == 0) {
+            if (strcmp(runner, PCRDR_RUNNER_FILESYSTEM) == 0) {
+                /* try to load asset from the system filesystem */
+                strcpy(prefix, "/");
+            }
+            else {
+                /* TODO */
+                strcpy(prefix, "/");
+            }
+        }
+        else if (strcmp(app, PCRDR_APP_SELF) == 0) {
+            char my_app[PURC_LEN_APP_NAME + 1];
+            char my_runner[PURC_LEN_RUNNER_NAME + 1];
+            const char *real_app = NULL;
+            const char *real_runner = NULL;
+
+            WebKitWebView *webview;
+            webview = webkit_uri_scheme_request_get_web_view(request);
+            /* get the real app name and/or real runner name */
+            if (webview) {
+                purcmc_session *sess;
+                sess = g_object_get_data(G_OBJECT(webview), "purcmc-session");
+                if (sess) {
+                    char my_host[PURC_LEN_HOST_NAME + 1];
+                    purc_hvml_uri_split(sess->uri_prefix,
+                            my_host, my_app, my_runner, NULL, NULL);
+
+                    real_app = my_app;
+                    if (strcmp(runner, PCRDR_RUNNER_SELF) == 0) {
+                        real_runner = my_runner;
+                    }
+                }
+            }
+
+            if (real_app) {
+                snprintf(prefix, sizeof(prefix), "/app/%s/%s/",
+                        real_app, real_runner ? real_runner : runner);
+            }
+            else {
+                error_str = g_strdup_printf(
+                        "Invalid HVML URI (%s): bad app or runner name", uri);
+                goto error;
+            }
+        }
+        else {
+            if (!purc_hvml_uri_get_query_value_alloc(uri,
+                        "irId", &initial_request_id) ||
+                    !purc_is_valid_unique_id(initial_request_id)) {
+                error_str = g_strdup_printf(
+                        "Invalid HVML URI (%s): bad initial request identifier", uri);
+            }
+            else {
+                contents = (char *)blank_page;
+            }
+
+            goto error;
+        }
+
+#if 0
+        unsigned asset_flags = 0;
         char *once_val = NULL;
         if (purc_hvml_uri_get_query_value_alloc(uri,
                     "once", &once_val) && strcmp(once_val, "yes") == 0) {
@@ -261,21 +316,34 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
 
         contents = load_asset_content(NULL, prefix, page, &content_length,
                 asset_flags);
+#else
+        contents = open_and_load_asset(NULL, prefix,
+                page, &max_to_load, &fd, &content_length);
+#endif
+
         if (contents == NULL) {
             error = g_error_new(XGUI_PRO_ERROR,
                     XGUI_PRO_ERROR_INVALID_HVML_URI,
                     "Can not load contents from file system (%s/%s)",
                     prefix, page);
             webkit_uri_scheme_request_finish_error(request, error);
-            goto failed;
+            goto done;
         }
+    }
 
+error:
+    if (contents == cover_page || contents == blank_page) {
+        content_length = strlen(contents);
+        content_type = g_strdup("text/html");
+        max_to_load = content_length;
+    }
+    else {
         gboolean result_uncertain;
         content_type = g_content_type_guess(page,
-                (const guchar *)contents, content_length, &result_uncertain);
+                (const guchar *)contents, max_to_load, &result_uncertain);
 
-        LOG_DEBUG("content type of page (%s): %s (%s)\n",
-                page, content_type,
+        LOG_DEBUG("content type of URI (%s): %s (%s)\n",
+                uri, content_type,
                 result_uncertain ? "uncertain" : "certain");
 
         if (result_uncertain) {
@@ -284,44 +352,38 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             content_type = NULL;
         }
     }
-    else {
-        if (!purc_hvml_uri_get_query_value_alloc(uri,
-                    "irId", &initial_request_id) ||
-                !purc_is_valid_unique_id(initial_request_id)) {
-            error_str = g_strdup_printf(
-                    "Invalid HVML URI (%s): bad initial request identifier", uri);
-        }
 
-        contents = (char *)cover_page;
-        content_length = strlen(contents);
-        content_type = g_strdup("text/html");
-    }
-
-error:
-    if (contents == NULL) {
-        contents = (char *)cover_page;
-        content_length = strlen(contents);
-        content_type = g_strdup("text/html");
-    }
-
+    GInputStream *stream = NULL;
     gsize footer_length = 0;
-    GInputStream *stream;
-    stream = g_memory_input_stream_new_from_data(contents, content_length,
-            (contents != cover_page) ? g_free : NULL);
-    if (contents == cover_page) {
-        gchar *footer = NULL;
+    if (content_length > max_to_load && fd >= 0) {
+        free(contents);
+        stream = g_unix_input_stream_new(fd, TRUE);
+        LOG_DEBUG("make a unix input stream for URI: %s (%s)\n",
+                uri, content_type);
+    }
+    else {
+        if (fd >= 0)
+            close(fd);
 
-        if (error_str) {
-            footer = g_strdup_printf(footer_on_error, error_str);
-            footer_length = strlen(footer);
-            g_memory_input_stream_add_data((GMemoryInputStream *)stream,
-                    footer, footer_length, g_free);
+        stream = g_memory_input_stream_new_from_data(contents, content_length,
+                (contents != cover_page && contents != blank_page) ? g_free : NULL);
+        if (contents == cover_page) {
+
+            if (error_str) {
+                gchar *footer = NULL;
+                footer = g_strdup_printf(footer_on_error, error_str);
+                footer_length = strlen(footer);
+                g_memory_input_stream_add_data((GMemoryInputStream *)stream,
+                        footer, footer_length, g_free);
+            }
+            else {
+                footer_length = strlen(footer_on_ok);
+                g_memory_input_stream_add_data((GMemoryInputStream *)stream,
+                        footer_on_ok, footer_length, NULL);
+            }
         }
-        else {
-            footer_length = strlen(footer_on_ok);
-            g_memory_input_stream_add_data((GMemoryInputStream *)stream,
-                    footer_on_ok, footer_length, NULL);
-        }
+        LOG_DEBUG("make a memory input stream for URI: %s (%s)\n",
+                uri, content_type);
     }
 
     webkit_uri_scheme_request_finish(request, stream,
@@ -329,7 +391,7 @@ error:
             content_type ? content_type : "application/octet-stream");
     g_object_unref(stream);
 
-failed:
+done:
     if (error_str)
         free(error_str);
     if (error)
