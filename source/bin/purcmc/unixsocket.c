@@ -49,6 +49,9 @@ USServer *us_init (const purcmc_server_config* config)
 
 void us_stop (USServer * server)
 {
+    /* remove the socket file */
+    unlink (server->config->unixsocket);
+
     close (server->listener);
     free (server);
 }
@@ -61,14 +64,12 @@ int us_listen (USServer* server)
 
     /* create a Unix domain stream socket */
     if ((fd = socket (AF_UNIX, SOCK_STREAM, 0)) < 0) {
-        purc_log_error ("Error duing calling `socket` in us_listen: %s\n", strerror (errno));
+        purc_log_error ("Error duing calling `socket` in us_listen: %s\n",
+                strerror (errno));
         return (-1);
     }
 
     fcntl (fd, F_SETFD, FD_CLOEXEC);
-
-    /* in case it already exists */
-    unlink (server->config->unixsocket);
 
     /* fill in socket address structure */
     memset (&unix_addr, 0, sizeof(unix_addr));
@@ -78,7 +79,8 @@ int us_listen (USServer* server)
 
     /* bind the name to the descriptor */
     if (bind (fd, (struct sockaddr *) &unix_addr, len) < 0) {
-        purc_log_error ("Error duing calling `bind` in us_listen: %s\n", strerror (errno));
+        purc_log_error ("Error duing calling `bind` in us_listen: %s\n",
+                strerror (errno));
         goto error;
     }
     if (chmod (server->config->unixsocket, 0666) < 0) {
@@ -89,7 +91,8 @@ int us_listen (USServer* server)
 
     /* tell kernel we're a server */
     if (listen (fd, server->config->backlog) < 0) {
-        purc_log_error ("Error duing calling `listen` in us_listen: %s\n", strerror (errno));
+        purc_log_error ("Error duing calling `listen` in us_listen: %s\n",
+                strerror (errno));
         goto error;
     }
 
