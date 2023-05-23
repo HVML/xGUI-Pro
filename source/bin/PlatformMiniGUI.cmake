@@ -8,11 +8,28 @@ list(APPEND xguipro_PRIVATE_INCLUDE_DIRECTORIES
 
 list(APPEND xguipro_SYSTEM_INCLUDE_DIRECTORIES
     ${GLIB_INCLUDE_DIRS}
+    ${GIO_UNIX_INCLUDE_DIRS}
     ${LIBSOUP_INCLUDE_DIRS}
 )
 
 list(APPEND xguipro_SOURCES
     ${xGUIPro_DERIVED_SOURCES_DIR}/minigui/BrowserMarshal.c
+    minigui/BrowserTab.c
+    minigui/BrowserTab.h
+    minigui/BrowserPane.c
+    minigui/BrowserPane.h
+    minigui/BrowserWindow.c
+    minigui/BrowserWindow.h
+    minigui/BrowserPlainWindow.c
+    minigui/BrowserPlainWindow.h
+    minigui/BrowserTabbedWindow.c
+    minigui/BrowserTabbedWindow.h
+    minigui/PurcmcCallbacks.c
+    minigui/PurcmcCallbacks.h
+    minigui/HVMLURISchema.c
+    minigui/HVMLURISchema.h
+    minigui/LayouterWidgets.c
+    minigui/LayouterWidgets.h
     minigui/main.c
 )
 
@@ -21,6 +38,7 @@ list(APPEND xguipro_LIBRARIES
     ${GLIB_GIO_LIBRARIES}
     ${GLIB_GOBJECT_LIBRARIES}
     ${GLIB_LIBRARIES}
+    CairoHbd::CairoHbd
     MiniGUI::MiniGUI
 )
 

@@ -20,6 +20,7 @@ find_package(GLIB 2.44.0 REQUIRED COMPONENTS gio gio-unix gmodule gobject)
 find_package(PurC 0.9.12 REQUIRED)
 find_package(DOMRuler 0.9.12 REQUIRED)
 find_package(MiniGUI 5.0.2 REQUIRED)
+find_package(CairoHbd REQUIRED)
 
 XGUIPRO_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC ON)
 
