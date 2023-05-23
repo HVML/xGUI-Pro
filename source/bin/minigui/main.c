@@ -974,7 +974,33 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
 //    gtk_widget_show(GTK_WIDGET(mainWindow));
 }
 
-int main(int argc, char *argv[])
+void performMessageLoopTasks()
+{
+    g_main_context_iteration(0, false);
+}
+
+static LRESULT MainFrameProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    HDC hdc;
+    char * url = NULL;
+    BrowserWindow * view = NULL;
+    int i = 0;
+
+    switch (message) {
+        case MSG_CREATE:
+            break;
+
+        case MSG_CLOSE:
+            DestroyAllControls (hWnd);
+            DestroyMainWindow (hWnd);
+            PostQuitMessage (hWnd);
+            return 0;
+    }
+
+    return DefaultMainWinProc(hWnd, message, wParam, lParam);
+}
+
+int MiniGUIMain (int argc, const char* argv[])
 {
 #if ENABLE_DEVELOPER_MODE
     g_setenv("WEBKIT_INJECTED_BUNDLE_PATH", WEBKIT_INJECTED_BUNDLE_PATH, FALSE);
@@ -1017,14 +1043,46 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-#if 0
-    GtkApplication *application = gtk_application_new(APP_NAME, G_APPLICATION_NON_UNIQUE);
-    g_signal_connect(application, "startup", G_CALLBACK(startup), webkitSettings);
-    g_signal_connect(application, "shutdown", G_CALLBACK(shutdown), webkitSettings);
-    g_signal_connect(application, "activate", G_CALLBACK(activate), webkitSettings);
-    g_application_run(G_APPLICATION(application), 0, NULL);
-    g_object_unref(application);
+    MSG Msg;
+    HWND hMainWnd;
+    MAINWINCREATE CreateInfo;
+
+    RECT rect = GetScreenRect();
+
+#ifdef _MGRM_PROCESSES
+    JoinLayer(NAME_DEF_LAYER , "xGUI Pro" , 0 , 0);
 #endif
+
+    CreateInfo.dwStyle = WS_VISIBLE | WS_CAPTION ;
+    CreateInfo.dwExStyle = WS_EX_NONE;
+    CreateInfo.spCaption = "xGUI Pro";
+    CreateInfo.hMenu = 0;
+    CreateInfo.hCursor = GetSystemCursor(0);
+    CreateInfo.hIcon = 0;
+    CreateInfo.MainWindowProc = MainFrameProc;
+    CreateInfo.lx = 0;
+    CreateInfo.ty = 0;
+    CreateInfo.rx = rect.right;
+    CreateInfo.by = rect.bottom;
+    CreateInfo.iBkColor = COLOR_lightwhite;
+    CreateInfo.dwAddData = 0;
+    CreateInfo.hHosting = HWND_DESKTOP;
+
+    hMainWnd = CreateMainWindow (&CreateInfo);
+
+    if (hMainWnd == HWND_INVALID)
+        return -1;
+
+    ShowWindow(hMainWnd, SW_SHOWNORMAL);
+
+    while (GetMessage(&Msg, hMainWnd)) {
+        performMessageLoopTasks();
+        TranslateMessage(&Msg);
+        DispatchMessage(&Msg);
+        performMessageLoopTasks();
+    }
+
+    MainWindowThreadCleanup (hMainWnd);
 
     return exitAfterLoad && webProcessCrashed ? 1 : 0;
 }
