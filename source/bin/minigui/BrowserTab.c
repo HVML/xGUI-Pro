@@ -54,14 +54,32 @@ static void browser_tab_init(BrowserTab *tab)
 {
 }
 
+static void browserTabConstructed(GObject *gObject)
+{
+    //BrowserTab *tab = BROWSER_TAB(gObject);
+
+    G_OBJECT_CLASS(browser_tab_parent_class)->constructed(gObject);
+}
+
+static void browserTabFinalize(GObject *gObject)
+{
+    G_OBJECT_CLASS(browser_tab_parent_class)->finalize(gObject);
+}
+
 static void browser_tab_class_init(BrowserTabClass *klass)
 {
+    GObjectClass *gobjectClass = G_OBJECT_CLASS(klass);
+    gobjectClass->constructed = browserTabConstructed;
+    gobjectClass->finalize = browserTabFinalize;
 }
 
 /* Public API. */
 HWND browser_tab_new(WebKitWebView *view)
 {
-    return NULL;
+    g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(view), NULL);
+
+    BrowserTab *tab = BROWSER_TAB(g_object_new(BROWSER_TYPE_TAB, "view", view, NULL));
+    return tab->parent.hwnd;
 }
 
 HWND browser_tab_get_title_widget(BrowserTab *tab)
