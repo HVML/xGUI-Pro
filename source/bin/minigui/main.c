@@ -79,8 +79,8 @@ static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
 
-HWND hMainWnd = HWND_INVALID;
-RECT screenRect;
+HWND g_hMainWnd = HWND_INVALID;
+RECT g_screenRect;
 
 static gchar *argumentToURL(const char *filename)
 {
@@ -102,6 +102,9 @@ static WebKitWebView *createBrowserTab(BrowserWindow *window
 #endif
         )
 {
+    RECT rect = g_screenRect;
+    rect.top += IDC_ADDRESS_HEIGHT + IDC_ADDRESS_TOP + 5;
+
     WebKitWebView *webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
         "web-context", browser_window_get_web_context(window),
         "settings", webkitSettings,
@@ -110,6 +113,9 @@ static WebKitWebView *createBrowserTab(BrowserWindow *window
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
         "website-policies", defaultWebsitePolicies,
 #endif
+        "webViewId", IDC_BROWSER,
+        "webViewRect", &rect,
+        "webViewParent", g_hMainWnd,
         NULL));
 
     if (editorMode)
@@ -610,20 +616,18 @@ static void aboutURISchemeRequestCallback(WebKitURISchemeRequest *request,
 
 static HWND createWebViewForAutomationInWindowCallback(WebKitAutomationSession* session, void *application)
 {
-#if 0
-    GtkWindow *window = gtk_application_get_active_window(application);
-    return BROWSER_IS_WINDOW(window) ? GTK_WIDGET(browser_window_get_or_create_web_view_for_automation(BROWSER_WINDOW(window))) : NULL;
-#endif
-    return NULL;
+    // TODO: get active window
+    BrowserWindow *window = NULL;
+    WebKitWebView *webView = browser_window_get_or_create_web_view_for_automation(NULL);
+    return webkit_web_view_get_hwnd(webView);
 }
 
 static HWND createWebViewForAutomationInTabCallback(WebKitAutomationSession* session, void *application)
 {
-#if 0
-    GtkWindow *window = gtk_application_get_active_window(application);
-    return BROWSER_IS_WINDOW(window) ? GTK_WIDGET(browser_window_create_web_view_in_new_tab_for_automation(BROWSER_WINDOW(window))) : NULL;
-#endif
-    return NULL;
+    // TODO: get active window
+    BrowserWindow *window = NULL;
+    WebKitWebView *webView = browser_window_create_web_view_in_new_tab_for_automation(NULL);
+    return webkit_web_view_get_hwnd(webView);
 }
 
 static void automationStartedCallback(WebKitWebContext *webContext, WebKitAutomationSession *session, void *application)
@@ -947,7 +951,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
 #endif
 
             if (!i) {
-         //       firstTab = GTK_WIDGET(webView);
+                firstTab = webkit_web_view_get_hwnd(webView);
                 if (exitAfterLoad)
                     exitAfterWebViewLoadFinishes(webView, application);
             }
@@ -962,7 +966,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
 #else
         WebKitWebView *webView = createBrowserTab(mainWindow, webkitSettings, userContentManager);
 #endif
-        //firstTab = GTK_WIDGET(webView);
+        firstTab = webkit_web_view_get_hwnd(webView);
 
         if (!editorMode) {
             if (sessionFile)
@@ -978,8 +982,9 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     g_object_unref(webContext);
     g_object_unref(userContentManager);
 
-    //gtk_widget_grab_focus(firstTab);
-//    gtk_widget_show(GTK_WIDGET(mainWindow));
+    SetFocus(firstTab);
+    // FIXME mainWindow
+    ShowWindow(firstTab, SW_SHOW);
 }
 
 void performMessageLoopTasks()
@@ -994,7 +999,7 @@ static LRESULT MainFrameProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     BrowserWindow * view = NULL;
     int i = 0;
 
-    RECT rect = screenRect;
+    RECT rect = g_screenRect;
     rect.top += IDC_ADDRESS_HEIGHT + IDC_ADDRESS_TOP + 5;
 
     switch (message) {
@@ -1066,7 +1071,7 @@ int MiniGUIMain (int argc, const char* argv[])
     MSG Msg;
     MAINWINCREATE CreateInfo;
 
-    screenRect = GetScreenRect();
+    g_screenRect = GetScreenRect();
 
 #ifdef _MGRM_PROCESSES
     JoinLayer(NAME_DEF_LAYER , "xGUI Pro" , 0 , 0);
@@ -1081,27 +1086,27 @@ int MiniGUIMain (int argc, const char* argv[])
     CreateInfo.MainWindowProc = MainFrameProc;
     CreateInfo.lx = 0;
     CreateInfo.ty = 0;
-    CreateInfo.rx = screenRect.right;
-    CreateInfo.by = screenRect.bottom;
+    CreateInfo.rx = g_screenRect.right;
+    CreateInfo.by = g_screenRect.bottom;
     CreateInfo.iBkColor = COLOR_lightwhite;
     CreateInfo.dwAddData = 0;
     CreateInfo.hHosting = HWND_DESKTOP;
 
-    hMainWnd = CreateMainWindow (&CreateInfo);
+    g_hMainWnd = CreateMainWindow (&CreateInfo);
 
-    if (hMainWnd == HWND_INVALID)
+    if (g_hMainWnd == HWND_INVALID)
         return -1;
 
-    ShowWindow(hMainWnd, SW_SHOWNORMAL);
+    ShowWindow(g_hMainWnd, SW_SHOWNORMAL);
 
-    while (GetMessage(&Msg, hMainWnd)) {
+    while (GetMessage(&Msg, g_hMainWnd)) {
         performMessageLoopTasks();
         TranslateMessage(&Msg);
         DispatchMessage(&Msg);
         performMessageLoopTasks();
     }
 
-    MainWindowThreadCleanup (hMainWnd);
+    MainWindowThreadCleanup (g_hMainWnd);
 
     return exitAfterLoad && webProcessCrashed ? 1 : 0;
 }
