@@ -1077,6 +1077,9 @@ int MiniGUIMain (int argc, const char* argv[])
     JoinLayer(NAME_DEF_LAYER , "xGUI Pro" , 0 , 0);
 #endif
 
+    startup(NULL, webkitSettings);
+    activate(NULL, webkitSettings);
+
     CreateInfo.dwStyle = WS_VISIBLE | WS_CAPTION ;
     CreateInfo.dwExStyle = WS_EX_NONE;
     CreateInfo.spCaption = "xGUI Pro";
