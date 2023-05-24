@@ -50,6 +50,8 @@ struct _BrowserPane {
     GObject parent;
 
     WebKitWebView *webView;
+
+    HWND  hwnd;
 };
 
 struct _BrowserPaneClass {

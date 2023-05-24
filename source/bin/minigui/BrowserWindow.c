@@ -30,6 +30,7 @@ struct _BrowserWindow {
     GObject parent;
 
     WebKitWebContext *webContext;
+    HWND parentWindow;
 };
 
 struct _BrowserWindowClass {
@@ -54,7 +55,9 @@ HWND browser_window_new(HWND parent, WebKitWebContext *webContext)
 
 WebKitWebContext* browser_window_get_web_context(BrowserWindow *window)
 {
-    return NULL;
+    g_return_val_if_fail(BROWSER_IS_WINDOW(window), NULL);
+
+    return window->webContext;
 }
 
 
