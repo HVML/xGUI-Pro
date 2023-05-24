@@ -43,6 +43,11 @@
 #define APP_NAME        "cn.fmsoft.hvml.xGUIPro"
 #define RUNNER_NAME     "purcmc"
 
+#define IDC_BROWSER     140
+#define IDC_ADDRESS_LEFT    5
+#define IDC_ADDRESS_TOP     3
+#define IDC_ADDRESS_HEIGHT  20
+
 static purcmc_server_config pcmc_srvcfg;
 static purcmc_server *pcmc_srv;
 
@@ -73,6 +78,9 @@ static gboolean enableSandbox;
 static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
+
+HWND hMainWnd = HWND_INVALID;
+RECT screenRect;
 
 static gchar *argumentToURL(const char *filename)
 {
@@ -986,8 +994,20 @@ static LRESULT MainFrameProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     BrowserWindow * view = NULL;
     int i = 0;
 
+    RECT rect = screenRect;
+    rect.top += IDC_ADDRESS_HEIGHT + IDC_ADDRESS_TOP + 5;
+
     switch (message) {
         case MSG_CREATE:
+            {
+                WebKitWebView *webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+                            "webViewId", IDC_BROWSER,
+                            "webViewRect", &rect,
+                            "webViewParent", hWnd,
+                            NULL));
+                ShowWindow(webkit_web_view_get_hwnd(webView), SW_SHOW);
+                webkit_web_view_load_uri(webView, "https://www.fmsoft.cn");
+            }
             break;
 
         case MSG_CLOSE:
@@ -1044,10 +1064,9 @@ int MiniGUIMain (int argc, const char* argv[])
     }
 
     MSG Msg;
-    HWND hMainWnd;
     MAINWINCREATE CreateInfo;
 
-    RECT rect = GetScreenRect();
+    screenRect = GetScreenRect();
 
 #ifdef _MGRM_PROCESSES
     JoinLayer(NAME_DEF_LAYER , "xGUI Pro" , 0 , 0);
@@ -1062,8 +1081,8 @@ int MiniGUIMain (int argc, const char* argv[])
     CreateInfo.MainWindowProc = MainFrameProc;
     CreateInfo.lx = 0;
     CreateInfo.ty = 0;
-    CreateInfo.rx = rect.right;
-    CreateInfo.by = rect.bottom;
+    CreateInfo.rx = screenRect.right;
+    CreateInfo.by = screenRect.bottom;
     CreateInfo.iBkColor = COLOR_lightwhite;
     CreateInfo.dwAddData = 0;
     CreateInfo.hHosting = HWND_DESKTOP;
