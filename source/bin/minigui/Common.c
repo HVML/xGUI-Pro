@@ -24,19 +24,57 @@
 
 #include "config.h"
 #include "Common.h"
+#include <assert.h>
 
 WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 {
-    return WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-                "is-controlled-by-automation", param->isControlledByAutomation,
-                "settings", param->settings,
-                "web-context", param->webContext,
-                "user-content-manager", param->userContentManager,
+    const char *names[8];
+    GValue    values[8];
+    guint nr_params = 0;
+
+    names[nr_params] = "is-controlled-by-automation";
+    g_value_set_boolean(&values[nr_params], param->isControlledByAutomation);
+    nr_params++;
+
+    if (param->settings) {
+        names[nr_params] = "settings";
+        g_value_set_object(&values[nr_params], param->settings);
+        nr_params++;
+    }
+
+    if (param->webContext) {
+        names[nr_params] = "web-context";
+        g_value_set_object(&values[nr_params], param->webContext);
+        nr_params++;
+    }
+
+    if (param->userContentManager) {
+        names[nr_params] = "user-content-manager";
+        g_value_set_object(&values[nr_params], param->userContentManager);
+        nr_params++;
+    }
+
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
-                "website-policies", param->websitePolicies,
+    if (param->websitePolicies) {
+        names[nr_params] = "user-content-manager";
+        g_value_set_object(&values[nr_params], param->websitePolicies);
+        nr_params++;
+    }
 #endif
-                "web-view-id", param->webViewId,
-                "web-view-rect", param->webViewRect,
-                "web-view-parent", param->webViewParent,
-                NULL));
+
+    names[nr_params] = "web-view-id";
+    g_value_set_int(&values[nr_params], param->webViewId);
+    nr_params++;
+
+    names[nr_params] = "web-view-rect";
+    g_value_set_pointer(&values[nr_params], param->webViewRect);
+    nr_params++;
+
+    names[nr_params] = "web-view-parent";
+    g_value_set_pointer(&values[nr_params], param->webViewParent);
+    nr_params++;
+
+
+    return WEBKIT_WEB_VIEW(g_object_new_with_properties(WEBKIT_TYPE_WEB_VIEW,
+                nr_params, names, values));
 }
