@@ -113,9 +113,9 @@ static WebKitWebView *createBrowserTab(BrowserWindow *window
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
         "website-policies", defaultWebsitePolicies,
 #endif
-        "webViewId", IDC_BROWSER,
-        "webViewRect", &rect,
-        "webViewParent", g_hMainWnd,
+        "web-view-id", IDC_BROWSER,
+        "web-view-rect", &rect,
+        "web-view-parent", g_hMainWnd,
         NULL));
 
     if (editorMode)
@@ -1006,9 +1006,9 @@ static LRESULT MainFrameProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         case MSG_CREATE:
             {
                 WebKitWebView *webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-                            "webViewId", IDC_BROWSER,
-                            "webViewRect", &rect,
-                            "webViewParent", hWnd,
+                            "web-view-id", IDC_BROWSER,
+                            "web-view-rect", &rect,
+                            "web-view-parent", hWnd,
                             NULL));
                 ShowWindow(webkit_web_view_get_hwnd(webView), SW_SHOW);
                 webkit_web_view_load_uri(webView, "https://www.fmsoft.cn");
