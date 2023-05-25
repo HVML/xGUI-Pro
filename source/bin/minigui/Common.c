@@ -25,4 +25,18 @@
 #include "config.h"
 #include "Common.h"
 
-
+WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
+{
+    return WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+                "is-controlled-by-automation", param->isControlledByAutomation,
+                "settings", param->settings,
+                "web-context", param->webContext,
+                "user-content-manager", param->userContentManager,
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
+                "website-policies", param->websitePolicies,
+#endif
+                "web-view-id", param->webViewId,
+                "web-view-rect", param->webViewRect,
+                "web-view-parent", param->webViewParent,
+                NULL));
+}

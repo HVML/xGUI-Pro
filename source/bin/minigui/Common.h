@@ -28,6 +28,18 @@
 extern "C" {
 #endif
 
+typedef struct {
+    bool isControlledByAutomation;
+    void *settings;
+    void *userContentManager;
+    void *webContext;
+    void *websitePolicies;
+    int  webViewId;
+    void *webViewParent;
+    void *webViewRect;
+} WebKitWebViewParam;
+
+WebKitWebView *xgui_create_webview(WebKitWebViewParam *param);
 
 #ifdef __cplusplus
 }
