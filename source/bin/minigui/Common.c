@@ -29,27 +29,31 @@
 WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 {
     const char *names[8];
-    GValue    values[8];
+    GValue    values[8] = {0, };
     guint nr_params = 0;
 
     names[nr_params] = "is-controlled-by-automation";
+    g_value_init(&values[nr_params], G_TYPE_BOOLEAN);
     g_value_set_boolean(&values[nr_params], param->isControlledByAutomation);
     nr_params++;
 
     if (param->settings) {
         names[nr_params] = "settings";
+        g_value_init(&values[nr_params], G_TYPE_OBJECT);
         g_value_set_object(&values[nr_params], param->settings);
         nr_params++;
     }
 
     if (param->webContext) {
         names[nr_params] = "web-context";
+        g_value_init(&values[nr_params], G_TYPE_OBJECT);
         g_value_set_object(&values[nr_params], param->webContext);
         nr_params++;
     }
 
     if (param->userContentManager) {
         names[nr_params] = "user-content-manager";
+        g_value_init(&values[nr_params], G_TYPE_OBJECT);
         g_value_set_object(&values[nr_params], param->userContentManager);
         nr_params++;
     }
@@ -57,23 +61,26 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
     if (param->websitePolicies) {
         names[nr_params] = "user-content-manager";
+        g_value_init(&values[nr_params], G_TYPE_OBJECT);
         g_value_set_object(&values[nr_params], param->websitePolicies);
         nr_params++;
     }
 #endif
 
     names[nr_params] = "web-view-id";
+    g_value_init(&values[nr_params], G_TYPE_INT);
     g_value_set_int(&values[nr_params], param->webViewId);
     nr_params++;
 
     names[nr_params] = "web-view-rect";
+    g_value_init(&values[nr_params], G_TYPE_POINTER);
     g_value_set_pointer(&values[nr_params], param->webViewRect);
     nr_params++;
 
     names[nr_params] = "web-view-parent";
+    g_value_init(&values[nr_params], G_TYPE_POINTER);
     g_value_set_pointer(&values[nr_params], param->webViewParent);
     nr_params++;
-
 
     return WEBKIT_WEB_VIEW(g_object_new_with_properties(WEBKIT_TYPE_WEB_VIEW,
                 nr_params, names, values));
