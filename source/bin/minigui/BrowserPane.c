@@ -55,10 +55,10 @@ static void browserPaneSetProperty(GObject *object, guint propId,
 
 static void browserPaneConstructed(GObject *gObject)
 {
- //   BrowserPane *pane = BROWSER_PANE(gObject);
- //   pane->hwnd = CreateWindow;
-
     G_OBJECT_CLASS(browser_pane_parent_class)->constructed(gObject);
+
+    BrowserPane *pane = BROWSER_PANE(gObject);
+    pane->hwnd = webkit_web_view_get_hwnd(pane->webView);
 }
 
 static void browserPaneFinalize(GObject *gObject)
