@@ -14,6 +14,7 @@ list(APPEND xguipro_SYSTEM_INCLUDE_DIRECTORIES
 
 list(APPEND xguipro_SOURCES
     ${xGUIPro_DERIVED_SOURCES_DIR}/minigui/BrowserMarshal.c
+    minigui/Common.c
     minigui/BrowserTab.c
     minigui/BrowserTab.h
     minigui/BrowserPane.c
