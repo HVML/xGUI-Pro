@@ -24,6 +24,13 @@
 
 #include <webkit2/webkit2.h>
 
+#define IDC_BROWSER             140
+#define IDC_PLAIN_WINDOW        141
+
+#define IDC_ADDRESS_LEFT        5
+#define IDC_ADDRESS_TOP         3
+#define IDC_ADDRESS_HEIGHT      20
+
 #ifdef __cplusplus
 extern "C" {
 #endif

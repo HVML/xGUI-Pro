@@ -27,6 +27,7 @@
 #include "BrowserPlainWindow.h"
 
 #include "BrowserPane.h"
+#include "Common.h"
 #include <string.h>
 
 struct _BrowserPlainWindow {
@@ -35,10 +36,11 @@ struct _BrowserPlainWindow {
     WebKitWebContext *webContext;
     BrowserPane *browserPane;
 
-    gchar *sessionFile;
-
     gchar *name;
     gchar *title;
+
+    HWND parentWindow;
+    HWND hwnd;
 };
 
 struct _BrowserPlainWindowClass {
@@ -57,8 +59,43 @@ static void browser_plain_window_init(BrowserPlainWindow *window)
 {
 }
 
+static void browserPlainWindowDispose(GObject *gObject)
+{
+    BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(gObject);
+
+    if (window->parentWindow) {
+        window->parentWindow = NULL;
+    }
+
+    G_OBJECT_CLASS(browser_plain_window_parent_class)->dispose(gObject);
+}
+
+static void browserPlainWindowFinalize(GObject *gObject)
+{
+    BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(gObject);
+
+    g_signal_handlers_disconnect_matched(window->webContext,
+            G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, window);
+    g_object_unref(window->webContext);
+
+    if (window->name) {
+        g_free(window->name);
+        window->name = NULL;
+    }
+
+    if (window->title) {
+        g_free(window->title);
+        window->title = NULL;
+    }
+
+    G_OBJECT_CLASS(browser_plain_window_parent_class)->finalize(gObject);
+}
+
 static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
 {
+    GObjectClass *gobjectClass = G_OBJECT_CLASS(klass);
+    gobjectClass->dispose = browserPlainWindowDispose;
+    gobjectClass->finalize = browserPlainWindowFinalize;
 }
 
 /* Public API. */
@@ -66,7 +103,28 @@ HWND
 browser_plain_window_new(HWND parent, WebKitWebContext *webContext,
         const char *name, const char *title)
 {
-    return NULL;
+    g_return_val_if_fail(WEBKIT_IS_WEB_CONTEXT(webContext), NULL);
+    assert(parent);
+
+    BrowserPlainWindow *window =
+        BROWSER_PLAIN_WINDOW(g_object_new(BROWSER_TYPE_PLAIN_WINDOW, NULL));
+
+    window->webContext = g_object_ref(webContext);
+    window->parentWindow = parent;
+
+    RECT rect;
+    GetWindowRect(parent, &rect);
+
+    window->hwnd = CreateWindow (CTRL_STATIC, "",
+                          WS_VISIBLE | SS_CENTER, IDC_PLAIN_WINDOW,
+                          rect.left, rect.top, RECTW(rect), RECTH(rect), parent, 0);
+    if (name)
+        window->name = g_strdup(name);
+
+    if (title)
+        window->title = g_strdup(title);
+
+    return window->hwnd;
 }
 
 WebKitWebContext *
@@ -77,9 +135,29 @@ browser_plain_window_get_web_context(BrowserPlainWindow *window)
     return window->webContext;
 }
 
+static void webViewClose(WebKitWebView *webView, BrowserPlainWindow *window)
+{
+    HWND hwnd = webkit_web_view_get_hwnd(webView);
+    DestroyWindow(hwnd);
+    DestroyWindow(window->hwnd);
+}
+
 void browser_plain_window_set_view(BrowserPlainWindow *window,
         WebKitWebView *webView)
 {
+    g_return_if_fail(BROWSER_IS_PLAIN_WINDOW(window));
+    g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
+
+    if (window->browserPane) {
+        g_assert(browser_pane_get_web_view(window->browserPane));
+        g_warning("Only one webView allowed in a plainwin.");
+        return;
+    }
+
+    window->browserPane = (BrowserPane*)browser_pane_new(webView);
+    ShowWindow(window->hwnd, SW_SHOW);
+
+    g_signal_connect_after(webView, "close", G_CALLBACK(webViewClose), window);
 }
 
 WebKitWebView *browser_plain_window_get_view(BrowserPlainWindow *window)
@@ -103,80 +181,6 @@ void browser_plain_window_load_uri(BrowserPlainWindow *window, const char *uri)
 void browser_plain_window_load_session(BrowserPlainWindow *window,
         const char *sessionFile)
 {
-    g_return_if_fail(BROWSER_IS_PLAIN_WINDOW(window));
-    g_return_if_fail(sessionFile);
-
-    WebKitWebView *webView = browser_pane_get_web_view(window->browserPane);
-
-    window->sessionFile = g_strdup(sessionFile);
-    GKeyFile *session = g_key_file_new();
-    GError *error = NULL;
-    if (!g_key_file_load_from_file(session, sessionFile, G_KEY_FILE_NONE,
-                &error)) {
-        if (!g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT))
-            g_warning("Failed to open session file: %s", error->message);
-        g_error_free(error);
-        webkit_web_view_load_uri(webView, BROWSER_DEFAULT_URL);
-        g_key_file_free(session);
-        return;
-    }
-
-    gsize groupCount;
-    gchar **groups = g_key_file_get_groups(session, &groupCount);
-    if (!groupCount || groupCount > 1) {
-        webkit_web_view_load_uri(webView, BROWSER_DEFAULT_URL);
-        g_strfreev(groups);
-        g_key_file_free(session);
-        return;
-    }
-
-    WebKitWebView *previousWebView = NULL;
-    WebKitWebViewSessionState *state = NULL;
-    gchar *base64 = g_key_file_get_string(session, "plainwin", "state", NULL);
-    if (base64) {
-        gsize stateDataLength;
-        guchar *stateData = g_base64_decode(base64, &stateDataLength);
-        GBytes *bytes = g_bytes_new_take(stateData, stateDataLength);
-        state = webkit_web_view_session_state_new(bytes);
-        g_bytes_unref(bytes);
-        g_free(base64);
-    }
-
-    if (!webView) {
-        webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-            "web-context",
-            webkit_web_view_get_context(previousWebView),
-            "settings",
-            webkit_web_view_get_settings(previousWebView),
-            "user-content-manager",
-            webkit_web_view_get_user_content_manager(previousWebView),
-#if WEBKIT_CHECK_VERSION(2, 30, 0)
-            "website-policies",
-            webkit_web_view_get_website_policies(previousWebView),
-#endif
-            NULL));
-        browser_plain_window_set_view(window, webView);
-    }
-
-    if (state) {
-        webkit_web_view_restore_session_state(webView, state);
-        webkit_web_view_session_state_unref(state);
-    }
-
-    WebKitBackForwardList *bfList =
-        webkit_web_view_get_back_forward_list(webView);
-    WebKitBackForwardListItem *item =
-        webkit_back_forward_list_get_current_item(bfList);
-    if (item)
-        webkit_web_view_go_to_back_forward_list_item(webView, item);
-    else
-        webkit_web_view_load_uri(webView, "about:blank");
-
-    previousWebView = webView;
-    webView = NULL;
-
-    g_strfreev(groups);
-    g_key_file_free(session);
 }
 
 const char* browser_plain_window_get_name(BrowserPlainWindow *window)

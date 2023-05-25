@@ -33,6 +33,7 @@
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "HVMLURISchema.h"
+#include "Common.h"
 
 #include "purcmc/purcmc.h"
 
@@ -43,10 +44,6 @@
 #define APP_NAME        "cn.fmsoft.hvml.xGUIPro"
 #define RUNNER_NAME     "purcmc"
 
-#define IDC_BROWSER     140
-#define IDC_ADDRESS_LEFT    5
-#define IDC_ADDRESS_TOP     3
-#define IDC_ADDRESS_HEIGHT  20
 
 static purcmc_server_config pcmc_srvcfg;
 static purcmc_server *pcmc_srv;
@@ -104,19 +101,19 @@ static WebKitWebView *createBrowserTab(BrowserWindow *window
 {
     RECT rect = g_screenRect;
     rect.top += IDC_ADDRESS_HEIGHT + IDC_ADDRESS_TOP + 5;
-
-    WebKitWebView *webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-        "web-context", browser_window_get_web_context(window),
-        "settings", webkitSettings,
-        "user-content-manager", userContentManager,
-        "is-controlled-by-automation", automationMode,
+    WebKitWebViewParam param = {
+        .webContext = browser_window_get_web_context(window),
+        .settings = webkitSettings,
+        .userContentManager = userContentManager,
+        .isControlledByAutomation = automationMode,
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
-        "website-policies", defaultWebsitePolicies,
+        .websitePolicies = defaultWebsitePolicies,
 #endif
-        "web-view-id", IDC_BROWSER,
-        "web-view-rect", &rect,
-        "web-view-parent", g_hMainWnd,
-        NULL));
+        .webViewId = IDC_BROWSER,
+        .webViewRect = &rect,
+        .webViewParent = g_hMainWnd
+    };
+    WebKitWebView *webView = xgui_create_webview(&param);
 
     if (editorMode)
         webkit_web_view_set_editable(webView, TRUE);
@@ -1005,11 +1002,12 @@ static LRESULT MainFrameProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     switch (message) {
         case MSG_CREATE:
             {
-                WebKitWebView *webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-                            "web-view-id", IDC_BROWSER,
-                            "web-view-rect", &rect,
-                            "web-view-parent", hWnd,
-                            NULL));
+                WebKitWebViewParam param = {
+                    .webViewId = IDC_BROWSER,
+                    .webViewRect = &rect,
+                    .webViewParent = hWnd
+                };
+                WebKitWebView *webView = xgui_create_webview(&param);
                 ShowWindow(webkit_web_view_get_hwnd(webView), SW_SHOW);
                 webkit_web_view_load_uri(webView, "https://www.fmsoft.cn");
             }
