@@ -24,6 +24,7 @@
 #define BrowserPlainWindow_h
 
 #include <webkit2/webkit2.h>
+#include "Common.h"
 
 G_BEGIN_DECLS
 
@@ -42,7 +43,7 @@ GType browser_plain_window_get_type(void);
 HWND browser_plain_window_new(HWND, WebKitWebContext*,
         const char*, const char*);
 WebKitWebContext* browser_plain_window_get_web_context(BrowserPlainWindow*);
-void browser_plain_window_set_view(BrowserPlainWindow*, WebKitWebView*);
+void browser_plain_window_set_view(BrowserPlainWindow*, WebKitWebViewParam*);
 WebKitWebView* browser_plain_window_get_view(BrowserPlainWindow*);
 const char* browser_plain_window_get_name(BrowserPlainWindow*);
 void browser_plain_window_set_title(BrowserPlainWindow*, const char*);

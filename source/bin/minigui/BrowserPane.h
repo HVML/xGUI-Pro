@@ -64,8 +64,7 @@ struct _BrowserPaneClass {
 
 GType browser_pane_get_type(void);
 
-HWND browser_pane_new(WebKitWebView*);
-HWND browser_pane_new_by_param(WebKitWebViewParam*);
+HWND browser_pane_new(WebKitWebViewParam*);
 WebKitWebView* browser_pane_get_web_view(BrowserPane*);
 void browser_pane_load_uri(BrowserPane*, const char* uri);
 void browser_pane_set_status_text(BrowserPane*, const char* text);

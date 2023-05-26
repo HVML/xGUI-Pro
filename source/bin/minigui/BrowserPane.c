@@ -30,8 +30,6 @@
 enum {
     PROP_0,
 
-    PROP_VIEW,
-
     PROP_WEBVIEW_PARAM
 
 };
@@ -48,9 +46,6 @@ static void browserPaneSetProperty(GObject *object, guint propId,
     BrowserPane *pane = BROWSER_PANE(object);
 
     switch (propId) {
-    case PROP_VIEW:
-        pane->webView = g_value_get_object(value);
-        break;
     case PROP_WEBVIEW_PARAM:
         {
             WebKitWebViewParam *param = (WebKitWebViewParam *)
@@ -67,11 +62,9 @@ static void browserPaneConstructed(GObject *gObject)
     G_OBJECT_CLASS(browser_pane_parent_class)->constructed(gObject);
 
     BrowserPane *pane = BROWSER_PANE(gObject);
-    if (!pane->webView) {
-        pane->webView = xgui_create_webview(&pane->param);
-    }
-
+    pane->webView = xgui_create_webview(&pane->param);
     pane->hwnd = webkit_web_view_get_hwnd(pane->webView);
+    pane->parentHwnd = pane->param.webViewParent;
 }
 
 static void browserPaneFinalize(GObject *gObject)
@@ -87,16 +80,6 @@ static void browser_pane_class_init(BrowserPaneClass *klass)
     gobjectClass->constructed = browserPaneConstructed;
     gobjectClass->set_property = browserPaneSetProperty;
     gobjectClass->finalize = browserPaneFinalize;
-
-    g_object_class_install_property(
-        gobjectClass,
-        PROP_VIEW,
-        g_param_spec_object(
-            "view",
-            "View",
-            "The web view of this pane",
-            WEBKIT_TYPE_WEB_VIEW,
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
     g_object_class_install_property(
         gobjectClass,
@@ -121,13 +104,7 @@ static char *getInternalURI(const char *uri)
 }
 
 /* Public API. */
-HWND browser_pane_new(WebKitWebView *view)
-{
-    BrowserPane *pane = BROWSER_PANE(g_object_new(BROWSER_TYPE_PANE, "view", view, NULL));
-    return pane->hwnd;
-}
-
-HWND browser_pane_new_by_param(WebKitWebViewParam *param)
+HWND browser_pane_new(WebKitWebViewParam *param)
 {
     BrowserPane *pane = BROWSER_PANE(g_object_new(BROWSER_TYPE_PANE, "param", param, NULL));
     return pane->hwnd;

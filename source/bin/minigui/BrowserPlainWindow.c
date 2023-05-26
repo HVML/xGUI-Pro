@@ -142,11 +142,9 @@ static void webViewClose(WebKitWebView *webView, BrowserPlainWindow *window)
     DestroyWindow(window->hwnd);
 }
 
-void browser_plain_window_set_view(BrowserPlainWindow *window,
-        WebKitWebView *webView)
+void browser_plain_window_set_view(BrowserPlainWindow *window, WebKitWebViewParam *param)
 {
     g_return_if_fail(BROWSER_IS_PLAIN_WINDOW(window));
-    g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
 
     if (window->browserPane) {
         g_assert(browser_pane_get_web_view(window->browserPane));
@@ -154,10 +152,10 @@ void browser_plain_window_set_view(BrowserPlainWindow *window,
         return;
     }
 
-    window->browserPane = (BrowserPane*)browser_pane_new(webView);
+    window->browserPane = (BrowserPane*)browser_pane_new(param);
     ShowWindow(window->hwnd, SW_SHOW);
 
-    g_signal_connect_after(webView, "close", G_CALLBACK(webViewClose), window);
+    g_signal_connect_after(window->browserPane->webView, "close", G_CALLBACK(webViewClose), window);
 }
 
 WebKitWebView *browser_plain_window_get_view(BrowserPlainWindow *window)
