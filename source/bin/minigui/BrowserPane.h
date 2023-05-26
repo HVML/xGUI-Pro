@@ -51,6 +51,7 @@ typedef struct _BrowserPaneClass   BrowserPaneClass;
 struct _BrowserPane {
     GObject parent;
 
+    WebKitWebViewParam param;
     WebKitWebView *webView;
 
     HWND  hwnd;
