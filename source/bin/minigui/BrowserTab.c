@@ -42,6 +42,10 @@ enum {
 
 struct _BrowserTab {
     BrowserPane parent;
+
+    int idx;
+    HWND psHwnd;
+    HWND pageHwnd;
 };
 
 struct _BrowserTabClass {
@@ -73,13 +77,36 @@ static void browser_tab_class_init(BrowserTabClass *klass)
     gobjectClass->finalize = browserTabFinalize;
 }
 
-/* Public API. */
-HWND browser_tab_new(WebKitWebView *view)
-{
-    g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(view), NULL);
+DLGTEMPLATE DlgWebView = {
+    WS_BORDER | WS_CAPTION,
+    WS_EX_NONE,
+    0, 0, 100, 100,
+    "",
+    0, 0,
+    0, NULL,
+    0
+};
 
-    BrowserTab *tab = BROWSER_TAB(g_object_new(BROWSER_TYPE_TAB, "view", view, NULL));
-    return tab->parent.hwnd;
+static LRESULT tabPageProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    return DefaultPageProc(hDlg, message, wParam, lParam);
+}
+
+/* Public API. */
+HWND browser_tab_new(HWND psHwnd, WebKitWebViewParam *param)
+{
+    int idx = SendMessage(psHwnd, PSM_ADDPAGE, (WPARAM)&DlgWebView, (LPARAM)tabPageProc);
+    HWND pageHwnd = (HWND) SendMessage(psHwnd, PSM_GETPAGE, (WPARAM)idx, 0);
+    RECT rcPage;
+    GetClientRect(pageHwnd, &rcPage);
+    SetRect(&param->webViewRect, 0, 0, RECTW(rcPage), RECTH(rcPage));
+    param->webViewParent = pageHwnd;
+
+    BrowserTab *tab = BROWSER_TAB(g_object_new(BROWSER_TYPE_TAB, "param", param, NULL));
+    tab->idx = idx;
+    tab->psHwnd = psHwnd;
+    tab->pageHwnd = pageHwnd;
+    return tab->pageHwnd;
 }
 
 HWND browser_tab_get_title_widget(BrowserTab *tab)

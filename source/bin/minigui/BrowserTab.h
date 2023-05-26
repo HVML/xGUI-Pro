@@ -43,7 +43,7 @@ typedef struct _BrowserTabClass   BrowserTabClass;
 
 GType browser_tab_get_type(void);
 
-HWND browser_tab_new(WebKitWebView*);
+HWND browser_tab_new(HWND psHwnd, WebKitWebViewParam *);
 HWND browser_tab_get_title_widget(BrowserTab*);
 
 static inline
