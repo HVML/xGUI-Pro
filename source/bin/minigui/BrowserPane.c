@@ -52,6 +52,7 @@ static void browserPaneSetProperty(GObject *object, guint propId,
                 g_value_get_pointer(value);
             pane->param = *param;
         }
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, pspec);
     }
