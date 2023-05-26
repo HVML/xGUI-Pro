@@ -105,10 +105,10 @@ static char *getInternalURI(const char *uri)
 }
 
 /* Public API. */
-HWND browser_pane_new(WebKitWebViewParam *param)
+BrowserPane *browser_pane_new(WebKitWebViewParam *param)
 {
     BrowserPane *pane = BROWSER_PANE(g_object_new(BROWSER_TYPE_PANE, "param", param, NULL));
-    return pane->hwnd;
+    return pane;
 }
 
 WebKitWebView *browser_pane_get_web_view(BrowserPane *pane)
