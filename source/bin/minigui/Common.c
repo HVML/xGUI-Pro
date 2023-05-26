@@ -60,7 +60,7 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
     if (param->websitePolicies) {
-        names[nr_params] = "user-content-manager";
+        names[nr_params] = "website-policies";
         g_value_init(&values[nr_params], G_TYPE_OBJECT);
         g_value_set_object(&values[nr_params], param->websitePolicies);
         nr_params++;
