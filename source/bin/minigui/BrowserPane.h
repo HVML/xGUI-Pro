@@ -30,6 +30,8 @@
 #include <minigui/window.h>
 #include <minigui/control.h>
 
+#include "Common.h"
+
 G_BEGIN_DECLS
 
 #define BROWSER_TYPE_PANE            (browser_pane_get_type())
@@ -52,6 +54,7 @@ struct _BrowserPane {
     WebKitWebView *webView;
 
     HWND  hwnd;
+    HWND  parentHwnd;
 };
 
 struct _BrowserPaneClass {
@@ -61,6 +64,7 @@ struct _BrowserPaneClass {
 GType browser_pane_get_type(void);
 
 HWND browser_pane_new(WebKitWebView*);
+HWND browser_pane_new_by_param(WebKitWebViewParam*);
 WebKitWebView* browser_pane_get_web_view(BrowserPane*);
 void browser_pane_load_uri(BrowserPane*, const char* uri);
 void browser_pane_set_status_text(BrowserPane*, const char* text);

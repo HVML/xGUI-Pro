@@ -105,6 +105,14 @@ HWND browser_pane_new(WebKitWebView *view)
     return pane->hwnd;
 }
 
+HWND browser_pane_new_by_param(WebKitWebViewParam *param)
+{
+    WebKitWebView *webView = xgui_create_webview(param);
+    BrowserPane *pane = BROWSER_PANE(g_object_new(BROWSER_TYPE_PANE, "view", webView, NULL));
+    pane->parentHwnd = param->webViewParent;
+    return pane->hwnd;
+}
+
 WebKitWebView *browser_pane_get_web_view(BrowserPane *pane)
 {
     g_return_val_if_fail(BROWSER_IS_PANE(pane), NULL);
