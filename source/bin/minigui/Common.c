@@ -74,7 +74,7 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 
     names[nr_params] = "web-view-rect";
     g_value_init(&values[nr_params], G_TYPE_POINTER);
-    g_value_set_pointer(&values[nr_params], param->webViewRect);
+    g_value_set_pointer(&values[nr_params], &param->webViewRect);
     nr_params++;
 
     names[nr_params] = "web-view-parent";

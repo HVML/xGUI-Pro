@@ -110,7 +110,7 @@ static WebKitWebView *createBrowserTab(BrowserWindow *window
         .websitePolicies = defaultWebsitePolicies,
 #endif
         .webViewId = IDC_BROWSER,
-        .webViewRect = &rect,
+        .webViewRect = rect,
         .webViewParent = g_hMainWnd
     };
     WebKitWebView *webView = xgui_create_webview(&param);
@@ -1004,7 +1004,7 @@ static LRESULT MainFrameProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             {
                 WebKitWebViewParam param = {
                     .webViewId = IDC_BROWSER,
-                    .webViewRect = &rect,
+                    .webViewRect = rect,
                     .webViewParent = hWnd
                 };
                 WebKitWebView *webView = xgui_create_webview(&param);

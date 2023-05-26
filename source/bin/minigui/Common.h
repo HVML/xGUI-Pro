@@ -44,7 +44,7 @@ typedef struct {
     void *websitePolicies;
     int  webViewId;
     void *webViewParent;
-    void *webViewRect;
+    RECT webViewRect;
 } WebKitWebViewParam;
 
 WebKitWebView *xgui_create_webview(WebKitWebViewParam *param);
