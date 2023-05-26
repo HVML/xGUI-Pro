@@ -35,6 +35,7 @@ enum {
 
     PROP_TITLE,
     PROP_NAME,
+    PROP_PARENT_WINDOW,
 
     N_PROPERTIES
 };
@@ -88,8 +89,14 @@ static void browserPlainWindowConstructed(GObject *gObject)
     BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(gObject);
     G_OBJECT_CLASS(browser_plain_window_parent_class)->constructed(gObject);
 
+    HWND parent = window->parentWindow ? window->parentWindow : g_hMainWnd;
+    RECT rc;
+    GetClientRect(parent, &rc);
+    int w = RECTW(rc);
+    int h = RECTH(rc);
+
     MAINWINCREATE CreateInfo;
-    CreateInfo.dwStyle = WS_VISIBLE | WS_CAPTION ;
+    CreateInfo.dwStyle = WS_CHILD | WS_VISIBLE | WS_CAPTION ;
     CreateInfo.dwExStyle = WS_EX_NONE;
     CreateInfo.spCaption = window->title ? window->title : BROWSER_DEFAULT_TITLE;
     CreateInfo.hMenu = 0;
@@ -98,13 +105,15 @@ static void browserPlainWindowConstructed(GObject *gObject)
     CreateInfo.MainWindowProc = PlainWindowProc;
     CreateInfo.lx = 0;
     CreateInfo.ty = 0;
-    CreateInfo.rx = g_screenRect.right;
-    CreateInfo.by = g_screenRect.bottom;
+    CreateInfo.rx = w;
+    CreateInfo.by = h;
     CreateInfo.iBkColor = COLOR_lightwhite;
     CreateInfo.dwAddData = 0;
-    CreateInfo.hHosting = g_hMainWnd;
+    CreateInfo.hHosting = parent;
     window->hwnd = CreateMainWindow (&CreateInfo);
-    ShowWindow(window->hwnd, SW_SHOWNORMAL);
+    if (window->hwnd != HWND_INVALID) {
+        ShowWindow(window->hwnd, SW_SHOWNORMAL);
+    }
 }
 
 static void browserPlainWindowSetProperty(GObject *object, guint propId,
@@ -129,6 +138,14 @@ static void browserPlainWindowSetProperty(GObject *object, guint propId,
             }
         }
         break;
+    case PROP_PARENT_WINDOW:
+        {
+            gpointer *p = g_value_get_pointer(value);
+            if (p) {
+                window->parentWindow = (HWND)p;
+            }
+        }
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, pspec);
     }
@@ -149,9 +166,11 @@ static void browserPlainWindowFinalize(GObject *gObject)
 {
     BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(gObject);
 
-    g_signal_handlers_disconnect_matched(window->webContext,
-            G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, window);
-    g_object_unref(window->webContext);
+    if (window->webContext) {
+        g_signal_handlers_disconnect_matched(window->webContext,
+                G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, window);
+        g_object_unref(window->webContext);
+    }
 
     if (window->name) {
         g_free(window->name);
@@ -190,26 +209,33 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
             "PlainWindow name",
             "The plain window name",
             G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+    g_object_class_install_property(
+        gobjectClass,
+        PROP_PARENT_WINDOW,
+        g_param_spec_pointer(
+            "parent-window",
+            "parent window",
+            "The parent window",
+            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 }
 
 /* Public API. */
-HWND
+BrowserPlainWindow *
 browser_plain_window_new(HWND parent, WebKitWebContext *webContext,
         const char *name, const char *title)
 {
-    g_return_val_if_fail(WEBKIT_IS_WEB_CONTEXT(webContext), NULL);
-    assert(parent);
-
     BrowserPlainWindow *window =
           BROWSER_PLAIN_WINDOW(g_object_new(BROWSER_TYPE_PLAIN_WINDOW,
                       "name", name,
                       "title", title,
+                      "parent-window", parent,
                       NULL));
 
-    window->webContext = g_object_ref(webContext);
-    window->parentWindow = parent;
+    if (webContext) {
+        window->webContext = g_object_ref(webContext);
+    }
 
-    return window->hwnd;
+    return window;
 }
 
 WebKitWebContext *
@@ -262,6 +288,7 @@ void browser_plain_window_set_view(BrowserPlainWindow *window, WebKitWebViewPara
     }
 
     param->webViewParent = window->hwnd;
+    param->webContext = window->webContext;
 
     RECT rc;
     GetClientRect(window->hwnd, &rc);
