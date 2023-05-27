@@ -34,6 +34,7 @@
 #include "PurcmcCallbacks.h"
 #include "HVMLURISchema.h"
 #include "Common.h"
+#include "BrowserPlainWindow.h"
 
 #include "purcmc/purcmc.h"
 
@@ -1002,14 +1003,20 @@ static LRESULT MainFrameProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     switch (message) {
         case MSG_CREATE:
             {
+
                 WebKitWebViewParam param = {
                     .webViewId = IDC_BROWSER,
                     .webViewRect = rect,
                     .webViewParent = hWnd
                 };
-                WebKitWebView *webView = xgui_create_webview(&param);
-                ShowWindow(webkit_web_view_get_hwnd(webView), SW_SHOW);
-                webkit_web_view_load_uri(webView, "https://www.fmsoft.cn");
+                BrowserPlainWindow *plain = browser_plain_window_new(hWnd, NULL,
+                        "PlainWindow", "PlainWindow title");
+                browser_plain_window_set_view(plain, &param);
+                browser_plain_window_load_uri(plain, "https://www.fmsoft.cn");
+
+                //WebKitWebView *webView = xgui_create_webview(&param);
+                //ShowWindow(webkit_web_view_get_hwnd(webView), SW_SHOW);
+                //webkit_web_view_load_uri(webView, "https://www.fmsoft.cn");
             }
             break;
 
@@ -1078,6 +1085,7 @@ int MiniGUIMain (int argc, const char* argv[])
     startup(NULL, webkitSettings);
     activate(NULL, webkitSettings);
 
+#if 0
     CreateInfo.dwStyle = WS_VISIBLE | WS_CAPTION ;
     CreateInfo.dwExStyle = WS_EX_NONE;
     CreateInfo.spCaption = "xGUI Pro";
@@ -1097,10 +1105,14 @@ int MiniGUIMain (int argc, const char* argv[])
 
     if (g_hMainWnd == HWND_INVALID)
         return -1;
+#endif
 
-    ShowWindow(g_hMainWnd, SW_SHOWNORMAL);
+    BrowserWindow *browserWindow =  browser_window_new(NULL, NULL);
+    g_hMainWnd = browser_window_hwnd(browserWindow);
+    //ShowWindow(g_hMainWnd, SW_SHOWNORMAL);
 
-    while (GetMessage(&Msg, g_hMainWnd)) {
+    //while (GetMessage(&Msg, g_hMainWnd)) {
+    while (GetMessage(&Msg, HWND_DESKTOP)) {
         performMessageLoopTasks();
         TranslateMessage(&Msg);
         DispatchMessage(&Msg);

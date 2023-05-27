@@ -27,6 +27,7 @@
 #define IDC_BROWSER             140
 #define IDC_PLAIN_WINDOW        141
 #define IDC_PROPSHEET           142
+#define IDC_URI_ENTRY           143
 
 #define IDC_ADDRESS_LEFT        5
 #define IDC_ADDRESS_TOP         3

@@ -23,14 +23,29 @@
 #endif
 #include "main.h"
 #include "BrowserWindow.h"
+#include "BrowserTab.h"
 
 #include <string.h>
+
+enum {
+    PROP_0,
+
+    PROP_PARENT_WINDOW,
+
+    N_PROPERTIES
+};
 
 struct _BrowserWindow {
     GObject parent;
 
     WebKitWebContext *webContext;
+    BrowserTab *activeTab;
+
     HWND parentWindow;
+    HWND hwnd;
+    HWND uriEntry;
+    HWND propsheet;
+
 };
 
 struct _BrowserWindowClass {
@@ -43,15 +58,161 @@ static void browser_window_init(BrowserWindow *window)
 {
 }
 
+static LRESULT BrowserWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message) {
+        case MSG_CREATE:
+            break;
+
+        case MSG_CLOSE:
+            DestroyAllControls (hWnd);
+            DestroyMainWindow (hWnd);
+            return 0;
+    }
+
+    return DefaultMainWinProc(hWnd, message, wParam, lParam);
+}
+
+static void uriEntryCallback(HWND hwnd, LINT id, int nc, DWORD add_data)
+{
+//    BrowserWindow *window = (BrowserWindow *)GetWindowAdditionalData2(hwnd);
+}
+
+static void browserWindowConstructed(GObject *gObject)
+{
+    BrowserWindow *window = BROWSER_WINDOW(gObject);
+    G_OBJECT_CLASS(browser_window_parent_class)->constructed(gObject);
+
+    RECT rc;
+    HWND parent;
+    if (window->parentWindow) {
+        parent = window->parentWindow;
+        GetClientRect(parent, &rc);
+    }
+    else {
+        parent = HWND_DESKTOP;
+        rc = GetScreenRect();
+    }
+    int w = RECTW(rc);
+    int h = RECTH(rc);
+
+    MAINWINCREATE CreateInfo;
+    CreateInfo.dwStyle = WS_VISIBLE | WS_CAPTION ;
+    CreateInfo.dwExStyle = WS_EX_NONE;
+    CreateInfo.spCaption = BROWSER_DEFAULT_TITLE;
+    CreateInfo.hMenu = 0;
+    CreateInfo.hCursor = GetSystemCursor(0);
+    CreateInfo.hIcon = 0;
+    CreateInfo.MainWindowProc = BrowserWindowProc;
+    CreateInfo.lx = rc.left;
+    CreateInfo.ty = rc.top;
+    CreateInfo.rx = w;
+    CreateInfo.by = h;
+    CreateInfo.iBkColor = COLOR_lightwhite;
+    CreateInfo.dwAddData = 0;
+    CreateInfo.hHosting = parent;
+    window->hwnd = CreateMainWindow (&CreateInfo);
+    SetWindowAdditionalData2(window->hwnd, (DWORD)window);
+
+    window->uriEntry = CreateWindow (CTRL_EDIT,
+            "", WS_CHILD | WS_VISIBLE | WS_BORDER,
+            IDC_URI_ENTRY,
+            rc.left + IDC_ADDRESS_LEFT,
+            rc.top + IDC_ADDRESS_TOP,
+            rc.right - rc.left - 2 * IDC_ADDRESS_LEFT - 5,
+            IDC_ADDRESS_HEIGHT,
+            window->hwnd, 0);
+    SetWindowAdditionalData2(window->uriEntry, (DWORD)window);
+    SetNotificationCallback (window->uriEntry, uriEntryCallback);
+
+    int top = rc.top + IDC_ADDRESS_TOP + IDC_ADDRESS_HEIGHT + 5;
+    int height = rc.bottom - top;
+    window->propsheet = CreateWindow (CTRL_PROPSHEET, NULL,
+            WS_VISIBLE | PSS_COMPACTTAB,
+            IDC_PROPSHEET,
+            rc.left,
+            top,
+            w,
+            height,
+            window->hwnd, 0);
+    SetWindowAdditionalData2(window->propsheet, (DWORD)window);
+
+    ShowWindow(window->hwnd, SW_SHOWNORMAL);
+}
+
+static void browserWindowSetProperty(GObject *object, guint propId,
+        const GValue *value, GParamSpec *pspec)
+{
+    BrowserWindow *window = BROWSER_WINDOW(object);
+
+    switch (propId) {
+    case PROP_PARENT_WINDOW:
+        {
+            gpointer *p = g_value_get_pointer(value);
+            if (p) {
+                window->parentWindow = (HWND)p;
+            }
+        }
+        break;
+    default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, pspec);
+    }
+}
+
+static void browserWindowDispose(GObject *gObject)
+{
+    //BrowserWindow *window = BROWSER_WINDOW(gObject);
+
+    G_OBJECT_CLASS(browser_window_parent_class)->dispose(gObject);
+}
+
+static void browserWindowFinalize(GObject *gObject)
+{
+    BrowserWindow *window = BROWSER_WINDOW(gObject);
+
+    if (window->webContext) {
+        g_object_unref(window->webContext);
+    }
+
+    G_OBJECT_CLASS(browser_window_parent_class)->finalize(gObject);
+}
+
 static void browser_window_class_init(BrowserWindowClass *klass)
 {
+    GObjectClass *gobjectClass = G_OBJECT_CLASS(klass);
+    gobjectClass->constructed = browserWindowConstructed;
+    gobjectClass->set_property = browserWindowSetProperty;
+    gobjectClass->dispose = browserWindowDispose;
+    gobjectClass->finalize = browserWindowFinalize;
+
+    g_object_class_install_property(
+        gobjectClass,
+        PROP_PARENT_WINDOW,
+        g_param_spec_pointer(
+            "parent-window",
+            "parent window",
+            "The parent window",
+            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 }
 
-HWND browser_window_new(HWND parent, WebKitWebContext *webContext)
+BrowserWindow* browser_window_new(HWND parent, WebKitWebContext *webContext)
 {
-    return NULL;
+    BrowserWindow *window = BROWSER_WINDOW(g_object_new(BROWSER_TYPE_WINDOW,
+                "parent-window", parent,
+                NULL));
+
+    if (webContext) {
+        window->webContext = g_object_ref(webContext);
+    }
+
+    return window;
 }
 
+HWND browser_window_hwnd(BrowserWindow *window)
+{
+    g_return_if_fail(BROWSER_IS_WINDOW(window));
+    return window->hwnd;
+}
 
 WebKitWebContext* browser_window_get_web_context(BrowserWindow *window)
 {

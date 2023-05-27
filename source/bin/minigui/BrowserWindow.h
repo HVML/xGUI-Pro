@@ -49,7 +49,8 @@ typedef struct _BrowserWindowClass   BrowserWindowClass;
 
 GType browser_window_get_type(void);
 
-HWND browser_window_new(HWND, WebKitWebContext*);
+BrowserWindow* browser_window_new(HWND, WebKitWebContext*);
+HWND browser_window_hwnd(BrowserWindow*);
 WebKitWebContext* browser_window_get_web_context(BrowserWindow*);
 void browser_window_append_view(BrowserWindow*, WebKitWebView*);
 void browser_window_load_uri(BrowserWindow*, const char *uri);
