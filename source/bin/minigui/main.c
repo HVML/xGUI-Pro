@@ -114,12 +114,11 @@ static WebKitWebView *createBrowserTab(BrowserWindow *window
         .webViewRect = rect,
         .webViewParent = g_hMainWnd
     };
-    WebKitWebView *webView = xgui_create_webview(&param);
+    WebKitWebView *webView = browser_window_append_view(window, &param);
 
     if (editorMode)
         webkit_web_view_set_editable(webView, TRUE);
 
-    browser_window_append_view(window, webView);
     return webView;
 }
 
@@ -1108,8 +1107,14 @@ int MiniGUIMain (int argc, const char* argv[])
 #endif
 
     BrowserWindow *browserWindow =  browser_window_new(NULL, NULL);
-    g_hMainWnd = browser_window_hwnd(browserWindow);
+    g_hMainWnd = browser_window_get_hwnd(browserWindow);
     //ShowWindow(g_hMainWnd, SW_SHOWNORMAL);
+
+    WebKitWebViewParam param = {
+        .webViewId = IDC_BROWSER,
+    };
+    WebKitWebView *webView = browser_window_append_view(browserWindow, &param);
+    browser_window_load_uri(browserWindow, "https://www.fmsoft.cn");
 
     //while (GetMessage(&Msg, g_hMainWnd)) {
     while (GetMessage(&Msg, HWND_DESKTOP)) {

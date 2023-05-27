@@ -35,6 +35,8 @@
 #include <minigui/window.h>
 #include <minigui/control.h>
 
+#include "Common.h"
+
 G_BEGIN_DECLS
 
 #define BROWSER_TYPE_WINDOW            (browser_window_get_type())
@@ -50,9 +52,9 @@ typedef struct _BrowserWindowClass   BrowserWindowClass;
 GType browser_window_get_type(void);
 
 BrowserWindow* browser_window_new(HWND, WebKitWebContext*);
-HWND browser_window_hwnd(BrowserWindow*);
+HWND browser_window_get_hwnd(BrowserWindow*);
 WebKitWebContext* browser_window_get_web_context(BrowserWindow*);
-void browser_window_append_view(BrowserWindow*, WebKitWebView*);
+WebKitWebView* browser_window_append_view(BrowserWindow*, WebKitWebViewParam*);
 void browser_window_load_uri(BrowserWindow*, const char *uri);
 void browser_window_load_session(BrowserWindow *, const char *sessionFile);
 void browser_window_set_background_color(BrowserWindow*, GAL_Color*);

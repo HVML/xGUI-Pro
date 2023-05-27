@@ -135,7 +135,6 @@ static void browserWindowConstructed(GObject *gObject)
             w,
             height,
             window->hwnd, 0);
-    SetWindowAdditionalData2(window->propsheet, (DWORD)window);
 
     ShowWindow(window->hwnd, SW_SHOWNORMAL);
 }
@@ -208,7 +207,7 @@ BrowserWindow* browser_window_new(HWND parent, WebKitWebContext *webContext)
     return window;
 }
 
-HWND browser_window_hwnd(BrowserWindow *window)
+HWND browser_window_get_hwnd(BrowserWindow *window)
 {
     g_return_if_fail(BROWSER_IS_WINDOW(window));
     return window->hwnd;
@@ -221,14 +220,25 @@ WebKitWebContext* browser_window_get_web_context(BrowserWindow *window)
     return window->webContext;
 }
 
-
-void browser_window_append_view(BrowserWindow *window, WebKitWebView * webView)
+static void webViewClose(WebKitWebView *webView, BrowserWindow *window)
 {
 }
 
+WebKitWebView *browser_window_append_view(BrowserWindow *window, WebKitWebViewParam *param)
+{
+    BrowserTab *tab = browser_tab_new(window->propsheet, param);
+    WebKitWebView *webView = browser_tab_get_web_view(tab);
+    g_signal_connect_after(webView, "close", G_CALLBACK(webViewClose), window);
+    window->activeTab = tab;
+    return webView;
+}
 
 void browser_window_load_uri(BrowserWindow *window, const char *uri)
 {
+    g_return_if_fail(BROWSER_IS_WINDOW(window));
+    g_return_if_fail(uri);
+
+    browser_tab_load_uri(window->activeTab, uri);
 }
 
 

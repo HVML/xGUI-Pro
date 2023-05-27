@@ -93,7 +93,7 @@ static LRESULT tabPageProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 }
 
 /* Public API. */
-HWND browser_tab_new(HWND psHwnd, WebKitWebViewParam *param)
+BrowserTab *browser_tab_new(HWND psHwnd, WebKitWebViewParam *param)
 {
     int idx = SendMessage(psHwnd, PSM_ADDPAGE, (WPARAM)&DlgWebView, (LPARAM)tabPageProc);
     HWND pageHwnd = (HWND) SendMessage(psHwnd, PSM_GETPAGE, (WPARAM)idx, 0);
@@ -106,7 +106,7 @@ HWND browser_tab_new(HWND psHwnd, WebKitWebViewParam *param)
     tab->idx = idx;
     tab->psHwnd = psHwnd;
     tab->pageHwnd = pageHwnd;
-    return tab->pageHwnd;
+    return tab;
 }
 
 HWND browser_tab_get_title_widget(BrowserTab *tab)
