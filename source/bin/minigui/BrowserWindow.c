@@ -76,7 +76,12 @@ static LRESULT BrowserWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 
 static void uriEntryCallback(HWND hwnd, LINT id, int nc, DWORD add_data)
 {
-//    BrowserWindow *window = (BrowserWindow *)GetWindowAdditionalData(hwnd);
+    BrowserWindow *window = (BrowserWindow *)GetWindowAdditionalData(hwnd);
+    if (id == IDC_URI_ENTRY && nc == EN_ENTER) {
+        char buff[1024];
+        GetWindowText (hwnd, buff, 1024);
+        browser_window_load_uri(window, buff);
+    }
 }
 
 static void propsheetCallback(HWND hwnd, LINT id, int nc, DWORD add_data)
@@ -260,6 +265,7 @@ void browser_window_load_uri(BrowserWindow *window, const char *uri)
     BrowserTab *tab = (BrowserTab *)GetWindowAdditionalData(pageHwnd);
     if (tab) {
         browser_tab_load_uri(tab, uri);
+        SetWindowText(window->uriEntry, uri);
     }
 }
 
