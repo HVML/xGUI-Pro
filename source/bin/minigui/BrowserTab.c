@@ -81,7 +81,7 @@ DLGTEMPLATE DlgWebView = {
     WS_BORDER | WS_CAPTION,
     WS_EX_NONE,
     0, 0, 100, 100,
-    "",
+    "XGUI Pro",
     0, 0,
     0, NULL,
     0
@@ -106,6 +106,7 @@ BrowserTab *browser_tab_new(HWND psHwnd, WebKitWebViewParam *param)
     tab->idx = idx;
     tab->psHwnd = psHwnd;
     tab->pageHwnd = pageHwnd;
+    SetWindowAdditionalData(tab->pageHwnd, (DWORD)tab);
     return tab;
 }
 
@@ -114,3 +115,12 @@ HWND browser_tab_get_title_widget(BrowserTab *tab)
     return NULL;
 }
 
+int browser_tag_get_idx(BrowserTab *tab)
+{
+    return tab->idx;
+}
+
+HWND browser_tag_get_page_hwnd(BrowserTab *tab)
+{
+    return tab->pageHwnd;
+}

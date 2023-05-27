@@ -40,6 +40,7 @@ struct _BrowserWindow {
 
     WebKitWebContext *webContext;
     BrowserTab *activeTab;
+    int activeIdx;
 
     HWND parentWindow;
     HWND hwnd;
@@ -75,7 +76,22 @@ static LRESULT BrowserWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 
 static void uriEntryCallback(HWND hwnd, LINT id, int nc, DWORD add_data)
 {
-//    BrowserWindow *window = (BrowserWindow *)GetWindowAdditionalData2(hwnd);
+//    BrowserWindow *window = (BrowserWindow *)GetWindowAdditionalData(hwnd);
+}
+
+static void propsheetCallback(HWND hwnd, LINT id, int nc, DWORD add_data)
+{
+    BrowserWindow *window = (BrowserWindow *)GetWindowAdditionalData(hwnd);
+    switch (nc) {
+        case PSN_ACTIVE_CHANGED:
+            {
+                int idx = SendMessage(hwnd, PSM_GETACTIVEINDEX, 0, 0);
+                window->activeIdx = idx;
+            }
+            break;
+        default:
+            break;
+    }
 }
 
 static void browserWindowConstructed(GObject *gObject)
@@ -112,7 +128,7 @@ static void browserWindowConstructed(GObject *gObject)
     CreateInfo.dwAddData = 0;
     CreateInfo.hHosting = parent;
     window->hwnd = CreateMainWindow (&CreateInfo);
-    SetWindowAdditionalData2(window->hwnd, (DWORD)window);
+    SetWindowAdditionalData(window->hwnd, (DWORD)window);
 
     window->uriEntry = CreateWindow (CTRL_EDIT,
             "", WS_CHILD | WS_VISIBLE | WS_BORDER,
@@ -122,7 +138,7 @@ static void browserWindowConstructed(GObject *gObject)
             rc.right - rc.left - 2 * IDC_ADDRESS_LEFT - 5,
             IDC_ADDRESS_HEIGHT,
             window->hwnd, 0);
-    SetWindowAdditionalData2(window->uriEntry, (DWORD)window);
+    SetWindowAdditionalData(window->uriEntry, (DWORD)window);
     SetNotificationCallback (window->uriEntry, uriEntryCallback);
 
     int top = rc.top + IDC_ADDRESS_TOP + IDC_ADDRESS_HEIGHT + 5;
@@ -135,6 +151,8 @@ static void browserWindowConstructed(GObject *gObject)
             w,
             height,
             window->hwnd, 0);
+    SetWindowAdditionalData(window->propsheet, (DWORD)window);
+    SetNotificationCallback(window->propsheet, propsheetCallback);
 
     ShowWindow(window->hwnd, SW_SHOWNORMAL);
 }
@@ -229,7 +247,6 @@ WebKitWebView *browser_window_append_view(BrowserWindow *window, WebKitWebViewPa
     BrowserTab *tab = browser_tab_new(window->propsheet, param);
     WebKitWebView *webView = browser_tab_get_web_view(tab);
     g_signal_connect_after(webView, "close", G_CALLBACK(webViewClose), window);
-    window->activeTab = tab;
     return webView;
 }
 
@@ -238,7 +255,12 @@ void browser_window_load_uri(BrowserWindow *window, const char *uri)
     g_return_if_fail(BROWSER_IS_WINDOW(window));
     g_return_if_fail(uri);
 
-    browser_tab_load_uri(window->activeTab, uri);
+    HWND pageHwnd = (HWND) SendMessage(window->propsheet, PSM_GETPAGE,
+            (WPARAM)window->activeIdx, 0);
+    BrowserTab *tab = (BrowserTab *)GetWindowAdditionalData(pageHwnd);
+    if (tab) {
+        browser_tab_load_uri(tab, uri);
+    }
 }
 
 

@@ -45,6 +45,8 @@ GType browser_tab_get_type(void);
 
 BrowserTab* browser_tab_new(HWND psHwnd, WebKitWebViewParam *);
 HWND browser_tab_get_title_widget(BrowserTab*);
+int browser_tag_get_idx(BrowserTab*);
+HWND browser_tag_get_page_hwnd(BrowserTab *tab);
 
 static inline
 WebKitWebView* browser_tab_get_web_view(BrowserTab *tab)
