@@ -1385,8 +1385,9 @@ gtk_set_property_in_dom(purcmc_session *sess, const char *request_id,
 
 static void get_monitor_geometry(struct ws_metrics *ws_geometry)
 {
-    ws_geometry->width  = 1920;
-    ws_geometry->height = 1080;
+    RECT rc = GetScreenRect();
+    ws_geometry->width  = RECTW(rc);
+    ws_geometry->height = RECTH(rc);
     ws_geometry->dpi = 72; /* TODO: calculate from physical width and height */
     ws_geometry->density = 27;
 }
