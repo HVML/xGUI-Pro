@@ -74,6 +74,22 @@ static LRESULT BrowserWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
     return DefaultMainWinProc(hWnd, message, wParam, lParam);
 }
 
+static char *getExternalURI(const char *uri)
+{
+    /* From the user point of view we support about: prefix. */
+    if (uri && g_str_has_prefix(uri, BROWSER_ABOUT_SCHEME))
+        return g_strconcat("about", uri + strlen(BROWSER_ABOUT_SCHEME), NULL);
+
+    return g_strdup(uri);
+}
+
+static void webViewURIChanged(WebKitWebView *webView, GParamSpec *pspec, BrowserWindow *window)
+{
+    char *externalURI = getExternalURI(webkit_web_view_get_uri(webView));
+    SetWindowText(window->uriEntry, externalURI);
+    g_free(externalURI);
+}
+
 static void uriEntryCallback(HWND hwnd, LINT id, int nc, DWORD add_data)
 {
     BrowserWindow *window = (BrowserWindow *)GetWindowAdditionalData(hwnd);
@@ -251,6 +267,7 @@ WebKitWebView *browser_window_append_view(BrowserWindow *window, WebKitWebViewPa
 {
     BrowserTab *tab = browser_tab_new(window->propsheet, param);
     WebKitWebView *webView = browser_tab_get_web_view(tab);
+    g_signal_connect(webView, "notify::uri", G_CALLBACK(webViewURIChanged), window);
     g_signal_connect_after(webView, "close", G_CALLBACK(webViewClose), window);
     return webView;
 }
