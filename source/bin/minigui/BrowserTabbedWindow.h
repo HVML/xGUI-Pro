@@ -40,43 +40,45 @@ typedef struct _BrowserTabbedWindowClass   BrowserTabbedWindowClass;
 
 GType browser_tabbed_window_get_type(void);
 
-HWND browser_tabbed_window_new(HWND, WebKitWebContext*,
+BrowserTabbedWindow* browser_tabbed_window_new(HWND, WebKitWebContext*,
         const char*, const char*, gint, gint);
+
+HWND browser_tabbed_window_get_hwnd(BrowserTabbedWindow *window);
 
 WebKitWebContext* browser_tabbed_window_get_web_context(BrowserTabbedWindow*);
 
 /* Create or get the only toolbar widget */
-HWND browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window);
+void *browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window);
 
 /* Create a layout container. */
-HWND browser_tabbed_window_create_layout_container(BrowserTabbedWindow*,
-        HWND, const char *klass, const RECT*);
+void *browser_tabbed_window_create_layout_container(BrowserTabbedWindow*,
+        void*, const char *klass, const RECT*);
 
 /* Create a pane container for BrowserPane widgets. */
-HWND browser_tabbed_window_create_pane_container(BrowserTabbedWindow*,
-        HWND, const char *klass, const RECT*);
+void *browser_tabbed_window_create_pane_container(BrowserTabbedWindow*,
+        void*, const char *klass, const RECT*);
 
 /* Create a BrowserPane widget in the specific pane container. */
-HWND browser_tabbed_window_append_view_pane(BrowserTabbedWindow*,
-        HWND, WebKitWebView*, const RECT*);
+void *browser_tabbed_window_append_view_pane(BrowserTabbedWindow*,
+        void*, WebKitWebView*, const RECT*);
 
 /* Create a container for BrowserTab widgets */
-HWND browser_tabbed_window_create_tab_container(BrowserTabbedWindow*,
-        HWND, const RECT*);
+void *browser_tabbed_window_create_tab_container(BrowserTabbedWindow*,
+        void*, const RECT*);
 
 /* Append a webview to the tab container. */
 BrowserTab *browser_tabbed_window_append_view_tab(BrowserTabbedWindow*,
-        HWND, WebKitWebViewParam*);
+        void*, WebKitWebViewParam*);
 
 /* Try to close all webViews in the container */
-void browser_tabbed_window_clear_container(BrowserTabbedWindow*, HWND);
+void browser_tabbed_window_clear_container(BrowserTabbedWindow*, void*);
 
 /* Try to close the webView in the BrowserPane or BrowserTab */
-void browser_tabbed_window_clear_pane_or_tab(BrowserTabbedWindow*, HWND);
+void browser_tabbed_window_clear_pane_or_tab(BrowserTabbedWindow*, void*);
 
 /* Load URI in the specific widget
    (or the active BrowserTab if the widget is NULL). */
-void browser_tabbed_window_load_uri(BrowserTabbedWindow*, HWND,
+void browser_tabbed_window_load_uri(BrowserTabbedWindow*, void*,
         const char *uri);
 
 void browser_tabbed_window_set_background_color(BrowserTabbedWindow*, GAL_Color*);
