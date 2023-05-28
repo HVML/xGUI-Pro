@@ -89,9 +89,16 @@ static void browserPlainWindowConstructed(GObject *gObject)
     BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(gObject);
     G_OBJECT_CLASS(browser_plain_window_parent_class)->constructed(gObject);
 
-    HWND parent = window->parentWindow ? window->parentWindow : g_hMainWnd;
     RECT rc;
-    GetClientRect(parent, &rc);
+    HWND parent;
+    if (window->parentWindow) {
+        parent = window->parentWindow;
+        GetClientRect(parent, &rc);
+    }
+    else {
+        parent = HWND_DESKTOP;
+        rc = GetScreenRect();
+    }
     int w = RECTW(rc);
     int h = RECTH(rc);
 

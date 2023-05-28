@@ -37,9 +37,6 @@
 extern "C" {
 #endif
 
-extern HWND g_hMainWnd;
-extern RECT g_screenRect;
-
 typedef struct {
     bool isControlledByAutomation;
     void *settings;

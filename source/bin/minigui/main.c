@@ -77,9 +77,6 @@ static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
 
-HWND g_hMainWnd = HWND_INVALID;
-RECT g_screenRect;
-
 static gchar *argumentToURL(const char *filename)
 {
     if (g_str_equal(filename, "about:gpu"))
@@ -100,8 +97,6 @@ static WebKitWebView *createBrowserTab(BrowserWindow *window
 #endif
         )
 {
-    RECT rect = g_screenRect;
-    rect.top += IDC_ADDRESS_HEIGHT + IDC_ADDRESS_TOP + 5;
     WebKitWebViewParam param = {
         .webContext = browser_window_get_web_context(window),
         .settings = webkitSettings,
@@ -111,8 +106,6 @@ static WebKitWebView *createBrowserTab(BrowserWindow *window
         .websitePolicies = defaultWebsitePolicies,
 #endif
         .webViewId = IDC_BROWSER,
-        .webViewRect = rect,
-        .webViewParent = g_hMainWnd
     };
     WebKitWebView *webView = browser_window_append_view(window, &param);
 
@@ -989,46 +982,6 @@ void performMessageLoopTasks()
     g_main_context_iteration(0, false);
 }
 
-static LRESULT MainFrameProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    HDC hdc;
-    char * url = NULL;
-    BrowserWindow * view = NULL;
-    int i = 0;
-
-    RECT rect = g_screenRect;
-    rect.top += IDC_ADDRESS_HEIGHT + IDC_ADDRESS_TOP + 5;
-
-    switch (message) {
-        case MSG_CREATE:
-            {
-
-                WebKitWebViewParam param = {
-                    .webViewId = IDC_BROWSER,
-                    .webViewRect = rect,
-                    .webViewParent = hWnd
-                };
-                BrowserPlainWindow *plain = browser_plain_window_new(hWnd, NULL,
-                        "PlainWindow", "PlainWindow title");
-                browser_plain_window_set_view(plain, &param);
-                browser_plain_window_load_uri(plain, "https://www.fmsoft.cn");
-
-                //WebKitWebView *webView = xgui_create_webview(&param);
-                //ShowWindow(webkit_web_view_get_hwnd(webView), SW_SHOW);
-                //webkit_web_view_load_uri(webView, "https://www.fmsoft.cn");
-            }
-            break;
-
-        case MSG_CLOSE:
-            DestroyAllControls (hWnd);
-            DestroyMainWindow (hWnd);
-            PostQuitMessage (hWnd);
-            return 0;
-    }
-
-    return DefaultMainWinProc(hWnd, message, wParam, lParam);
-}
-
 int MiniGUIMain (int argc, const char* argv[])
 {
 #if ENABLE_DEVELOPER_MODE
@@ -1073,9 +1026,6 @@ int MiniGUIMain (int argc, const char* argv[])
     }
 
     MSG Msg;
-    MAINWINCREATE CreateInfo;
-
-    g_screenRect = GetScreenRect();
 
 #ifdef _MGRM_PROCESSES
     JoinLayer(NAME_DEF_LAYER , "xGUI Pro" , 0 , 0);
@@ -1084,39 +1034,6 @@ int MiniGUIMain (int argc, const char* argv[])
     startup(NULL, webkitSettings);
     activate(NULL, webkitSettings);
 
-#if 0
-    CreateInfo.dwStyle = WS_VISIBLE | WS_CAPTION ;
-    CreateInfo.dwExStyle = WS_EX_NONE;
-    CreateInfo.spCaption = "xGUI Pro";
-    CreateInfo.hMenu = 0;
-    CreateInfo.hCursor = GetSystemCursor(0);
-    CreateInfo.hIcon = 0;
-    CreateInfo.MainWindowProc = MainFrameProc;
-    CreateInfo.lx = 0;
-    CreateInfo.ty = 0;
-    CreateInfo.rx = g_screenRect.right;
-    CreateInfo.by = g_screenRect.bottom;
-    CreateInfo.iBkColor = COLOR_lightwhite;
-    CreateInfo.dwAddData = 0;
-    CreateInfo.hHosting = HWND_DESKTOP;
-
-    g_hMainWnd = CreateMainWindow (&CreateInfo);
-
-    if (g_hMainWnd == HWND_INVALID)
-        return -1;
-#endif
-
-    BrowserWindow *browserWindow =  browser_window_new(NULL, NULL);
-    g_hMainWnd = browser_window_get_hwnd(browserWindow);
-    //ShowWindow(g_hMainWnd, SW_SHOWNORMAL);
-
-    WebKitWebViewParam param = {
-        .webViewId = IDC_BROWSER,
-    };
-    WebKitWebView *webView = browser_window_append_view(browserWindow, &param);
-    browser_window_load_uri(browserWindow, "https://www.fmsoft.cn");
-
-    //while (GetMessage(&Msg, g_hMainWnd)) {
     while (GetMessage(&Msg, HWND_DESKTOP)) {
         performMessageLoopTasks();
         TranslateMessage(&Msg);
@@ -1124,7 +1041,7 @@ int MiniGUIMain (int argc, const char* argv[])
         performMessageLoopTasks();
     }
 
-    MainWindowThreadCleanup (g_hMainWnd);
+    MainWindowCleanup(HWND_DESKTOP);
 
     return exitAfterLoad && webProcessCrashed ? 1 : 0;
 }
