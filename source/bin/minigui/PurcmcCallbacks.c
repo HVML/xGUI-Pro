@@ -451,7 +451,7 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
     LOG_INFO("remove webview (%p) from session (%p)\n", webview, sess);
 
     if (sorted_array_remove(sess->all_handles, PTR2U64(webview))) {
-        HWND container = g_object_get_data(G_OBJECT(webview),
+        void *container = g_object_get_data(G_OBJECT(webview),
                 "purcmc-container");
 
         sorted_array_remove(sess->all_handles, PTR2U64(container));
@@ -581,7 +581,7 @@ static int cb_find_first_page(void *ctxt, const char *id, void *data)
     struct timespec birth = purc_page_ostack_get_birth(ostack);
     if (info->min.tv_sec > birth.tv_sec) {
         WebKitWebView *webview = purc_page_ostack_get_page(ostack);
-        HWND widget = g_object_get_data(G_OBJECT(webview),
+        void *widget = g_object_get_data(G_OBJECT(webview),
                 "purcmc-container");
         info->found = widget;
         info->min = birth;
@@ -589,7 +589,7 @@ static int cb_find_first_page(void *ctxt, const char *id, void *data)
     else if (info->min.tv_sec == birth.tv_sec &&
             info->min.tv_nsec > birth.tv_nsec) {
         WebKitWebView *webview = purc_page_ostack_get_page(ostack);
-        HWND widget = g_object_get_data(G_OBJECT(webview),
+        void *widget = g_object_get_data(G_OBJECT(webview),
                 "purcmc-container");
         info->found = widget;
         info->min = birth;
@@ -630,7 +630,7 @@ static int cb_find_last_page(void *ctxt, const char *id, void *data)
     struct timespec birth = purc_page_ostack_get_birth(ostack);
     if (info->max.tv_sec < birth.tv_sec) {
         WebKitWebView *webview = purc_page_ostack_get_page(ostack);
-        HWND widget = g_object_get_data(G_OBJECT(webview),
+        void *widget = g_object_get_data(G_OBJECT(webview),
                 "purcmc-container");
         info->found = widget;
         info->max = birth;
@@ -638,7 +638,7 @@ static int cb_find_last_page(void *ctxt, const char *id, void *data)
     else if (info->max.tv_sec == birth.tv_sec &&
             info->max.tv_nsec < birth.tv_nsec) {
         WebKitWebView *webview = purc_page_ostack_get_page(ostack);
-        HWND widget = g_object_get_data(G_OBJECT(webview),
+        void *widget = g_object_get_data(G_OBJECT(webview),
                 "purcmc-container");
         info->found = widget;
         info->max = birth;
@@ -676,7 +676,7 @@ static int cb_find_active_page(void *ctxt, const char *id, void *data)
 
     purc_page_ostack_t ostack = *(purc_page_ostack_t *)data;
     WebKitWebView *webview = purc_page_ostack_get_page(ostack);
-    HWND widget = g_object_get_data(G_OBJECT(webview),
+    void *widget = g_object_get_data(G_OBJECT(webview),
             "purcmc-container");
     // TODO
 #if 0
