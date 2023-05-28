@@ -24,6 +24,7 @@
 #define BrowserTabbedWindow_h
 
 #include <webkit2/webkit2.h>
+#include "BrowserTab.h"
 
 G_BEGIN_DECLS
 
@@ -64,8 +65,8 @@ HWND browser_tabbed_window_create_tab_container(BrowserTabbedWindow*,
         HWND, const RECT*);
 
 /* Append a webview to the tab container. */
-HWND browser_tabbed_window_append_view_tab(BrowserTabbedWindow*,
-        HWND, WebKitWebView*);
+BrowserTab *browser_tabbed_window_append_view_tab(BrowserTabbedWindow*,
+        HWND, WebKitWebViewParam*);
 
 /* Try to close all webViews in the container */
 void browser_tabbed_window_clear_container(BrowserTabbedWindow*, HWND);

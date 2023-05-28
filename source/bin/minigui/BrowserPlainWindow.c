@@ -245,6 +245,11 @@ browser_plain_window_new(HWND parent, WebKitWebContext *webContext,
     return window;
 }
 
+HWND browser_plain_window_get_hwnd(BrowserPlainWindow *window)
+{
+    return window->hwnd;
+}
+
 WebKitWebContext *
 browser_plain_window_get_web_context(BrowserPlainWindow *window)
 {

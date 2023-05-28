@@ -114,9 +114,9 @@ browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
     return NULL;
 }
 
-HWND
+BrowserTab *
 browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
-        HWND container, WebKitWebView *webView)
+        HWND container, WebKitWebViewParam *webView)
 {
     return NULL;
 }

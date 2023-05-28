@@ -42,6 +42,7 @@ GType browser_plain_window_get_type(void);
 
 BrowserPlainWindow* browser_plain_window_new(HWND, WebKitWebContext*,
         const char *name, const char *title);
+HWND browser_plain_window_get_hwnd(BrowserPlainWindow*);
 WebKitWebContext* browser_plain_window_get_web_context(BrowserPlainWindow*);
 void browser_plain_window_set_view(BrowserPlainWindow*, WebKitWebViewParam*);
 WebKitWebView* browser_plain_window_get_view(BrowserPlainWindow*);
