@@ -73,38 +73,36 @@ void gtk_imp_convert_style(struct ws_widget_info *style,
     }
 }
 
-static HWND
+static BrowserPlainWindow *
 create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
-        WebKitWebView *web_view, const struct ws_widget_info *style)
+        WebKitWebViewParam *web_view_param, const struct ws_widget_info *style)
 {
     BrowserPlainWindow *plainwin;
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(NULL,
                 sess->web_context, style->name, style->title));
 
-    return NULL;
-#if 0
-    GtkApplication *application;
-    application = g_object_get_data(G_OBJECT(sess->webkit_settings),
-            "gtk-application");
-
-    gtk_application_add_window(GTK_APPLICATION(application),
-            GTK_WINDOW(plainwin));
+    HWND hwnd = browser_plain_window_get_hwnd(plainwin);
+    RECT rect;
+    GetWindowRect(hwnd, &rect);
 
     if (style->flags & WSWS_FLAG_GEOMETRY) {
         LOG_DEBUG("the SIZE of creating plainwin: %d, %d; %u x %u\n",
                 style->x, style->y, style->w, style->h);
 
+        unsigned w = RECTW(rect);
+        unsigned h = RECTH(rect);
         if (style->w > 0 && style->h > 0) {
-            gtk_window_set_default_size(GTK_WINDOW(plainwin),
-                    style->w, style->h);
-            gtk_window_resize(GTK_WINDOW(plainwin), style->w, style->h);
+            w = style->w;
+            h = style->h;
         }
 
-        gtk_window_move(GTK_WINDOW(plainwin), style->x, style->y);
-
-        gtk_window_set_resizable(GTK_WINDOW(plainwin), FALSE);
+        MoveWindow(hwnd, rect.left, rect.top, w, h, false);
     }
 
+    browser_plain_window_set_view(plainwin, web_view_param);
+    WebKitWebView *web_view = browser_plain_window_get_view(plainwin);
+
+#if 0
     if (style->darkMode) {
         g_object_set(gtk_widget_get_settings(GTK_WIDGET(plainwin)),
                 "gtk-application-prefer-dark-theme", TRUE, NULL);
@@ -120,18 +118,13 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
             browser_plain_window_set_background_color(plainwin, &rgba);
         }
     }
-
-#if 0
     if (editorMode)
         webkit_web_view_set_editable(web_view, TRUE);
 #endif
 
     g_object_set_data(G_OBJECT(web_view), "purcmc-container", plainwin);
 
-    browser_plain_window_set_view(plainwin, web_view);
-
-    return GTK_WIDGET(plainwin);
-#endif
+    return plainwin;
 }
 
 static void post_tabbedwindow_event(purcmc_session *sess, void *window,
@@ -311,17 +304,19 @@ create_pane(purcmc_workspace *workspace, purcmc_session *sess,
     return widget;
 }
 
-static HWND
+static BrowserTab *
 create_tab(purcmc_workspace *workspace, purcmc_session *sess,
         BrowserTabbedWindow *window, HWND container,
-        WebKitWebView *web_view, const struct ws_widget_info *style)
+        WebKitWebViewParam *web_view_param, const struct ws_widget_info *style)
 {
-    HWND widget = browser_tabbed_window_append_view_tab(window,
-            container, web_view);
-    if (widget)
-        g_object_set_data(G_OBJECT(web_view), "purcmc-container", widget);
+    BrowserTab *tab = browser_tabbed_window_append_view_tab(window,
+            container, web_view_param);
+    if (tab) {
+        WebKitWebView *web_view = browser_tab_get_web_view(tab);
+        g_object_set_data(G_OBJECT(web_view), "purcmc-container", tab);
+    }
 
-    return widget;
+    return tab;
 }
 
 void *

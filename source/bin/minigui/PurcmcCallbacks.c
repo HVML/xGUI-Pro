@@ -25,6 +25,7 @@
 #include "config.h"
 #include "main.h"
 #include "BrowserPane.h"
+#include "BrowserTab.h"
 #include "BrowserPlainWindow.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
@@ -33,6 +34,7 @@
 
 #include "purcmc/purcmc.h"
 #include "layouter/layouter.h"
+#include "Common.h"
 
 #include <errno.h>
 #include <assert.h>
@@ -497,7 +499,8 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
     return FALSE;
 }
 
-static WebKitWebView *create_web_view(purcmc_session *sess)
+static void init_web_view_param(purcmc_session *sess,
+        WebKitWebViewParam *param)
 {
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
     WebKitWebsitePolicies *website_policies;
@@ -509,15 +512,14 @@ static WebKitWebView *create_web_view(purcmc_session *sess)
     uc_manager = g_object_get_data(G_OBJECT(sess->webkit_settings),
             "default-user-content-manager");
 
-    return WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
-                "web-context", sess->web_context,
-                "settings", sess->webkit_settings,
-                "user-content-manager", uc_manager,
-                "is-controlled-by-automation", FALSE,
+    param->webContext = sess->web_context;
+    param->settings = sess->webkit_settings;
+    param->userContentManager = uc_manager;
+    param->isControlledByAutomation = false;
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
-                "website-policies", website_policies,
+    param->websitePolicies = website_policies;
 #endif
-                NULL));
+    param->webViewId = IDC_BROWSER;
 }
 
 static void web_view_load_uri(WebKitWebView *webview,
@@ -849,6 +851,20 @@ static inline WebKitWebView *validate_handle(purcmc_session *sess,
     return (WebKitWebView *)page;
 }
 
+WebKitWebView *widget_get_web_view(void *widget)
+{
+    if (BROWSER_IS_PANE(widget)) {
+        return browser_pane_get_web_view(BROWSER_PANE(widget));
+    }
+    else if (BROWSER_IS_PLAIN_WINDOW(widget)) {
+        return browser_plain_window_get_view(BROWSER_PLAIN_WINDOW(widget));
+    }
+    else if (BROWSER_IS_TAB(widget)) {
+        return browser_tab_get_web_view(BROWSER_TAB(widget));
+    }
+    return NULL;
+}
+
 purcmc_page *gtk_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace, const char *request_id,
         const char *page_id, const char *group, const char *name,
@@ -864,7 +880,8 @@ purcmc_page *gtk_create_plainwin(purcmc_session *sess,
         goto done;
     }
 
-    WebKitWebView *webview = create_web_view(sess);
+    WebKitWebViewParam webview_param = {0};
+    init_web_view_param(sess, &webview_param);
 
     if (group == NULL) {
         /* create a ungrouped plain window */
@@ -876,7 +893,7 @@ purcmc_page *gtk_create_plainwin(purcmc_session *sess,
         style.title = title;
         gtk_imp_convert_style(&style, toolkit_style);
         plainwin = gtk_imp_create_widget(workspace, sess,
-                WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, webview, &style);
+                WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, &webview_param, &style);
 
     }
     else if (workspace->layouter == NULL) {
@@ -890,21 +907,17 @@ purcmc_page *gtk_create_plainwin(purcmc_session *sess,
         /* create a plain window in the specified group */
         plainwin = ws_layouter_add_plain_window(workspace->layouter, sess,
                 group, name, klass, title, layout_style, toolkit_style,
-                webview, retv);
+                &webview_param, retv);
     }
 
     if (plainwin) {
+        WebKitWebView *webview = widget_get_web_view(plainwin);
+
         purc_page_ostack_t ostack =
             purc_page_ostack_new(workspace->page_owners, page_id, webview);
         g_object_set_data(G_OBJECT(webview), "purcmc-owner-stack", ostack);
 
         web_view_load_uri(webview, sess, group, name, request_id);
-
-#if 0
-        // TODO
-        gtk_widget_grab_focus(GTK_WIDGET(webview));
-        gtk_widget_show(GTK_WIDGET(plainwin));
-#endif
 
         sorted_array_add(sess->all_handles, PTR2U64(plainwin),
                 INT2PTR(HT_PLAINWIN));
@@ -1454,32 +1467,28 @@ gtk_create_widget(purcmc_session *sess, purcmc_workspace *workspace,
         *retv = PCRDR_SC_PRECONDITION_FAILED;
     }
     else {
-        WebKitWebView *webview = create_web_view(sess);
+        WebKitWebViewParam webview_param = {0};
+        init_web_view_param(sess, &webview_param);
+
         widget = ws_layouter_add_widget(workspace->layouter, sess,
                     group, name, klass, title,
-                    layout_style, toolkit_style, webview, retv);
+                    layout_style, toolkit_style, &webview_param, retv);
 
         if (widget) {
+            WebKitWebView *webview = widget_get_web_view(widget);
+
             purc_page_ostack_t ostack =
                 purc_page_ostack_new(workspace->page_owners, page_id, webview);
             g_object_set_data(G_OBJECT(webview), "purcmc-owner-stack", ostack);
 
             web_view_load_uri(webview, sess, group, name, request_id);
 
-#if 0
-            gtk_widget_grab_focus(GTK_WIDGET(webview));
-#endif
 
             sorted_array_add(sess->all_handles, PTR2U64(widget),
                     INT2PTR(HT_PANE_TAB));
             sorted_array_add(sess->all_handles, PTR2U64(webview),
                     INT2PTR(HT_WEBVIEW));
             *retv = 0;
-        }
-        else {
-#if 0
-            gtk_widget_destroy(GTK_WIDGET(webview));
-#endif
         }
     }
 
