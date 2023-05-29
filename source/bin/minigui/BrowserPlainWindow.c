@@ -57,11 +57,6 @@ struct _BrowserPlainWindowClass {
     GObjectClass parent;
 };
 
-static const gdouble minimumZoomLevel = 0.5;
-static const gdouble maximumZoomLevel = 3;
-static const gdouble defaultZoomLevel = 1;
-static const gdouble zoomStep = 1.2;
-
 G_DEFINE_TYPE(BrowserPlainWindow, browser_plain_window,
         G_TYPE_OBJECT)
 
@@ -72,8 +67,13 @@ static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
             break;
 
         case MSG_CLOSE:
-            DestroyAllControls (hWnd);
-            DestroyMainWindow (hWnd);
+            {
+                BrowserPlainWindow *window = (BrowserPlainWindow *)
+                    GetWindowAdditionalData(hWnd);
+                WebKitWebView *webView = browser_pane_get_web_view(
+                        window->browserPane);
+                webkit_web_view_try_close(webView);
+            }
             return 0;
     }
 
@@ -119,6 +119,7 @@ static void browserPlainWindowConstructed(GObject *gObject)
     CreateInfo.hHosting = parent;
     window->hwnd = CreateMainWindow (&CreateInfo);
     if (window->hwnd != HWND_INVALID) {
+        SetWindowAdditionalData(window->hwnd, (DWORD)window);
         ShowWindow(window->hwnd, SW_SHOWNORMAL);
     }
 }
@@ -260,9 +261,8 @@ browser_plain_window_get_web_context(BrowserPlainWindow *window)
 
 static void webViewClose(WebKitWebView *webView, BrowserPlainWindow *window)
 {
-    HWND hwnd = webkit_web_view_get_hwnd(webView);
-    DestroyWindow(hwnd);
-    DestroyWindow(window->hwnd);
+    DestroyAllControls(window->hwnd);
+    DestroyMainWindow(window->hwnd);
 }
 
 static void webViewTitleChanged(WebKitWebView *webView,
