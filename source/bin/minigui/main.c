@@ -54,7 +54,6 @@ static const gchar **ignoreHosts = NULL;
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
 static WebKitAutoplayPolicy autoplayPolicy = WEBKIT_AUTOPLAY_ALLOW_WITHOUT_SOUND;
 #endif
-static GAL_Color *backgroundColor;
 static gboolean editorMode;
 static const char *sessionFile;
 static char *geometry;
@@ -77,43 +76,6 @@ static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
 
-static gchar *argumentToURL(const char *filename)
-{
-    if (g_str_equal(filename, "about:gpu"))
-        filename = "webkit://gpu";
-
-    GFile *gfile = g_file_new_for_commandline_arg(filename);
-    gchar *fileURL = g_file_get_uri(gfile);
-    g_object_unref(gfile);
-
-    return fileURL;
-}
-
-static WebKitWebView *createBrowserTab(BrowserWindow *window
-        ,WebKitSettings *webkitSettings
-        ,WebKitUserContentManager *userContentManager
-#if WEBKIT_CHECK_VERSION(2, 30, 0)
-        ,WebKitWebsitePolicies *defaultWebsitePolicies
-#endif
-        )
-{
-    WebKitWebViewParam param = {
-        .webContext = browser_window_get_web_context(window),
-        .settings = webkitSettings,
-        .userContentManager = userContentManager,
-        .isControlledByAutomation = automationMode,
-#if WEBKIT_CHECK_VERSION(2, 30, 0)
-        .websitePolicies = defaultWebsitePolicies,
-#endif
-        .webViewId = IDC_BROWSER,
-    };
-    WebKitWebView *webView = browser_window_append_view(window, &param);
-
-    if (editorMode)
-        webkit_web_view_set_editable(webView, TRUE);
-
-    return webView;
-}
 
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
 static gboolean parseAutoplayPolicy(const char *optionName, const char *value, gpointer data, GError **error)
@@ -604,61 +566,6 @@ static void aboutURISchemeRequestCallback(WebKitURISchemeRequest *request,
     }
 }
 
-static HWND createWebViewForAutomationInWindowCallback(WebKitAutomationSession* session, void *application)
-{
-    // TODO: get active window
-    BrowserWindow *window = NULL;
-    WebKitWebView *webView = browser_window_get_or_create_web_view_for_automation(NULL);
-    return webkit_web_view_get_hwnd(webView);
-}
-
-static HWND createWebViewForAutomationInTabCallback(WebKitAutomationSession* session, void *application)
-{
-    // TODO: get active window
-    BrowserWindow *window = NULL;
-    WebKitWebView *webView = browser_window_create_web_view_in_new_tab_for_automation(NULL);
-    return webkit_web_view_get_hwnd(webView);
-}
-
-static void automationStartedCallback(WebKitWebContext *webContext, WebKitAutomationSession *session, void *application)
-{
-    WebKitApplicationInfo *info = webkit_application_info_new();
-    webkit_application_info_set_version(info, WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, WEBKIT_MICRO_VERSION);
-    webkit_automation_session_set_application_info(session, info);
-    webkit_application_info_unref(info);
-
-    g_signal_connect(session, "create-web-view::window", G_CALLBACK(createWebViewForAutomationInWindowCallback), application);
-    g_signal_connect(session, "create-web-view::tab", G_CALLBACK(createWebViewForAutomationInTabCallback), application);
-}
-
-static gboolean quitApplication(GApplication *application)
-{
-    g_application_quit(application);
-    return FALSE;
-}
-
-static void exitAfterWebViewLoadFinishesCallback(WebKitWebView *webView, WebKitLoadEvent loadEvent, GApplication *application)
-{
-    if (loadEvent != WEBKIT_LOAD_FINISHED)
-        return;
-
-    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, (GSourceFunc)quitApplication, g_object_ref(application), g_object_unref);
-}
-
-static void exitAfterWebProcessCrashed(WebKitWebView *webView, WebKitWebProcessTerminationReason reason, GApplication *application)
-{
-    if (reason == WEBKIT_WEB_PROCESS_CRASHED) {
-        webProcessCrashed = TRUE;
-        exitAfterWebViewLoadFinishesCallback(webView, WEBKIT_LOAD_FINISHED, application);
-    }
-}
-
-static void exitAfterWebViewLoadFinishes(WebKitWebView *webView, GApplication *application)
-{
-    g_signal_connect_object(webView, "load-changed", G_CALLBACK(exitAfterWebViewLoadFinishesCallback), application, G_CONNECT_AFTER);
-    g_signal_connect_object(webView, "web-process-terminated", G_CALLBACK(exitAfterWebProcessCrashed), application, G_CONNECT_AFTER);
-}
-
 typedef struct {
     GMainLoop *mainLoop;
     WebKitUserContentFilter *filter;
@@ -676,9 +583,9 @@ static void setDefaultWebsiteDataManager(WebKitSettings *webkitSettings)
     WebKitWebsiteDataManager *manager;
 
     char *dataDirectory = g_build_filename(g_get_user_data_dir(),
-            "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "xGUIPro", NULL);
+            "webkithbd-" WEBKITHBD_API_VERSION_STRING, "xGUIPro", NULL);
     char *cacheDirectory = g_build_filename(g_get_user_cache_dir(),
-            "webkitgtk-" WEBKITGTK_API_VERSION_STRING, "xGUIPro", NULL);
+            "webkithbd-" WEBKITHBD_API_VERSION_STRING, "xGUIPro", NULL);
     manager = webkit_website_data_manager_new(
             "base-data-directory", dataDirectory,
             "base-cache-directory", cacheDirectory,
@@ -725,35 +632,6 @@ static void setDefaultWebsitePolicies(WebKitSettings *webkitSettings)
 
 static void startup(GApplication *application, WebKitSettings *webkitSettings)
 {
-    const char *actionAccels[] = {
-        "win.reload", "F5", "<Ctrl>R", NULL,
-        "win.reload-no-cache", "<Ctrl>F5", "<Ctrl><Shift>R", NULL,
-        "win.toggle-inspector", "<Ctrl><Shift>I", "F12", NULL,
-        "win.open-private-window", "<Ctrl><Shift>P", NULL,
-        "win.focus-location", "<Ctrl>L", NULL,
-        "win.stop-load", "F6", "Escape", NULL,
-        "win.load-homepage", "<Alt>Home", NULL,
-        "win.zoom-in", "<Ctrl>plus", "<Ctrl>equal", "<Ctrl>KP_Add", NULL,
-        "win.zoom-out", "<Ctrl>minus", "<Ctrl>KP_Subtract", NULL,
-        "win.zoom-default", "<Ctrl>0", "<Ctrl>KP_0", NULL,
-        "win.find", "<Ctrl>F", NULL,
-        "win.new-tab", "<Ctrl>T", NULL,
-        "win.toggle-fullscreen", "F11", NULL,
-        "win.print", "<Ctrl>P", NULL,
-        "win.close", "<Ctrl>W", NULL,
-        "win.quit", "<Ctrl>Q", NULL,
-        "find.next", "F3", "<Ctrl>G", NULL,
-        "find.previous", "<Shift>F3", "<Ctrl><Shift>G", NULL,
-        NULL
-    };
-
-#if 0
-    for (const gchar **it = actionAccels; it[0]; it += g_strv_length((gchar **)it) + 1)
-        gtk_application_set_accels_for_action(GTK_APPLICATION(application), it[0], &it[1]);
-#endif
-
-    /* use webkitSettings to store some global data */
-    g_object_set_data(G_OBJECT(webkitSettings), "gtk-application", application);
     setDefaultWebsiteDataManager(webkitSettings);
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
     setDefaultWebsitePolicies(webkitSettings);
@@ -915,66 +793,21 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     }
 
     webkit_web_context_set_automation_allowed(webContext, automationMode);
-    g_signal_connect(webContext, "automation-started", G_CALLBACK(automationStartedCallback), application);
 
-    BrowserWindow *mainWindow = BROWSER_WINDOW(browser_window_new(NULL, webContext));
-#if 0
-    gtk_application_add_window(GTK_APPLICATION(application), GTK_WINDOW(mainWindow));
-    if (darkMode)
-        g_object_set(gtk_widget_get_settings(GTK_WIDGET(mainWindow)), "gtk-application-prefer-dark-theme", TRUE, NULL);
-    if (fullScreen)
-        gtk_window_fullscreen(GTK_WINDOW(mainWindow));
+    BrowserPlainWindow *mainWindow = browser_plain_window_new(NULL, webContext,
+        BROWSER_DEFAULT_TITLE, BROWSER_DEFAULT_TITLE);
+    WebKitWebViewParam param = {
+        .webContext = webContext,
+        .settings = webkitSettings,
+        .userContentManager = userContentManager,
+        .isControlledByAutomation = automationMode,
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
+        .websitePolicies = defaultWebsitePolicies,
 #endif
-
-    if (backgroundColor)
-        browser_window_set_background_color(mainWindow, backgroundColor);
-
-    HWND firstTab = NULL;
-    if (uriArguments) {
-        int i;
-
-        for (i = 0; uriArguments[i]; i++) {
-#if WEBKIT_CHECK_VERSION(2,30,0)
-            WebKitWebView *webView = createBrowserTab(mainWindow, webkitSettings, userContentManager, defaultWebsitePolicies);
-#else
-            WebKitWebView *webView = createBrowserTab(mainWindow, webkitSettings, userContentManager);
-#endif
-
-            if (!i) {
-                firstTab = webkit_web_view_get_hwnd(webView);
-                if (exitAfterLoad)
-                    exitAfterWebViewLoadFinishes(webView, application);
-            }
-            gchar *url = argumentToURL(uriArguments[i]);
-            webkit_web_view_load_uri(webView, url);
-            g_free(url);
-        }
-    }
-    else {
-#if WEBKIT_CHECK_VERSION(2,30,0)
-        WebKitWebView *webView = createBrowserTab(mainWindow, webkitSettings, userContentManager, defaultWebsitePolicies);
-#else
-        WebKitWebView *webView = createBrowserTab(mainWindow, webkitSettings, userContentManager);
-#endif
-        firstTab = webkit_web_view_get_hwnd(webView);
-
-        if (!editorMode) {
-            if (sessionFile)
-                browser_window_load_session(mainWindow, sessionFile);
-            else if (!automationMode) {
-                webkit_web_view_load_uri(webView, BROWSER_DEFAULT_URL);
-                if (exitAfterLoad)
-                    exitAfterWebViewLoadFinishes(webView, application);
-            }
-        }
-    }
-
-    g_object_unref(webContext);
-    g_object_unref(userContentManager);
-
-    SetFocus(firstTab);
-    // FIXME mainWindow
-    ShowWindow(firstTab, SW_SHOW);
+        .webViewId = IDC_BROWSER,
+    };
+    browser_plain_window_set_view(mainWindow, &param);
+    browser_plain_window_load_uri(mainWindow, BROWSER_DEFAULT_URL);
 }
 
 void performMessageLoopTasks()
@@ -990,7 +823,6 @@ int MiniGUIMain (int argc, const char* argv[])
 
     GOptionContext *context = g_option_context_new(NULL);
     g_option_context_add_main_entries(context, commandLineOptions, 0);
-//    g_option_context_add_group(context, gtk_get_option_group(TRUE));
 
     WebKitSettings *webkitSettings = webkit_settings_new();
     webkit_settings_set_enable_developer_extras(webkitSettings, TRUE);
@@ -1002,7 +834,7 @@ int MiniGUIMain (int argc, const char* argv[])
     }
 
     GError *error = 0;
-    if (!g_option_context_parse(context, &argc, &argv, &error)) {
+    if (!g_option_context_parse(context, &argc, (gchar ***)&argv, &error)) {
         g_printerr("Cannot parse arguments: %s\n", error->message);
         g_error_free(error);
         g_option_context_free(context);
@@ -1025,6 +857,7 @@ int MiniGUIMain (int argc, const char* argv[])
         return 0;
     }
 
+    automationMode = false;
     MSG Msg;
 
 #ifdef _MGRM_PROCESSES
@@ -1042,6 +875,8 @@ int MiniGUIMain (int argc, const char* argv[])
     }
 
     MainWindowCleanup(HWND_DESKTOP);
+
+    shutdown(NULL, webkitSettings);
 
     return exitAfterLoad && webProcessCrashed ? 1 : 0;
 }
