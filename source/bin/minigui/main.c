@@ -41,6 +41,7 @@
 #include <errno.h>
 #include <string.h>
 #include <webkit2/webkit2.h>
+#include <glib-unix.h>
 
 #define APP_NAME        "cn.fmsoft.hvml.xGUIPro"
 #define RUNNER_NAME     "purcmc"
@@ -815,6 +816,12 @@ void performMessageLoopTasks()
     g_main_context_iteration(0, false);
 }
 
+gboolean on_sigint(gpointer data)
+{
+    PostQuitMessage(HWND_DESKTOP);
+    return FALSE;
+}
+
 int MiniGUIMain (int argc, const char* argv[])
 {
 #if ENABLE_DEVELOPER_MODE
@@ -867,6 +874,7 @@ int MiniGUIMain (int argc, const char* argv[])
     startup(NULL, webkitSettings);
     activate(NULL, webkitSettings);
 
+    g_unix_signal_add(SIGINT, on_sigint, NULL);
     while (GetMessage(&Msg, HWND_DESKTOP)) {
         performMessageLoopTasks();
         TranslateMessage(&Msg);
