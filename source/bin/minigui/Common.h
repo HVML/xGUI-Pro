@@ -45,6 +45,7 @@ typedef struct {
     void *websitePolicies;
     int  webViewId;
     void *webViewParent;
+    void *relatedView;
     RECT webViewRect;
 } WebKitWebViewParam;
 

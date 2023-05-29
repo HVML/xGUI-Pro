@@ -43,6 +43,7 @@ enum {
 struct _BrowserPlainWindow {
     GObject parent;
 
+    WebKitWebViewParam param;
     WebKitWebContext *webContext;
     BrowserPane *browserPane;
 
@@ -270,6 +271,24 @@ static void webViewClose(WebKitWebView *webView, BrowserPlainWindow *window)
     DestroyMainWindow(window->hwnd);
 }
 
+#if 0
+static char *getExternalURI(const char *uri)
+{
+    /* From the user point of view we support about: prefix. */
+    if (uri && g_str_has_prefix(uri, BROWSER_ABOUT_SCHEME))
+        return g_strconcat("about", uri + strlen(BROWSER_ABOUT_SCHEME), NULL);
+
+    return g_strdup(uri);
+}
+
+static void webViewURIChanged(WebKitWebView *webView, GParamSpec *pspec,
+        BrowserPlainWindow *window)
+{
+    char *externalURI = getExternalURI(webkit_web_view_get_uri(webView));
+    g_free(externalURI);
+}
+#endif
+
 static void webViewTitleChanged(WebKitWebView *webView,
         GParamSpec *pspec, BrowserPlainWindow *window)
 {
@@ -286,12 +305,33 @@ static void webViewTitleChanged(WebKitWebView *webView,
     g_free(privateTitle);
 }
 
+static WebKitWebView *webViewCreate(WebKitWebView *webView,
+        WebKitNavigationAction *navigation, BrowserPlainWindow *window)
+{
+    BrowserPlainWindow *newWindow = browser_plain_window_new(NULL,
+            window->webContext, window->name, window->title);
+    WebKitWebViewParam param = window->param;
+    param.relatedView = webView;
+    browser_plain_window_set_view(newWindow, &param);
+    WebKitWebView *newWebView = browser_plain_window_get_view(newWindow);
+    webkit_web_view_set_settings(newWebView,
+            webkit_web_view_get_settings(webView));
+    return newWebView;
+}
+
 static void browserPlainWindowSetupSignalHandlers(BrowserPlainWindow *window)
 {
     WebKitWebView *webView = browser_pane_get_web_view(window->browserPane);
+#if 0
+    webViewURIChanged(webView, NULL, window);
+    g_signal_connect(webView, "notify::uri",
+            G_CALLBACK(webViewURIChanged), window);
+#endif
     webViewTitleChanged(webView, NULL, window);
     g_signal_connect(webView, "notify::title",
             G_CALLBACK(webViewTitleChanged), window);
+    g_signal_connect(webView, "create",
+            G_CALLBACK(webViewCreate), window);
 }
 
 void browser_plain_window_set_view(BrowserPlainWindow *window, WebKitWebViewParam *param)
@@ -313,7 +353,9 @@ void browser_plain_window_set_view(BrowserPlainWindow *window, WebKitWebViewPara
     window->browserPane = (BrowserPane*)browser_pane_new(param);
     g_signal_connect_after(window->browserPane->webView, "close", G_CALLBACK(webViewClose), window);
 
+    window->param = *param;
     ShowWindow(window->hwnd, SW_SHOW);
+    SetFocus(window->hwnd);
 
     browserPlainWindowSetupSignalHandlers(window);
 }

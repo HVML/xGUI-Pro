@@ -30,8 +30,8 @@ unsigned nr_windows = 0;
 
 WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 {
-    const char *names[8];
-    GValue    values[8] = {0, };
+    const char *names[9];
+    GValue    values[9] = {0, };
     guint nr_params = 0;
 
     names[nr_params] = "is-controlled-by-automation";
@@ -68,6 +68,13 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
         nr_params++;
     }
 #endif
+
+    if (param->relatedView) {
+        names[nr_params] = "related-view";
+        g_value_init(&values[nr_params], G_TYPE_OBJECT);
+        g_value_set_object(&values[nr_params], param->relatedView);
+        nr_params++;
+    }
 
     names[nr_params] = "web-view-id";
     g_value_init(&values[nr_params], G_TYPE_INT);
