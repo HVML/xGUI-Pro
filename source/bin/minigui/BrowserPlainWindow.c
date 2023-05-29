@@ -64,6 +64,7 @@ static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 {
     switch (message) {
         case MSG_CREATE:
+            xgui_window_inc();
             break;
 
         case MSG_CLOSE:
@@ -75,6 +76,10 @@ static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
                 webkit_web_view_try_close(webView);
             }
             return 0;
+
+        case MSG_DESTROY:
+            xgui_window_dec();
+            break;
     }
 
     return DefaultMainWinProc(hWnd, message, wParam, lParam);

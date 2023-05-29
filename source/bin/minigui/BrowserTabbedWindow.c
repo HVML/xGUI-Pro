@@ -74,12 +74,17 @@ static LRESULT BrowserTabbedWindowProc(HWND hWnd, UINT message, WPARAM wParam,
 {
     switch (message) {
         case MSG_CREATE:
+            xgui_window_inc();
             break;
 
         case MSG_CLOSE:
             DestroyAllControls (hWnd);
             DestroyMainWindow (hWnd);
             return 0;
+
+        case MSG_DESTROY:
+            xgui_window_dec();
+            break;
     }
 
     return DefaultMainWinProc(hWnd, message, wParam, lParam);

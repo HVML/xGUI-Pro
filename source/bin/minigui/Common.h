@@ -50,6 +50,9 @@ typedef struct {
 
 WebKitWebView *xgui_create_webview(WebKitWebViewParam *param);
 
+void xgui_window_inc();
+void xgui_window_dec();
+
 #ifdef __cplusplus
 }
 #endif
