@@ -90,6 +90,23 @@ static void webViewURIChanged(WebKitWebView *webView, GParamSpec *pspec, Browser
     g_free(externalURI);
 }
 
+static void webViewTitleChanged(WebKitWebView *webView,
+        GParamSpec *pspec, BrowserWindow *window)
+{
+    const char *title = webkit_web_view_get_title(webView);
+    if (!title)
+        title = BROWSER_DEFAULT_TITLE;
+
+    char *privateTitle = NULL;
+    if (webkit_web_view_is_controlled_by_automation(webView))
+        privateTitle = g_strdup_printf("[Automation] %s", title);
+    else if (webkit_web_view_is_ephemeral(webView))
+        privateTitle = g_strdup_printf("[Private] %s", title);
+    SetWindowCaption(window->hwnd,
+            privateTitle ? privateTitle : title);
+    g_free(privateTitle);
+}
+
 static void uriEntryCallback(HWND hwnd, LINT id, int nc, DWORD add_data)
 {
     BrowserWindow *window = (BrowserWindow *)GetWindowAdditionalData(hwnd);
@@ -267,7 +284,10 @@ WebKitWebView *browser_window_append_view(BrowserWindow *window, WebKitWebViewPa
 {
     BrowserTab *tab = browser_tab_new(window->propsheet, param);
     WebKitWebView *webView = browser_tab_get_web_view(tab);
+    webViewURIChanged(webView, NULL, window);
+    webViewTitleChanged(webView, NULL, window);
     g_signal_connect(webView, "notify::uri", G_CALLBACK(webViewURIChanged), window);
+    g_signal_connect(webView, "notify::title", G_CALLBACK(webViewTitleChanged), window);
     g_signal_connect_after(webView, "close", G_CALLBACK(webViewClose), window);
     return webView;
 }
