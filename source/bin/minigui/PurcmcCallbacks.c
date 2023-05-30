@@ -681,7 +681,14 @@ static int cb_find_active_page(void *ctxt, const char *id, void *data)
     void *widget = g_object_get_data(G_OBJECT(webview),
             "purcmc-container");
 
-    // TODO
+    // FIXME:
+    HWND hwnd = webkit_web_view_get_hwnd(webview);
+    HWND parent = GetParent(hwnd);
+    if (GetFocusChild(parent) == hwnd) {
+        info->found = widget;
+        return -1;  /* stop the travel */
+    }
+
 #if 0
     if (gtk_widget_has_focus(widget)) {
         info->found = widget;
