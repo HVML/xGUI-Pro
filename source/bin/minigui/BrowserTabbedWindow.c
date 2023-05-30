@@ -51,7 +51,9 @@ struct _BrowserTabbedWindow {
 
     HWND parentWindow;
     HWND hwnd;
+#if 0
     HWND propsheet;
+#endif
 
     gchar *name;
     gchar *title;
@@ -67,11 +69,13 @@ G_DEFINE_TYPE(BrowserTabbedWindow, browser_tabbed_window, G_TYPE_OBJECT)
 
 static void browser_tabbed_window_init(BrowserTabbedWindow *window)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
 }
 
 static LRESULT BrowserTabbedWindowProc(HWND hWnd, UINT message, WPARAM wParam,
         LPARAM lParam)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     switch (message) {
         case MSG_CREATE:
             xgui_window_inc();
@@ -90,8 +94,10 @@ static LRESULT BrowserTabbedWindowProc(HWND hWnd, UINT message, WPARAM wParam,
     return DefaultMainWinProc(hWnd, message, wParam, lParam);
 }
 
+#if 0
 static void propsheetCallback(HWND hwnd, LINT id, int nc, DWORD add_data)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     BrowserTabbedWindow *window = (BrowserTabbedWindow *)GetWindowAdditionalData(hwnd);
     switch (nc) {
         case PSN_ACTIVE_CHANGED:
@@ -104,9 +110,11 @@ static void propsheetCallback(HWND hwnd, LINT id, int nc, DWORD add_data)
             break;
     }
 }
+#endif
 
 static void browserTabbedWindowConstructed(GObject *gObject)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     BrowserTabbedWindow *window = BROWSER_TABBED_WINDOW(gObject);
     G_OBJECT_CLASS(browser_tabbed_window_parent_class)->constructed(gObject);
 
@@ -142,6 +150,7 @@ static void browserTabbedWindowConstructed(GObject *gObject)
     window->hwnd = CreateMainWindow (&CreateInfo);
     SetWindowAdditionalData(window->hwnd, (DWORD)window);
 
+#if 0
     GetClientRect(window->hwnd, &rc);
     window->propsheet = CreateWindow (CTRL_PROPSHEET, NULL,
             WS_VISIBLE | PSS_COMPACTTAB,
@@ -153,6 +162,7 @@ static void browserTabbedWindowConstructed(GObject *gObject)
             window->hwnd, 0);
     SetWindowAdditionalData(window->propsheet, (DWORD)window);
     SetNotificationCallback(window->propsheet, propsheetCallback);
+#endif
 
     ShowWindow(window->hwnd, SW_SHOWNORMAL);
 }
@@ -160,6 +170,7 @@ static void browserTabbedWindowConstructed(GObject *gObject)
 static void browserTabbedWindowSetProperty(GObject *object, guint propId,
         const GValue *value, GParamSpec *pspec)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     BrowserTabbedWindow *window = BROWSER_TABBED_WINDOW(object);
 
     switch (propId) {
@@ -204,6 +215,7 @@ static void browserTabbedWindowSetProperty(GObject *object, guint propId,
 
 static void browserTabbedWindowDispose(GObject *gObject)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     //BrowserTabbedWindow *window = BROWSER_TABBED_WINDOW(gObject);
 
     G_OBJECT_CLASS(browser_tabbed_window_parent_class)->dispose(gObject);
@@ -211,6 +223,7 @@ static void browserTabbedWindowDispose(GObject *gObject)
 
 static void browserTabbedWindowFinalize(GObject *gObject)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     BrowserTabbedWindow *window = BROWSER_TABBED_WINDOW(gObject);
 
     if (window->name) {
@@ -232,6 +245,7 @@ static void browserTabbedWindowFinalize(GObject *gObject)
 
 static void browser_tabbed_window_class_init(BrowserTabbedWindowClass *klass)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     GObjectClass *gobjectClass = G_OBJECT_CLASS(klass);
     gobjectClass->constructed = browserTabbedWindowConstructed;
     gobjectClass->set_property = browserTabbedWindowSetProperty;
@@ -287,9 +301,11 @@ static void browser_tabbed_window_class_init(BrowserTabbedWindowClass *klass)
 }
 
 /* Public API. */
-BrowserTabbedWindow* browser_tabbed_window_new(HWND parent, WebKitWebContext *webContext,
-        const char *name, const char *title, gint width, gint height)
+BrowserTabbedWindow* browser_tabbed_window_new(HWND parent,
+        WebKitWebContext *webContext, const char *name, const char *title,
+        gint width, gint height)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     BrowserTabbedWindow *window = BROWSER_TABBED_WINDOW(
             g_object_new(BROWSER_TYPE_TABBED_WINDOW,
                 "name", name,
@@ -308,6 +324,7 @@ BrowserTabbedWindow* browser_tabbed_window_new(HWND parent, WebKitWebContext *we
 
 HWND browser_tabbed_window_get_hwnd(BrowserTabbedWindow *window)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
     return window->hwnd;
 }
@@ -315,21 +332,24 @@ HWND browser_tabbed_window_get_hwnd(BrowserTabbedWindow *window)
 WebKitWebContext *
 browser_tabbed_window_get_web_context(BrowserTabbedWindow *window)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
     return window->webContext;
 }
 
-void *
+HWND
 browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window)
 {
-    return NULL;
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
+    return HWND_INVALID;
 }
 
 void *
 browser_tabbed_window_create_layout_container(BrowserTabbedWindow *window,
         void *container, const char *klass, const RECT *geometry)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     return NULL;
 }
 
@@ -337,6 +357,7 @@ void *
 browser_tabbed_window_create_pane_container(BrowserTabbedWindow *window,
         void *container, const char *klass, const RECT *geometry)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     return NULL;
 }
 
@@ -344,6 +365,7 @@ void *
 browser_tabbed_window_create_tab_container(BrowserTabbedWindow *window,
         void *container, const RECT *geometry)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     return NULL;
 }
 
@@ -352,6 +374,7 @@ browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
         void *container, WebKitWebView *webView,
         const RECT *geometry)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     return NULL;
 }
 
@@ -359,6 +382,7 @@ BrowserTab *
 browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
         void *container, WebKitWebViewParam *webView)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     return NULL;
 }
 
@@ -366,11 +390,13 @@ void
 browser_tabbed_window_clear_container(BrowserTabbedWindow *window,
         void *container)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
 }
 
 void browser_tabbed_window_clear_pane_or_tab(BrowserTabbedWindow *window,
         void *widget)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
 
     WebKitWebView* web_view = NULL;
@@ -393,6 +419,7 @@ void
 browser_tabbed_window_load_uri(BrowserTabbedWindow *window,
         void *widget, const char *uri)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
     g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
     g_return_if_fail(uri);
 
@@ -409,5 +436,6 @@ browser_tabbed_window_load_uri(BrowserTabbedWindow *window,
 void browser_tabbed_window_set_background_color(BrowserTabbedWindow *window,
         GAL_Color *rgba)
 {
+    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
 }
 

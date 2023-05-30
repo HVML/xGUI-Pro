@@ -40,15 +40,16 @@ typedef struct _BrowserTabbedWindowClass   BrowserTabbedWindowClass;
 
 GType browser_tabbed_window_get_type(void);
 
-BrowserTabbedWindow* browser_tabbed_window_new(HWND, WebKitWebContext*,
-        const char*, const char*, gint, gint);
+BrowserTabbedWindow* browser_tabbed_window_new(HWND hwnd,
+        WebKitWebContext* webContext, const char* name, const char* title,
+        gint width, gint height);
 
 HWND browser_tabbed_window_get_hwnd(BrowserTabbedWindow *window);
 
 WebKitWebContext* browser_tabbed_window_get_web_context(BrowserTabbedWindow*);
 
 /* Create or get the only toolbar widget */
-void *browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window);
+HWND browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window);
 
 /* Create a layout container. */
 void *browser_tabbed_window_create_layout_container(BrowserTabbedWindow*,
