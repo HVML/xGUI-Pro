@@ -148,7 +148,7 @@ static void browserTabbedWindowConstructed(GObject *gObject)
     CreateInfo.ty = rc.top;
     CreateInfo.rx = w;
     CreateInfo.by = h;
-    CreateInfo.iBkColor = COLOR_lightwhite;
+    CreateInfo.iBkColor = COLOR_lightgray;
     CreateInfo.dwAddData = 0;
     CreateInfo.hHosting = parent;
     window->mainFixed = CreateMainWindow (&CreateInfo);
@@ -357,14 +357,26 @@ browser_tabbed_window_create_layout_container(BrowserTabbedWindow *window,
         container = window->mainFixed;
     }
 
+    RECT rc;
+    GetClientRect(container, &rc);
+
+    int w = RECTWP(geometry);
+    int h = RECTHP(geometry);
+    if (w == 0) {
+        w = RECTW(rc);
+    }
+    if (h == 0) {
+        h = RECTH(rc);
+    }
+
     HWND hWnd =  CreateWindow(CTRL_STATIC,
                               "",
                               WS_CHILD | SS_NOTIFY | SS_SIMPLE | WS_VISIBLE,
                               IDC_CONTAINER,
                               geometry->left,
                               geometry->top,
-                              RECTWP(geometry),
-                              RECTHP(geometry),
+                              w,
+                              h,
                               container,
                               0);
 
@@ -378,8 +390,20 @@ browser_tabbed_window_create_pane_container(BrowserTabbedWindow *window,
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
-    if (container == NULL) {
+    if (container == NULL || (void *)container == (void *)window) {
         container = window->mainFixed;
+    }
+
+    RECT rc;
+    GetClientRect(container, &rc);
+
+    int w = RECTWP(geometry);
+    int h = RECTHP(geometry);
+    if (w == 0) {
+        w = RECTW(rc);
+    }
+    if (h == 0) {
+        h = RECTH(rc);
     }
 
     HWND hWnd =  CreateWindow(CTRL_STATIC,
@@ -388,13 +412,13 @@ browser_tabbed_window_create_pane_container(BrowserTabbedWindow *window,
                               IDC_CONTAINER,
                               geometry->left,
                               geometry->top,
-                              RECTWP(geometry),
-                              RECTHP(geometry),
+                              w,
+                              h,
                               container,
                               0);
 
     g_warning("Creating pan container: (%d, %d; %d x %d)",
-            geometry->left, geometry->top, RECTWP(geometry), RECTHP(geometry));
+            geometry->left, geometry->top, w, h);
     window->viewContainers = g_slist_append(window->viewContainers, hWnd);
 
     ShowWindow(hWnd, SW_SHOWNORMAL);
@@ -408,7 +432,6 @@ browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
         const RECT *geometry)
 {
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
-
 
     param->webViewParent = container;
     param->webViewRect = *geometry;
@@ -428,6 +451,7 @@ browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
     window->nrViews++;
     return pane;
 }
+
 static void tab_container_callback(HWND hWnd, LINT id, int nc, DWORD add_data)
 {
 

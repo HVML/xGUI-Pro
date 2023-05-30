@@ -358,7 +358,9 @@ purcmc_session *gtk_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
     WebKitWebContext *web_context = g_object_new(WEBKIT_TYPE_WEB_CONTEXT,
             "website-data-manager", manager,
             "process-swap-on-cross-site-navigation-enabled", TRUE,
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
             "use-system-appearance-for-scrollbars", FALSE,
+#endif
             NULL);
     g_object_unref(manager);
 
@@ -678,6 +680,7 @@ static int cb_find_active_page(void *ctxt, const char *id, void *data)
     WebKitWebView *webview = purc_page_ostack_get_page(ostack);
     void *widget = g_object_get_data(G_OBJECT(webview),
             "purcmc-container");
+
     // TODO
 #if 0
     if (gtk_widget_has_focus(widget)) {
