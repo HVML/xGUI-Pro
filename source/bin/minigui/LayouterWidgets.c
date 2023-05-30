@@ -24,6 +24,7 @@
 #include "main.h"
 #include "BrowserPlainWindow.h"
 #include "BrowserTabbedWindow.h"
+#include "BrowserPane.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "LayouterWidgets.h"
@@ -217,18 +218,31 @@ create_tabbedwin(purcmc_workspace *workspace, purcmc_session *sess,
             browser_tabbed_window_set_background_color(window, &rgba);
         }
     }
+#endif
 
     sorted_array_add(sess->all_handles, PTR2U64(window), INT2PTR(HT_TABBEDWIN));
+#if 0
     g_signal_connect(window, "destroy",
             G_CALLBACK(on_destroy_tabbed_window), sess);
+#endif
 
-    gtk_window_move(GTK_WINDOW(window), style->x, style->y);
-    gtk_widget_show(GTK_WIDGET(window));
 
     post_tabbedwindow_event(sess, window, true);
     return window;
-#endif
-    return NULL;
+}
+
+static WNDPROC old_layout_container_proc;
+static LRESULT layout_container_proc(HWND hWnd, UINT message, WPARAM wParam,
+        LPARAM lParam)
+{
+    if (message == MSG_DESTROY) {
+        purcmc_session *sess = (purcmc_session *)
+            GetWindowAdditionalData(hWnd);
+        if (sess) {
+            on_destroy_container(hWnd, sess);
+        }
+    }
+    return (*old_layout_container_proc) (hWnd, message, wParam, lParam);
 }
 
 static HWND
@@ -243,8 +257,8 @@ create_layout_container(purcmc_workspace *workspace, purcmc_session *sess,
     if (widget) {
         sorted_array_add(sess->all_handles, PTR2U64(widget),
                 INT2PTR(HT_CONTAINER));
-        g_signal_connect(widget, "destroy",
-                G_CALLBACK(on_destroy_container), sess);
+        SetWindowAdditionalData(widget, (DWORD)sess);
+        old_layout_container_proc = SetWindowCallbackProc(widget, layout_container_proc);
     }
 
     return widget;
@@ -263,8 +277,10 @@ create_pane_container(purcmc_workspace *workspace, purcmc_session *sess,
 
         sorted_array_add(sess->all_handles, PTR2U64(widget),
                 INT2PTR(HT_CONTAINER));
+#if 0
         g_signal_connect(widget, "destroy",
                 G_CALLBACK(on_destroy_container), sess);
+#endif
     }
 
     return widget;
@@ -282,26 +298,30 @@ create_tab_container(purcmc_workspace *workspace, purcmc_session *sess,
     if (widget) {
         sorted_array_add(sess->all_handles, PTR2U64(widget),
                 INT2PTR(HT_CONTAINER));
+#if 0 // TODO
         g_signal_connect(widget, "destroy",
                 G_CALLBACK(on_destroy_container), sess);
+#endif
     }
 
     return widget;
 }
 
-static HWND
+static BrowserPane *
 create_pane(purcmc_workspace *workspace, purcmc_session *sess,
         BrowserTabbedWindow *window, HWND container,
-        WebKitWebView *web_view, const struct ws_widget_info *style)
+        WebKitWebViewParam *web_view_param, const struct ws_widget_info *style)
 {
     RECT geometry = {style->x, style->y, style->x + style->w, style->y + style->h};
 
-    HWND widget = browser_tabbed_window_append_view_pane(window,
-            container, web_view, &geometry);
-    if (widget)
-        g_object_set_data(G_OBJECT(web_view), "purcmc-container", widget);
+    BrowserPane *pane = browser_tabbed_window_append_view_pane(window,
+            container, web_view_param, &geometry);
+    if (pane) {
+        WebKitWebView *web_view = browser_pane_get_web_view(pane);
+        g_object_set_data(G_OBJECT(web_view), "purcmc-container", pane);
+    }
 
-    return widget;
+    return pane;
 }
 
 static BrowserTab *
