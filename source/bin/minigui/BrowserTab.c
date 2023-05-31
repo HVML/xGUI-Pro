@@ -115,12 +115,17 @@ HWND browser_tab_get_title_widget(BrowserTab *tab)
     return NULL;
 }
 
-int browser_tag_get_idx(BrowserTab *tab)
+int browser_tab_get_idx(BrowserTab *tab)
 {
     return tab->idx;
 }
 
-HWND browser_tag_get_page_hwnd(BrowserTab *tab)
+HWND browser_tab_get_page_hwnd(BrowserTab *tab)
 {
     return tab->pageHwnd;
+}
+
+HWND browser_tab_get_propsheet(BrowserTab *tab)
+{
+    return tab->psHwnd;
 }
