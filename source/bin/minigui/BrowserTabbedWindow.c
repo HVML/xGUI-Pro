@@ -114,7 +114,7 @@ static void browserTabbedWindowConstructed(GObject *gObject)
     int h = window->height > 0 ? window->height : RECTH(rc);
 
     MAINWINCREATE CreateInfo;
-    CreateInfo.dwStyle = WS_VISIBLE | WS_CAPTION ;
+    CreateInfo.dwStyle = WS_VISIBLE;
     CreateInfo.dwExStyle = WS_EX_NONE;
     CreateInfo.spCaption = window->title ? window->title : BROWSER_DEFAULT_TITLE;
     CreateInfo.hMenu = 0;
