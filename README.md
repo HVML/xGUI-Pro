@@ -62,7 +62,9 @@ Please download or fetch the source code of the above software, build and instal
 
 You can also try our tailored WebKit engine instead of the package shipped with the distribution. The tailored WebKit engine provide a new JavaScript API to support two HVML-specific attributes `hvml-handle` and `hvml-events`. You may obtain better performance by using the tailored WebKit engine.
 
-- [Tailored WebKit Engine](https://www.hvml.org/software): to support two HVML-specific attributes `hvml-handle` and `hvml-events`. This tailored WebKit engine provides support for two ports: GTK+ and HybridOS.
+The tailored WebKit engine also provides support for MiniGUI, which is a mature window system for embedded system. Note that the graphics stack and window system of HybridOS is based on MiniGUI.
+
+- [Tailored WebKit Engine](https://www.hvml.org/software): to support two HVML-specific attributes `hvml-handle` and `hvml-events`. This tailored WebKit engine provides support for two ports: GTK+ and HybridOS (MiniGUI).
 
 If you are using Ubuntu Linux, you can use the following commands to build and install the tailored WebKit to your system:
 
@@ -194,7 +196,7 @@ and WebKit. So please wait patiently.
 
 ## Current Status
 
-- May 2023: Version 0.7.2. (PurC 0.9.12+)
+- May 2023: Version 0.8.0. (PurC 0.9.12+)
 - Apr. 2023: Version 0.7.0. (PurC 0.9.10+)
 - Feb. 2023: Version 0.6.4. (PurC 0.9.7+)
 - Jan. 2023: Version 0.6.3. (PurC 0.9.5+)
