@@ -492,11 +492,51 @@ browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
     return tab;
 }
 
+static void
+containerTryClose(BrowserTabbedWindow *window, void *container)
+{
+    GSList *webViews = NULL;
+
+    if (BROWSER_IS_TAB(container)) {
+        BrowserTab *tab = BROWSER_TAB(container);
+        webViews = g_slist_prepend(webViews, browser_tab_get_web_view(tab));
+    }
+    else if (BROWSER_IS_PANE(container)) {
+        BrowserPane *pane = BROWSER_PANE(container);
+        webViews = g_slist_prepend(webViews, browser_pane_get_web_view(pane));
+    }
+
+    if (webViews) {
+        GSList *link;
+        for (link = webViews; link; link = link->next) {
+            webkit_web_view_try_close(link->data);
+        }
+        g_slist_free(webViews);
+    }
+}
+
+static void
+windowTryClose(BrowserTabbedWindow *window)
+{
+    if (window->viewContainers) {
+        GSList *link;
+        for (link = window->viewContainers; link; link = link->next)
+            containerTryClose(window, link->data);
+    }
+}
+
 void
 browser_tabbed_window_clear_container(BrowserTabbedWindow *window,
         void *container)
 {
-    //fprintf(stderr, "#####> %s:%d:%s\n", __FILE__, __LINE__, __func__);
+    g_return_if_fail(BROWSER_IS_TABBED_WINDOW(window));
+
+    if ((void *)window == (void *)container || container == NULL) {
+        windowTryClose(window);
+    }
+    else {
+        containerTryClose(window, container);
+    }
 }
 
 void browser_tabbed_window_clear_pane_or_tab(BrowserTabbedWindow *window,
