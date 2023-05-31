@@ -30,6 +30,8 @@
 #include "BrowserTab.h"
 #include <string.h>
 
+#define KEY_BROWSER_TABBED_WINDOW "browser_tabbed_wndow"
+
 enum {
     PROP_0,
 
@@ -383,7 +385,7 @@ static void
 browserPaneWebViewClose(WebKitWebView *webView, BrowserPane *pane)
 {
     BrowserTabbedWindow *window = (BrowserTabbedWindow *)
-        g_object_get_data(G_OBJECT(pane), "browser_tabbed_window");
+        g_object_get_data(G_OBJECT(pane), KEY_BROWSER_TABBED_WINDOW);
     if (window->nrViews == 1) {
         DestroyMainWindow(window->mainFixed);
         return;
@@ -409,7 +411,7 @@ browser_tabbed_window_append_view_pane(BrowserTabbedWindow *window,
     param->webViewId = IDC_BROWSER;
 
     BrowserPane *pane = browser_pane_new(param);
-    g_object_set_data(G_OBJECT(pane), "browser_tabbed_wndow", window);
+    g_object_set_data(G_OBJECT(pane), KEY_BROWSER_TABBED_WINDOW, window);
 
     WebKitWebView *webView = browser_pane_get_web_view(pane);
     g_signal_connect_after(webView, "close",
@@ -458,7 +460,7 @@ static void
 browserTabWebViewClose(WebKitWebView *webView, BrowserTab *tab)
 {
     BrowserTabbedWindow *window = (BrowserTabbedWindow *)
-        g_object_get_data(G_OBJECT(tab), "browser_tabbed_window");
+        g_object_get_data(G_OBJECT(tab), KEY_BROWSER_TABBED_WINDOW);
     if (window->nrViews == 1) {
         DestroyMainWindow(window->mainFixed);
         return;
@@ -481,7 +483,7 @@ browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
 
     BrowserTab *tab = browser_tab_new(container, param);
-    g_object_set_data(G_OBJECT(tab), "browser_tabbed_wndow", window);
+    g_object_set_data(G_OBJECT(tab), KEY_BROWSER_TABBED_WINDOW, window);
     WebKitWebView *webView = browser_tab_get_web_view(tab);
     g_signal_connect_after(webView, "close",
             G_CALLBACK(browserTabWebViewClose), tab);
