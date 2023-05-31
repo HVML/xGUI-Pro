@@ -77,6 +77,7 @@ static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
 
+GMainLoop *g_xgui_main_loop = NULL;
 
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
 static gboolean parseAutoplayPolicy(const char *optionName, const char *value, gpointer data, GError **error)
@@ -816,9 +817,23 @@ void performMessageLoopTasks()
     g_main_context_iteration(0, false);
 }
 
+gboolean minigui_msg_loop(gpointer user_data)
+{
+    MSG Msg;
+    if (HavePendingMessage(HWND_DESKTOP)) {
+        if (GetMessage(&Msg, HWND_DESKTOP)) {
+            TranslateMessage(&Msg);
+            DispatchMessage(&Msg);
+        }
+    }
+    return G_SOURCE_CONTINUE;
+}
+
 gboolean on_sigint(gpointer data)
 {
-    PostQuitMessage(HWND_DESKTOP);
+    if (g_xgui_main_loop) {
+        g_main_loop_quit(g_xgui_main_loop);
+    }
     return FALSE;
 }
 
@@ -865,7 +880,6 @@ int MiniGUIMain (int argc, const char* argv[])
     }
 
     automationMode = false;
-    MSG Msg;
 
 #ifdef _MGRM_PROCESSES
     JoinLayer(NAME_DEF_LAYER , "xGUI Pro" , 0 , 0);
@@ -875,14 +889,11 @@ int MiniGUIMain (int argc, const char* argv[])
     activate(NULL, webkitSettings);
 
     g_unix_signal_add(SIGINT, on_sigint, NULL);
-    while (GetMessage(&Msg, HWND_DESKTOP)) {
-        performMessageLoopTasks();
-        TranslateMessage(&Msg);
-        DispatchMessage(&Msg);
-        performMessageLoopTasks();
-    }
 
-    MainWindowCleanup(HWND_DESKTOP);
+    g_xgui_main_loop = g_main_loop_new(NULL, FALSE);
+    g_timeout_add(10, minigui_msg_loop, NULL);
+    g_main_loop_run(g_xgui_main_loop);
+    g_main_loop_unref(g_xgui_main_loop);
 
     shutdown(NULL, webkitSettings);
 

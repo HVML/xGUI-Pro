@@ -104,6 +104,8 @@ void xgui_window_dec()
 {
     nr_windows--;
     if (nr_windows <= 0) {
-        PostQuitMessage(HWND_DESKTOP);
+        if (g_xgui_main_loop) {
+            g_main_loop_quit(g_xgui_main_loop);
+        }
     }
 }
