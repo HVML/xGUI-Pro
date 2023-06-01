@@ -58,6 +58,12 @@
 /* 1 MiB throttle threshold per client */
 #define SOCK_THROTTLE_THLD  (1024 * 1024)
 
+/* packet body types */
+enum {
+    PT_TEXT = 0,
+    PT_BINARY,
+};
+
 /* purcmc_endpoint types */
 enum {
     ET_BUILTIN = 0,
