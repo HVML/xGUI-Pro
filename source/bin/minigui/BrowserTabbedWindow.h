@@ -25,6 +25,9 @@
 
 #include <webkit2/webkit2.h>
 #include "BrowserTab.h"
+#include "BrowserPaneContainer.h"
+#include "BrowserLayoutContainer.h"
+#include "BrowserTabContainer.h"
 
 G_BEGIN_DECLS
 
@@ -52,27 +55,27 @@ WebKitWebContext* browser_tabbed_window_get_web_context(BrowserTabbedWindow*);
 HWND browser_tabbed_window_create_or_get_toolbar(BrowserTabbedWindow *window);
 
 /* Create a layout container. */
-HWND
+BrowserLayoutContainer *
 browser_tabbed_window_create_layout_container(BrowserTabbedWindow *window,
-        HWND container, const char *klass, const RECT *geometry);
+        GObject *container, const char *klass, const RECT *geometry);
 
 /* Create a pane container for BrowserPane widgets. */
-HWND
+BrowserPaneContainer *
 browser_tabbed_window_create_pane_container(BrowserTabbedWindow *window,
-        HWND container, const char *klass, const RECT *geometry);
+        GObject *container, const char *klass, const RECT *geometry);
 
 /* Create a BrowserPane widget in the specific pane container. */
 BrowserPane *browser_tabbed_window_append_view_pane(BrowserTabbedWindow*,
-        HWND, WebKitWebViewParam*, const RECT*);
+        GObject*, WebKitWebViewParam*, const RECT*);
 
 /* Create a container for BrowserTab widgets */
-HWND
+BrowserTabContainer *
 browser_tabbed_window_create_tab_container(BrowserTabbedWindow *window,
-        HWND container, const RECT *geometry);
+        GObject *container, const RECT *geometry);
 
 /* Append a webview to the tab container. */
 BrowserTab *browser_tabbed_window_append_view_tab(BrowserTabbedWindow*,
-        HWND, WebKitWebViewParam*);
+        GObject*, WebKitWebViewParam*);
 
 /* Try to close all webViews in the container */
 void browser_tabbed_window_clear_container(BrowserTabbedWindow*, void*);

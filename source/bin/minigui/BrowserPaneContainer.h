@@ -22,8 +22,8 @@
 #define BrowserPaneContainer_h
 
 #include <webkit2/webkit2.h>
+#include "BrowserPane.h"
 #include "Common.h"
-#include "BrowserTabbedWindow.h"
 
 G_BEGIN_DECLS
 
@@ -37,12 +37,16 @@ G_BEGIN_DECLS
 typedef struct _BrowserPaneContainer        BrowserPaneContainer;
 typedef struct _BrowserPaneContainerClass   BrowserPaneContainerClass;
 
+typedef struct _BrowserTabbedWindow         BrowserTabbedWindow;
+
 GType browser_pane_container_get_type(void);
 
 BrowserPaneContainer *browser_pane_container_new(BrowserTabbedWindow *window,
         GObject *container, const char *klass, const RECT *geometry);
 HWND browser_pane_container_get_hwnd(BrowserPaneContainer*);
 
+void browser_pane_container_add_child(BrowserPaneContainer*, BrowserPane*);
+GSList *browser_pane_container_get_children(BrowserPaneContainer*);
 
 G_END_DECLS
 

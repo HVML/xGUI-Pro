@@ -23,7 +23,6 @@
 
 #include <webkit2/webkit2.h>
 #include "Common.h"
-#include "BrowserTabbedWindow.h"
 
 G_BEGIN_DECLS
 
@@ -36,6 +35,8 @@ G_BEGIN_DECLS
 
 typedef struct _BrowserLayoutContainer        BrowserLayoutContainer;
 typedef struct _BrowserLayoutContainerClass   BrowserLayoutContainerClass;
+
+typedef struct _BrowserTabbedWindow           BrowserTabbedWindow;
 
 GType browser_layout_container_get_type(void);
 

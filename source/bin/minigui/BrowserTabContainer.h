@@ -23,7 +23,7 @@
 
 #include <webkit2/webkit2.h>
 #include "Common.h"
-#include "BrowserTabbedWindow.h"
+#include "BrowserTab.h"
 
 G_BEGIN_DECLS
 
@@ -37,12 +37,17 @@ G_BEGIN_DECLS
 typedef struct _BrowserTabContainer        BrowserTabContainer;
 typedef struct _BrowserTabContainerClass   BrowserTabContainerClass;
 
+typedef struct _BrowserTabbedWindow           BrowserTabbedWindow;
+
 GType browser_tab_container_get_type(void);
 
 BrowserTabContainer *browser_tab_container_new(BrowserTabbedWindow *window,
         GObject *container, const RECT *geometry);
 HWND browser_tab_container_get_hwnd(BrowserTabContainer*);
 
+void browser_tab_container_add_child(BrowserTabContainer *container,
+        BrowserTab *tab);
+GSList *browser_tab_container_get_children(BrowserTabContainer *container);
 
 G_END_DECLS
 

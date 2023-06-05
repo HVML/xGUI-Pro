@@ -24,6 +24,7 @@
 #include "main.h"
 #include "BrowserLayoutContainer.h"
 #include "BrowserPaneContainer.h"
+#include "BrowserTabbedWindow.h"
 
 #include "Common.h"
 #include <string.h>

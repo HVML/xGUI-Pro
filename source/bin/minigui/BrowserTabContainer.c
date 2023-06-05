@@ -25,6 +25,7 @@
 #include "BrowserTabContainer.h"
 #include "BrowserLayoutContainer.h"
 #include "BrowserPaneContainer.h"
+#include "BrowserTabbedWindow.h"
 
 #include "Common.h"
 #include <string.h>
@@ -42,6 +43,7 @@ enum {
 struct _BrowserTabContainer {
     GObject parent;
 
+    GSList *children;
     BrowserTabbedWindow *tabbedWindow;
     GObject *container;
     gchar *klass;
@@ -213,5 +215,16 @@ browser_tab_container_new(BrowserTabbedWindow *window,
 HWND browser_tab_container_get_hwnd(BrowserTabContainer *container)
 {
     return container->hwnd;
+}
+
+void browser_tab_container_add_child(BrowserTabContainer *container,
+        BrowserTab *tab)
+{
+    container->children = g_slist_append(container->children, tab);
+}
+
+GSList *browser_tab_container_get_children(BrowserTabContainer *container)
+{
+    return container->children;
 }
 
