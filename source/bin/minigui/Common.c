@@ -26,8 +26,6 @@
 #include "Common.h"
 #include <assert.h>
 
-unsigned nr_windows = 0;
-
 WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 {
     const char *names[9];
@@ -97,15 +95,10 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 
 void xgui_window_inc()
 {
-    nr_windows++;
+    g_application_hold(g_xgui_application);
 }
 
 void xgui_window_dec()
 {
-    nr_windows--;
-    if (nr_windows <= 0) {
-        if (g_xgui_main_loop) {
-            g_main_loop_quit(g_xgui_main_loop);
-        }
-    }
+    g_application_release(g_xgui_application);
 }

@@ -38,7 +38,7 @@
 extern "C" {
 #endif
 
-extern GMainLoop *g_xgui_main_loop;
+extern GApplication *g_xgui_application;
 
 typedef struct {
     bool isControlledByAutomation;

@@ -77,7 +77,7 @@ static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
 
-GMainLoop *g_xgui_main_loop = NULL;
+GApplication *g_xgui_application = NULL;
 
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
 static gboolean parseAutoplayPolicy(const char *optionName, const char *value, gpointer data, GError **error)
@@ -831,8 +831,8 @@ gboolean minigui_msg_loop(gpointer user_data)
 
 gboolean on_sigint(gpointer data)
 {
-    if (g_xgui_main_loop) {
-        g_main_loop_quit(g_xgui_main_loop);
+    if (g_xgui_application) {
+        g_application_quit(g_xgui_application);
     }
     return FALSE;
 }
@@ -885,17 +885,16 @@ int MiniGUIMain (int argc, const char* argv[])
     JoinLayer(NAME_DEF_LAYER , "xGUI Pro" , 0 , 0);
 #endif
 
-    startup(NULL, webkitSettings);
-    activate(NULL, webkitSettings);
-
     g_unix_signal_add(SIGINT, on_sigint, NULL);
 
-    g_xgui_main_loop = g_main_loop_new(NULL, FALSE);
-    g_timeout_add(10, minigui_msg_loop, NULL);
-    g_main_loop_run(g_xgui_main_loop);
-    g_main_loop_unref(g_xgui_main_loop);
+    g_xgui_application = g_application_new(APP_NAME, G_APPLICATION_NON_UNIQUE);
+    g_signal_connect(g_xgui_application, "startup", G_CALLBACK(startup), webkitSettings);
+    g_signal_connect(g_xgui_application, "activate", G_CALLBACK(activate), webkitSettings);
+    g_signal_connect(g_xgui_application, "shutdown", G_CALLBACK(shutdown), webkitSettings);
 
-    shutdown(NULL, webkitSettings);
+    g_timeout_add(10, minigui_msg_loop, NULL);
+    g_application_run(g_xgui_application, 0, NULL);
+    g_object_unref(g_xgui_application);
 
     return exitAfterLoad && webProcessCrashed ? 1 : 0;
 }
