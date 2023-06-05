@@ -634,6 +634,7 @@ static void setDefaultWebsitePolicies(WebKitSettings *webkitSettings)
 
 static void startup(GApplication *application, WebKitSettings *webkitSettings)
 {
+    g_object_set_data(G_OBJECT(webkitSettings), KEY_XGUI_APPLICATION, application);
     setDefaultWebsiteDataManager(webkitSettings);
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
     setDefaultWebsitePolicies(webkitSettings);

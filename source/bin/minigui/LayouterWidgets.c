@@ -194,7 +194,7 @@ create_tabbedwin(purcmc_workspace *workspace, purcmc_session *sess,
 #if 0
     GtkApplication *application;
     application = g_object_get_data(G_OBJECT(sess->webkit_settings),
-            "gtk-application");
+            KEY_XGUI_APPLICATION);
 
     gtk_application_add_window(GTK_APPLICATION(application),
             GTK_WINDOW(window));

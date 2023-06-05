@@ -34,6 +34,8 @@
 #define IDC_ADDRESS_TOP         3
 #define IDC_ADDRESS_HEIGHT      20
 
+#define KEY_XGUI_APPLICATION    "xgui-application"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

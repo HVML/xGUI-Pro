@@ -25,6 +25,10 @@ list(APPEND xguipro_SOURCES
     minigui/BrowserPlainWindow.h
     minigui/BrowserTabbedWindow.c
     minigui/BrowserTabbedWindow.h
+    minigui/BrowserLayoutContainer.h
+    minigui/BrowserLayoutContainer.c
+    minigui/BrowserPaneContainer.h
+    minigui/BrowserPaneContainer.c
     minigui/PurcmcCallbacks.c
     minigui/PurcmcCallbacks.h
     minigui/HVMLURISchema.c
