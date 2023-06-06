@@ -23,6 +23,7 @@
 #define Common_h
 
 #include <webkit2/webkit2.h>
+#include <purc/purc-pcrdr.h>
 
 #define IDC_BROWSER             140
 #define IDC_PLAIN_WINDOW        141
@@ -58,6 +59,8 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param);
 
 void xgui_window_inc();
 void xgui_window_dec();
+
+void xgui_destroy_event(pcrdr_msg *msg);
 
 #ifdef __cplusplus
 }

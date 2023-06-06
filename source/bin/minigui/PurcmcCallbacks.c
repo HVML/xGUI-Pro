@@ -60,6 +60,7 @@ void pcmc_gtk_cleanup(purcmc_server *srv)
         if (workspace->layouter) {
             ws_layouter_delete(workspace->layouter, NULL);
         }
+        free(workspace);
     }
 
     kvlist_free(&kv_app_workspace);
@@ -441,6 +442,10 @@ int gtk_remove_session(purcmc_session *sess)
     }
     kvlist_free(&sess->pending_responses);
 
+    if (sess->uri_prefix) {
+        free(sess->uri_prefix);
+    }
+
     LOG_DEBUG("free session...\n");
     free(sess);
 
@@ -479,6 +484,9 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
                 event.targetValue = PTR2U64(container);
                 purcmc_endpoint_post_event(sess->srv, endpoint, &event);
             }
+            else {
+                xgui_destroy_event(&event);
+            }
 
             purc_page_ostack_t ostack = g_object_get_data(G_OBJECT(webview),
                 "purcmc-owner-stack");
@@ -488,9 +496,6 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
                     WS_WIDGET_TYPE_PLAINWINDOW); */
         }
         else {
-            purc_page_ostack_t ostack = g_object_get_data(G_OBJECT(webview),
-                "purcmc-owner-stack");
-            purc_page_ostack_delete(sess->workspace->page_owners, ostack);
             /* endpoint might be deleted already. */
             if (endpoint) {
                 /* post `destroy` event for the page */
@@ -498,6 +503,12 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
                 event.targetValue = PTR2U64(container);
                 purcmc_endpoint_post_event(sess->srv, endpoint, &event);
             }
+            else {
+                xgui_destroy_event(&event);
+            }
+            purc_page_ostack_t ostack = g_object_get_data(G_OBJECT(webview),
+                "purcmc-owner-stack");
+            purc_page_ostack_delete(sess->workspace->page_owners, ostack);
         }
     }
 

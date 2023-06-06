@@ -102,3 +102,22 @@ void xgui_window_dec()
 {
     g_application_release(g_xgui_application);
 }
+
+void xgui_destroy_event(pcrdr_msg *msg)
+{
+    if (!msg) {
+        return;
+    }
+
+    if (msg->eventName)
+        purc_variant_unref(msg->eventName);
+    if (msg->sourceURI)
+        purc_variant_unref(msg->sourceURI);
+    if (msg->elementValue)
+        purc_variant_unref(msg->elementValue);
+    if (msg->property)
+        purc_variant_unref(msg->property);
+    if (msg->dataType == PCRDR_MSG_DATA_TYPE_JSON) {
+        purc_variant_unref(msg->data);
+    }
+}

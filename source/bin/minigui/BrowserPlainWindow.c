@@ -123,7 +123,7 @@ static void browserPlainWindowConstructed(GObject *gObject)
     int h = RECTH(rc);
 
     MAINWINCREATE CreateInfo;
-    CreateInfo.dwStyle = WS_CHILD | WS_VISIBLE | WS_CAPTION;
+    CreateInfo.dwStyle = WS_CHILD | WS_VISIBLE;
     CreateInfo.dwExStyle = WS_EX_NONE;
     CreateInfo.spCaption = window->title ? window->title : BROWSER_DEFAULT_TITLE;
     CreateInfo.hMenu = 0;
@@ -198,6 +198,11 @@ static void browserPlainWindowFinalize(GObject *gObject)
         g_signal_handlers_disconnect_matched(window->webContext,
                 G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, window);
         g_object_unref(window->webContext);
+    }
+
+    if (window->browserPane) {
+        g_object_unref(window->browserPane);
+        window->browserPane = NULL;
     }
 
     if (window->name) {
