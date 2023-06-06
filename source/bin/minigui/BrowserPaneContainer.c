@@ -57,6 +57,14 @@ struct _BrowserPaneContainerClass {
     GObjectClass parent;
 };
 
+enum {
+    DESTROY,
+
+    LAST_SIGNAL
+};
+
+static guint signals[LAST_SIGNAL] = { 0, };
+
 G_DEFINE_TYPE(BrowserPaneContainer, browser_pane_container,
         G_TYPE_OBJECT)
 
@@ -64,7 +72,19 @@ static void browser_pane_container_init(BrowserPaneContainer *window)
 {
 }
 
-static void browserPlainWindowConstructed(GObject *gObject)
+static WNDPROC old_container_callback_proc;
+static LRESULT container_callback_proc(HWND hWnd, UINT message, WPARAM wParam,
+        LPARAM lParam)
+{
+    if (message == MSG_DESTROY) {
+        void *container = (void *)GetWindowAdditionalData(hWnd);
+        g_signal_emit(container, signals[DESTROY], 0, NULL);
+        g_object_unref(container);
+    }
+    return (*old_container_callback_proc) (hWnd, message, wParam, lParam);
+}
+
+static void objectConstructed(GObject *gObject)
 {
     BrowserPaneContainer *window = BROWSER_PANE_CONTAINER(gObject);
     G_OBJECT_CLASS(browser_pane_container_parent_class)->constructed(gObject);
@@ -110,10 +130,14 @@ static void browserPlainWindowConstructed(GObject *gObject)
     g_warning("Creating pan container: (%d, %d; %d x %d)",
             window->geometry.left, window->geometry.top, w, h);
 
+    SetWindowAdditionalData(window->hwnd, (DWORD)window);
+    old_container_callback_proc = SetWindowCallbackProc(window->hwnd,
+            container_callback_proc);
+
     ShowWindow(window->hwnd, SW_SHOWNORMAL);
 }
 
-static void browserPlainWindowSetProperty(GObject *object, guint propId,
+static void objectSetProperty(GObject *object, guint propId,
         const GValue *value, GParamSpec *pspec)
 {
     BrowserPaneContainer *window = BROWSER_PANE_CONTAINER(object);
@@ -159,14 +183,14 @@ static void browserPlainWindowSetProperty(GObject *object, guint propId,
     }
 }
 
-static void browserPlainWindowDispose(GObject *gObject)
+static void objectDispose(GObject *gObject)
 {
     //BrowserPaneContainer *window = BROWSER_PANE_CONTAINER(gObject);
 
     G_OBJECT_CLASS(browser_pane_container_parent_class)->dispose(gObject);
 }
 
-static void browserPlainWindowFinalize(GObject *gObject)
+static void objectFinalize(GObject *gObject)
 {
     BrowserPaneContainer *window = BROWSER_PANE_CONTAINER(gObject);
 
@@ -181,43 +205,55 @@ static void browserPlainWindowFinalize(GObject *gObject)
 static void browser_pane_container_class_init(BrowserPaneContainerClass *klass)
 {
     GObjectClass *gobjectClass = G_OBJECT_CLASS(klass);
-    gobjectClass->constructed = browserPlainWindowConstructed;
-    gobjectClass->set_property = browserPlainWindowSetProperty;
-    gobjectClass->dispose = browserPlainWindowDispose;
-    gobjectClass->finalize = browserPlainWindowFinalize;
+    gobjectClass->constructed = objectConstructed;
+    gobjectClass->set_property = objectSetProperty;
+    gobjectClass->dispose = objectDispose;
+    gobjectClass->finalize = objectFinalize;
 
     g_object_class_install_property(
-        gobjectClass,
-        PROP_CLASS,
-        g_param_spec_pointer(
-            "class",
-            "Pane container class",
-            "The layout container style class",
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_CLASS,
+            g_param_spec_pointer(
+                "class",
+                "Pane container class",
+                "The layout container style class",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+
     g_object_class_install_property(
-        gobjectClass,
-        PROP_CONTAINER,
-        g_param_spec_pointer(
-            "container",
-            "The Container of layout container",
-            "The Container of layout container",
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_CONTAINER,
+            g_param_spec_pointer(
+                "container",
+                "The Container of layout container",
+                "The Container of layout container",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+
     g_object_class_install_property(
-        gobjectClass,
-        PROP_TABBED_WINDOW,
-        g_param_spec_pointer(
-            "tabbed-window",
-            "tabbed window",
-            "The tabbed window",
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_TABBED_WINDOW,
+            g_param_spec_pointer(
+                "tabbed-window",
+                "tabbed window",
+                "The tabbed window",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+
     g_object_class_install_property(
-        gobjectClass,
-        PROP_GEOMETRY,
-        g_param_spec_pointer(
-            "geometry",
-            "geometry",
-            "The gemoetry of layout container",
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_GEOMETRY,
+            g_param_spec_pointer(
+                "geometry",
+                "geometry",
+                "The gemoetry of layout container",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+
+      signals[DESTROY] =
+          g_signal_new("destroy",
+                       G_TYPE_FROM_CLASS(klass),
+                       G_SIGNAL_RUN_LAST,
+                       0,
+                       0, 0,
+                       g_cclosure_marshal_VOID__VOID,
+                       G_TYPE_NONE, 0);
 }
 
 /* Public API. */
