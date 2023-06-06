@@ -192,13 +192,6 @@ create_tabbedwin(purcmc_workspace *workspace, purcmc_session *sess,
                 style->w, style->h));
 
 #if 0
-    GtkApplication *application;
-    application = g_object_get_data(G_OBJECT(sess->webkit_settings),
-            KEY_XGUI_APPLICATION);
-
-    gtk_application_add_window(GTK_APPLICATION(application),
-            GTK_WINDOW(window));
-
     if (style->withToolbar) {
         browser_tabbed_window_create_or_get_toolbar(window);
     }
@@ -221,11 +214,8 @@ create_tabbedwin(purcmc_workspace *workspace, purcmc_session *sess,
 #endif
 
     sorted_array_add(sess->all_handles, PTR2U64(window), INT2PTR(HT_TABBEDWIN));
-#if 0
     g_signal_connect(window, "destroy",
             G_CALLBACK(on_destroy_tabbed_window), sess);
-#endif
-
 
     post_tabbedwindow_event(sess, window, true);
     return window;

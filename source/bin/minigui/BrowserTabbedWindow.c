@@ -67,6 +67,14 @@ struct _BrowserTabbedWindowClass {
     GObjectClass parent;
 };
 
+enum {
+    DESTROY,
+
+    LAST_SIGNAL
+};
+
+static guint signals[LAST_SIGNAL] = { 0, };
+
 G_DEFINE_TYPE(BrowserTabbedWindow, browser_tabbed_window, G_TYPE_OBJECT)
 
 static void browser_tabbed_window_init(BrowserTabbedWindow *window)
@@ -87,7 +95,12 @@ static LRESULT BrowserTabbedWindowProc(HWND hWnd, UINT message, WPARAM wParam,
             return 0;
 
         case MSG_DESTROY:
-            xgui_window_dec();
+            {
+                void *container = (void *)GetWindowAdditionalData(hWnd);
+                g_signal_emit(container, signals[DESTROY], 0, NULL);
+                g_object_unref(container);
+                xgui_window_dec();
+            }
             break;
     }
 
@@ -216,51 +229,60 @@ static void browser_tabbed_window_class_init(BrowserTabbedWindowClass *klass)
     gobjectClass->finalize = browserTabbedWindowFinalize;
 
     g_object_class_install_property(
-        gobjectClass,
-        PROP_TITLE,
-        g_param_spec_pointer(
-            "title",
-            "PlainWindow title",
-            "The plain window title",
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_TITLE,
+            g_param_spec_pointer(
+                "title",
+                "PlainWindow title",
+                "The plain window title",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
     g_object_class_install_property(
-        gobjectClass,
-        PROP_NAME,
-        g_param_spec_pointer(
-            "name",
-            "PlainWindow name",
-            "The plain window name",
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_NAME,
+            g_param_spec_pointer(
+                "name",
+                "PlainWindow name",
+                "The plain window name",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
     g_object_class_install_property(
-        gobjectClass,
-        PROP_WIDTH,
-        g_param_spec_int(
-            "width",
-            "width",
-            "The window width",
-            0, G_MAXINT, 0,
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_WIDTH,
+            g_param_spec_int(
+                "width",
+                "width",
+                "The window width",
+                0, G_MAXINT, 0,
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
     g_object_class_install_property(
-        gobjectClass,
-        PROP_HEIGHT,
-        g_param_spec_int(
-            "height",
-            "height",
-            "The window height",
-            0, G_MAXINT, 0,
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_HEIGHT,
+            g_param_spec_int(
+                "height",
+                "height",
+                "The window height",
+                0, G_MAXINT, 0,
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
     g_object_class_install_property(
-        gobjectClass,
-        PROP_PARENT_WINDOW,
-        g_param_spec_pointer(
-            "parent-window",
-            "parent window",
-            "The parent window",
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_PARENT_WINDOW,
+            g_param_spec_pointer(
+                "parent-window",
+                "parent window",
+                "The parent window",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+
+      signals[DESTROY] =
+          g_signal_new("destroy",
+                       G_TYPE_FROM_CLASS(klass),
+                       G_SIGNAL_RUN_LAST,
+                       0,
+                       0, 0,
+                       g_cclosure_marshal_VOID__VOID,
+                       G_TYPE_NONE, 0);
 }
 
 /* Public API. */
