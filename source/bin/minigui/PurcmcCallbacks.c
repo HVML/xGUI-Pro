@@ -488,6 +488,9 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
                     WS_WIDGET_TYPE_PLAINWINDOW); */
         }
         else {
+            purc_page_ostack_t ostack = g_object_get_data(G_OBJECT(webview),
+                "purcmc-owner-stack");
+            purc_page_ostack_delete(sess->workspace->page_owners, ostack);
             /* endpoint might be deleted already. */
             if (endpoint) {
                 /* post `destroy` event for the page */
