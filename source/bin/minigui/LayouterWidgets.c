@@ -170,7 +170,7 @@ on_destroy_tabbed_window(BrowserTabbedWindow *window, purcmc_session *sess)
     sorted_array_remove(sess->all_handles, PTR2U64(window));
 }
 
-static void on_destroy_container(HWND container, purcmc_session *sess)
+static void on_destroy_container(void *container, purcmc_session *sess)
 {
     void *data;
     if (!sorted_array_find(sess->all_handles, PTR2U64(container), &data)
@@ -231,77 +231,58 @@ create_tabbedwin(purcmc_workspace *workspace, purcmc_session *sess,
     return window;
 }
 
-static WNDPROC old_layout_container_proc;
-static LRESULT layout_container_proc(HWND hWnd, UINT message, WPARAM wParam,
-        LPARAM lParam)
-{
-    if (message == MSG_DESTROY) {
-        purcmc_session *sess = (purcmc_session *)
-            GetWindowAdditionalData(hWnd);
-        if (sess) {
-            on_destroy_container(hWnd, sess);
-        }
-    }
-    return (*old_layout_container_proc) (hWnd, message, wParam, lParam);
-}
-
-static HWND
+static BrowserLayoutContainer *
 create_layout_container(purcmc_workspace *workspace, purcmc_session *sess,
-        BrowserTabbedWindow *window, HWND container,
+        BrowserTabbedWindow *window, void *container,
         const struct ws_widget_info *style)
 {
     RECT geometry = {style->x, style->y, style->x + style->w, style->y + style->h};
 
-    HWND widget = browser_tabbed_window_create_layout_container(window,
+    BrowserLayoutContainer *widget = browser_tabbed_window_create_layout_container(window,
             container, style->klass, &geometry);
     if (widget) {
         sorted_array_add(sess->all_handles, PTR2U64(widget),
                 INT2PTR(HT_CONTAINER));
-        SetWindowAdditionalData(widget, (DWORD)sess);
-        old_layout_container_proc = SetWindowCallbackProc(widget, layout_container_proc);
-    }
-
-    return widget;
-}
-
-static HWND
-create_pane_container(purcmc_workspace *workspace, purcmc_session *sess,
-        BrowserTabbedWindow *window, HWND container,
-        const struct ws_widget_info *style)
-{
-    RECT geometry = {style->x, style->y, style->x + style->w, style->y + style->h};
-
-    HWND widget = browser_tabbed_window_create_pane_container(window,
-            container, style->klass, &geometry);
-    if (widget) {
-
-        sorted_array_add(sess->all_handles, PTR2U64(widget),
-                INT2PTR(HT_CONTAINER));
-#if 0
         g_signal_connect(widget, "destroy",
                 G_CALLBACK(on_destroy_container), sess);
-#endif
     }
 
     return widget;
 }
 
-static HWND
+static BrowserPaneContainer *
+create_pane_container(purcmc_workspace *workspace, purcmc_session *sess,
+        BrowserTabbedWindow *window, void *container,
+        const struct ws_widget_info *style)
+{
+    RECT geometry = {style->x, style->y, style->x + style->w, style->y + style->h};
+
+    BrowserPaneContainer *widget = browser_tabbed_window_create_pane_container(window,
+            container, style->klass, &geometry);
+    if (widget) {
+        sorted_array_add(sess->all_handles, PTR2U64(widget),
+                INT2PTR(HT_CONTAINER));
+        g_signal_connect(widget, "destroy",
+                G_CALLBACK(on_destroy_container), sess);
+    }
+
+    return widget;
+}
+
+static BrowserTabContainer *
 create_tab_container(purcmc_workspace *workspace, purcmc_session *sess,
         BrowserTabbedWindow *window, HWND container,
         const struct ws_widget_info *style)
 {
     RECT geometry = {style->x, style->y, style->x + style->w, style->y + style->h};
 
-    HWND widget = browser_tabbed_window_create_tab_container(window,
+    BrowserTabContainer *widget = browser_tabbed_window_create_tab_container(window,
             container, &geometry);
     if (widget) {
         sorted_array_add(sess->all_handles, PTR2U64(widget),
                 INT2PTR(HT_CONTAINER));
-#if 0 // TODO
         g_signal_connect(widget, "destroy",
                 G_CALLBACK(on_destroy_container), sess);
-#endif
     }
 
     return widget;
