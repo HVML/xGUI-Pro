@@ -74,6 +74,7 @@ void gtk_imp_convert_style(struct ws_widget_info *style,
     }
 }
 
+#if 0
 static void
 on_destroy_plain_window(BrowserPlainWindow *window, purcmc_session *sess)
 {
@@ -86,6 +87,7 @@ on_destroy_plain_window(BrowserPlainWindow *window, purcmc_session *sess)
 
     sorted_array_remove(sess->all_handles, PTR2U64(window));
 }
+#endif
 
 static BrowserPlainWindow *
 create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
@@ -137,9 +139,11 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
 #endif
 
     g_object_set_data(G_OBJECT(web_view), "purcmc-container", plainwin);
+#if 0
     sorted_array_add(sess->all_handles, PTR2U64(plainwin), INT2PTR(HT_PLAINWIN));
     g_signal_connect(plainwin, "destroy",
             G_CALLBACK(on_destroy_plain_window), sess);
+#endif
 
     return plainwin;
 }
