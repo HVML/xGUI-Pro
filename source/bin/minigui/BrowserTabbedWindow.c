@@ -92,6 +92,7 @@ static LRESULT BrowserTabbedWindowProc(HWND hWnd, UINT message, WPARAM wParam,
         case MSG_CLOSE:
             DestroyAllControls (hWnd);
             DestroyMainWindow (hWnd);
+            MainWindowCleanup (hWnd);
             return 0;
 
         case MSG_DESTROY:
@@ -215,6 +216,10 @@ static void browserTabbedWindowFinalize(GObject *gObject)
 
     if (window->webContext) {
         g_object_unref(window->webContext);
+    }
+
+    if (window->viewContainers) {
+        g_slist_free(window->viewContainers);
     }
 
     G_OBJECT_CLASS(browser_tabbed_window_parent_class)->finalize(gObject);
@@ -353,7 +358,10 @@ browserPaneWebViewClose(WebKitWebView *webView, BrowserPane *pane)
     BrowserTabbedWindow *window = (BrowserTabbedWindow *)
         g_object_get_data(G_OBJECT(pane), KEY_BROWSER_TABBED_WINDOW);
     if (window->nrViews == 1) {
-        DestroyMainWindow(window->mainFixed);
+        HWND hwnd = window->mainFixed;
+        DestroyAllControls(hwnd);
+        DestroyMainWindow(hwnd);
+        MainWindowCleanup(hwnd);
         return;
     }
 
@@ -415,7 +423,10 @@ browserTabWebViewClose(WebKitWebView *webView, BrowserTab *tab)
     BrowserTabbedWindow *window = (BrowserTabbedWindow *)
         g_object_get_data(G_OBJECT(tab), KEY_BROWSER_TABBED_WINDOW);
     if (window->nrViews == 1) {
-        DestroyMainWindow(window->mainFixed);
+        HWND hwnd = window->mainFixed;
+        DestroyAllControls(hwnd);
+        DestroyMainWindow(hwnd);
+        MainWindowCleanup(hwnd);
         return;
     }
 

@@ -297,8 +297,10 @@ browser_plain_window_get_web_context(BrowserPlainWindow *window)
 
 static void webViewClose(WebKitWebView *webView, BrowserPlainWindow *window)
 {
-    DestroyAllControls(window->hwnd);
-    DestroyMainWindow(window->hwnd);
+    HWND hwnd = window->hwnd;
+    DestroyAllControls(hwnd);
+    DestroyMainWindow(hwnd);
+    MainWindowCleanup(hwnd);
 }
 
 #if 0

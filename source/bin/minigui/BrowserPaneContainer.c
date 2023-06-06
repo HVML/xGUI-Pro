@@ -199,6 +199,10 @@ static void objectFinalize(GObject *gObject)
         window->klass = NULL;
     }
 
+    if (window->children) {
+        g_slist_free(window->children);
+    }
+
     G_OBJECT_CLASS(browser_pane_container_parent_class)->finalize(gObject);
 }
 
