@@ -261,7 +261,7 @@ create_pane_container(purcmc_workspace *workspace, purcmc_session *sess,
 
 static BrowserTabContainer *
 create_tab_container(purcmc_workspace *workspace, purcmc_session *sess,
-        BrowserTabbedWindow *window, HWND container,
+        BrowserTabbedWindow *window, void *container,
         const struct ws_widget_info *style)
 {
     RECT geometry = {style->x, style->y, style->x + style->w, style->y + style->h};
@@ -280,7 +280,7 @@ create_tab_container(purcmc_workspace *workspace, purcmc_session *sess,
 
 static BrowserPane *
 create_pane(purcmc_workspace *workspace, purcmc_session *sess,
-        BrowserTabbedWindow *window, HWND container,
+        BrowserTabbedWindow *window, void *container,
         WebKitWebViewParam *web_view_param, const struct ws_widget_info *style)
 {
     RECT geometry = {style->x, style->y, style->x + style->w, style->y + style->h};
@@ -297,7 +297,7 @@ create_pane(purcmc_workspace *workspace, purcmc_session *sess,
 
 static BrowserTab *
 create_tab(purcmc_workspace *workspace, purcmc_session *sess,
-        BrowserTabbedWindow *window, HWND container,
+        BrowserTabbedWindow *window, void *container,
         WebKitWebViewParam *web_view_param, const struct ws_widget_info *style)
 {
     BrowserTab *tab = browser_tabbed_window_append_view_tab(window,
@@ -351,7 +351,7 @@ gtk_imp_create_widget(void *workspace, void *session, ws_widget_type_t type,
 
 static int
 destroy_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
-        HWND plain_win)
+        void *plain_win)
 {
     void *data;
     if (!sorted_array_find(sess->all_handles, PTR2U64(plain_win), &data)) {
@@ -369,7 +369,7 @@ destroy_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
 
 static int
 destroy_container_in_tabbedwin(purcmc_workspace *workspace,
-        purcmc_session *sess, BrowserTabbedWindow *window, HWND container)
+        purcmc_session *sess, BrowserTabbedWindow *window, void *container)
 {
     void *data;
     if (!sorted_array_find(sess->all_handles, PTR2U64(window), &data)) {
