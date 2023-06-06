@@ -74,6 +74,19 @@ void gtk_imp_convert_style(struct ws_widget_info *style,
     }
 }
 
+static void
+on_destroy_plain_window(BrowserPlainWindow *window, purcmc_session *sess)
+{
+    void *data;
+    if (!sorted_array_find(sess->all_handles, PTR2U64(window), &data)
+            || (uintptr_t)data != HT_PLAINWIN) {
+        LOG_ERROR("ODD plain window: %p\n", window);
+        return;
+    }
+
+    sorted_array_remove(sess->all_handles, PTR2U64(window));
+}
+
 static BrowserPlainWindow *
 create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
         WebKitWebViewParam *web_view_param, const struct ws_widget_info *style)
@@ -124,6 +137,9 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
 #endif
 
     g_object_set_data(G_OBJECT(web_view), "purcmc-container", plainwin);
+    sorted_array_add(sess->all_handles, PTR2U64(plainwin), INT2PTR(HT_PLAINWIN));
+    g_signal_connect(plainwin, "destroy",
+            G_CALLBACK(on_destroy_plain_window), sess);
 
     return plainwin;
 }
