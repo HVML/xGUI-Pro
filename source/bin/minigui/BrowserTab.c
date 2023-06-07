@@ -31,7 +31,6 @@
 
 #include "BrowserPane.h"
 #include "BrowserTab.h"
-#include "BrowserWindow.h"
 
 #include <string.h>
 

@@ -19,8 +19,6 @@ list(APPEND xguipro_SOURCES
     minigui/BrowserTab.h
     minigui/BrowserPane.c
     minigui/BrowserPane.h
-    minigui/BrowserWindow.c
-    minigui/BrowserWindow.h
     minigui/BrowserPlainWindow.c
     minigui/BrowserPlainWindow.h
     minigui/BrowserTabbedWindow.c

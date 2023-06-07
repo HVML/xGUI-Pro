@@ -24,7 +24,6 @@
 #include "main.h"
 #include "BrowserPane.h"
 
-#include "BrowserWindow.h"
 #include <string.h>
 
 enum {

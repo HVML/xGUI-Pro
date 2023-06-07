@@ -29,7 +29,6 @@
 #include "config.h"
 
 #include "main.h"
-#include "BrowserWindow.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "HVMLURISchema.h"
