@@ -36,6 +36,7 @@ enum {
     PROP_TITLE,
     PROP_NAME,
     PROP_PARENT_WINDOW,
+    PROP_EX_STYLE,
 
     N_PROPERTIES
 };
@@ -49,6 +50,7 @@ struct _BrowserPlainWindow {
 
     gchar *name;
     gchar *title;
+    guint exStyle;
 
     HWND parentWindow;
     HWND hwnd;
@@ -124,7 +126,7 @@ static void browserPlainWindowConstructed(GObject *gObject)
 
     MAINWINCREATE CreateInfo;
     CreateInfo.dwStyle = WS_CHILD | WS_VISIBLE;
-    CreateInfo.dwExStyle = WS_EX_NONE;
+    CreateInfo.dwExStyle = window->exStyle;
     CreateInfo.spCaption = window->title ? window->title : BROWSER_DEFAULT_TITLE;
     CreateInfo.hMenu = 0;
     CreateInfo.hCursor = GetSystemCursor(0);
@@ -172,6 +174,11 @@ static void browserPlainWindowSetProperty(GObject *object, guint propId,
             if (p) {
                 window->parentWindow = (HWND)p;
             }
+        }
+        break;
+    case PROP_EX_STYLE:
+        {
+            window->exStyle = g_value_get_uint(value);
         }
         break;
     default:
@@ -252,6 +259,15 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
                 "parent window",
                 "The parent window",
                 G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+    g_object_class_install_property(
+            gobjectClass,
+            PROP_EX_STYLE,
+            g_param_spec_uint(
+                "ex-style",
+                "window exStyle",
+                "The window exStyle",
+                WS_EX_NONE, WS_EX_INTERNAL_MASK, WS_EX_NONE,
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
       signals[DESTROY] =
           g_signal_new("destroy",
@@ -266,13 +282,14 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
 /* Public API. */
 BrowserPlainWindow *
 browser_plain_window_new(HWND parent, WebKitWebContext *webContext,
-        const char *name, const char *title)
+        const char *name, const char *title, uint32_t exStyle)
 {
     BrowserPlainWindow *window =
           BROWSER_PLAIN_WINDOW(g_object_new(BROWSER_TYPE_PLAIN_WINDOW,
                       "name", name,
                       "title", title,
                       "parent-window", parent,
+                      "ex-style", exStyle,
                       NULL));
 
     if (webContext) {
@@ -341,7 +358,7 @@ static WebKitWebView *webViewCreate(WebKitWebView *webView,
         WebKitNavigationAction *navigation, BrowserPlainWindow *window)
 {
     BrowserPlainWindow *newWindow = browser_plain_window_new(NULL,
-            window->webContext, window->name, window->title);
+            window->webContext, window->name, window->title, WS_EX_WINTYPE_NORMAL);
     WebKitWebViewParam param = window->param;
     param.relatedView = webView;
     browser_plain_window_set_view(newWindow, &param);

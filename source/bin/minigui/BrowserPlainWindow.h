@@ -41,7 +41,7 @@ typedef struct _BrowserPlainWindowClass   BrowserPlainWindowClass;
 GType browser_plain_window_get_type(void);
 
 BrowserPlainWindow* browser_plain_window_new(HWND, WebKitWebContext*,
-        const char *name, const char *title);
+        const char *name, const char *title, uint32_t exStyle);
 HWND browser_plain_window_get_hwnd(BrowserPlainWindow*);
 WebKitWebContext* browser_plain_window_get_web_context(BrowserPlainWindow*);
 void browser_plain_window_set_view(BrowserPlainWindow*, WebKitWebViewParam*);
