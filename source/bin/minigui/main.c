@@ -76,8 +76,6 @@ static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
 
-GApplication *g_xgui_application = NULL;
-
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
 static gboolean parseAutoplayPolicy(const char *optionName, const char *value, gpointer data, GError **error)
 {

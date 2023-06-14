@@ -26,6 +26,8 @@
 #include "Common.h"
 #include <assert.h>
 
+GApplication *g_xgui_application = NULL;
+
 WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 {
     const char *names[9];
