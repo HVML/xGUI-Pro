@@ -56,11 +56,6 @@
 #include "server.h"
 #include "websocket.h"
 
-enum {
-    PT_TEXT = 0,
-    PT_BINARY,
-};
-
 /* *INDENT-OFF* */
 
 /* UTF-8 Decoder */
