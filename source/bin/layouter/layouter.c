@@ -249,6 +249,7 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
 
     if (name) free(name);
     if (title) free(title);
+    if (klass) free(klass);
     if (widget == NULL) {
         return NULL;
     }

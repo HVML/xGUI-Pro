@@ -26,7 +26,9 @@
 #include "Common.h"
 #include <assert.h>
 
-unsigned nr_windows = 0;
+GApplication *g_xgui_application = NULL;
+HWND g_xgui_main_window = HWND_INVALID;
+uint32_t g_xgui_window_count = 0;
 
 WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 {
@@ -97,15 +99,41 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 
 void xgui_window_inc()
 {
-    nr_windows++;
+    g_xgui_window_count++;
+#if 0
+    if (g_xgui_window_count == 2) {
+        ShowWindow(g_xgui_main_window, SW_HIDE);
+    }
+#endif
+    g_application_hold(g_xgui_application);
 }
 
 void xgui_window_dec()
 {
-    nr_windows--;
-    if (nr_windows <= 0) {
-        if (g_xgui_main_loop) {
-            g_main_loop_quit(g_xgui_main_loop);
-        }
+    g_xgui_window_count--;
+#if 0
+    if (g_xgui_window_count == 1) {
+        ShowWindow(g_xgui_main_window, SW_SHOWNORMAL);
+    }
+#endif
+    g_application_release(g_xgui_application);
+}
+
+void xgui_destroy_event(pcrdr_msg *msg)
+{
+    if (!msg) {
+        return;
+    }
+
+    if (msg->eventName)
+        purc_variant_unref(msg->eventName);
+    if (msg->sourceURI)
+        purc_variant_unref(msg->sourceURI);
+    if (msg->elementValue)
+        purc_variant_unref(msg->elementValue);
+    if (msg->property)
+        purc_variant_unref(msg->property);
+    if (msg->dataType == PCRDR_MSG_DATA_TYPE_JSON) {
+        purc_variant_unref(msg->data);
     }
 }

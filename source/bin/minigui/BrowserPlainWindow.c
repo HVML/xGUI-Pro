@@ -36,6 +36,7 @@ enum {
     PROP_TITLE,
     PROP_NAME,
     PROP_PARENT_WINDOW,
+    PROP_EX_STYLE,
 
     N_PROPERTIES
 };
@@ -49,6 +50,7 @@ struct _BrowserPlainWindow {
 
     gchar *name;
     gchar *title;
+    guint exStyle;
 
     HWND parentWindow;
     HWND hwnd;
@@ -57,6 +59,14 @@ struct _BrowserPlainWindow {
 struct _BrowserPlainWindowClass {
     GObjectClass parent;
 };
+
+enum {
+    DESTROY,
+
+    LAST_SIGNAL
+};
+
+static guint signals[LAST_SIGNAL] = { 0, };
 
 G_DEFINE_TYPE(BrowserPlainWindow, browser_plain_window,
         G_TYPE_OBJECT)
@@ -79,7 +89,13 @@ static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
             return 0;
 
         case MSG_DESTROY:
-            xgui_window_dec();
+            {
+                BrowserPlainWindow *window = (BrowserPlainWindow *)
+                    GetWindowAdditionalData(hWnd);
+                g_signal_emit(window, signals[DESTROY], 0, NULL);
+                g_object_unref(window);
+                xgui_window_dec();
+            }
             break;
     }
 
@@ -109,8 +125,8 @@ static void browserPlainWindowConstructed(GObject *gObject)
     int h = RECTH(rc);
 
     MAINWINCREATE CreateInfo;
-    CreateInfo.dwStyle = WS_CHILD | WS_VISIBLE ;
-    CreateInfo.dwExStyle = WS_EX_NONE;
+    CreateInfo.dwStyle = WS_CHILD | WS_VISIBLE;
+    CreateInfo.dwExStyle = window->exStyle;
     CreateInfo.spCaption = window->title ? window->title : BROWSER_DEFAULT_TITLE;
     CreateInfo.hMenu = 0;
     CreateInfo.hCursor = GetSystemCursor(0);
@@ -160,6 +176,11 @@ static void browserPlainWindowSetProperty(GObject *object, guint propId,
             }
         }
         break;
+    case PROP_EX_STYLE:
+        {
+            window->exStyle = g_value_get_uint(value);
+        }
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, pspec);
     }
@@ -186,6 +207,11 @@ static void browserPlainWindowFinalize(GObject *gObject)
         g_object_unref(window->webContext);
     }
 
+    if (window->browserPane) {
+        g_object_unref(window->browserPane);
+        window->browserPane = NULL;
+    }
+
     if (window->name) {
         g_free(window->name);
         window->name = NULL;
@@ -208,41 +234,62 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
     gobjectClass->finalize = browserPlainWindowFinalize;
 
     g_object_class_install_property(
-        gobjectClass,
-        PROP_TITLE,
-        g_param_spec_pointer(
-            "title",
-            "PlainWindow title",
-            "The plain window title",
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_TITLE,
+            g_param_spec_pointer(
+                "title",
+                "PlainWindow title",
+                "The plain window title",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+
     g_object_class_install_property(
-        gobjectClass,
-        PROP_NAME,
-        g_param_spec_pointer(
-            "name",
-            "PlainWindow name",
-            "The plain window name",
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_NAME,
+            g_param_spec_pointer(
+                "name",
+                "PlainWindow name",
+                "The plain window name",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+
     g_object_class_install_property(
-        gobjectClass,
-        PROP_PARENT_WINDOW,
-        g_param_spec_pointer(
-            "parent-window",
-            "parent window",
-            "The parent window",
-            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            gobjectClass,
+            PROP_PARENT_WINDOW,
+            g_param_spec_pointer(
+                "parent-window",
+                "parent window",
+                "The parent window",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+    g_object_class_install_property(
+            gobjectClass,
+            PROP_EX_STYLE,
+            g_param_spec_uint(
+                "ex-style",
+                "window exStyle",
+                "The window exStyle",
+                WS_EX_NONE, WS_EX_INTERNAL_MASK, WS_EX_NONE,
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+
+      signals[DESTROY] =
+          g_signal_new("destroy",
+                       G_TYPE_FROM_CLASS(klass),
+                       G_SIGNAL_RUN_LAST,
+                       0,
+                       0, 0,
+                       g_cclosure_marshal_VOID__VOID,
+                       G_TYPE_NONE, 0);
 }
 
 /* Public API. */
 BrowserPlainWindow *
 browser_plain_window_new(HWND parent, WebKitWebContext *webContext,
-        const char *name, const char *title)
+        const char *name, const char *title, uint32_t exStyle)
 {
     BrowserPlainWindow *window =
           BROWSER_PLAIN_WINDOW(g_object_new(BROWSER_TYPE_PLAIN_WINDOW,
                       "name", name,
                       "title", title,
                       "parent-window", parent,
+                      "ex-style", exStyle,
                       NULL));
 
     if (webContext) {
@@ -267,8 +314,10 @@ browser_plain_window_get_web_context(BrowserPlainWindow *window)
 
 static void webViewClose(WebKitWebView *webView, BrowserPlainWindow *window)
 {
-    DestroyAllControls(window->hwnd);
-    DestroyMainWindow(window->hwnd);
+    HWND hwnd = window->hwnd;
+    DestroyAllControls(hwnd);
+    DestroyMainWindow(hwnd);
+    MainWindowCleanup(hwnd);
 }
 
 #if 0
@@ -309,7 +358,7 @@ static WebKitWebView *webViewCreate(WebKitWebView *webView,
         WebKitNavigationAction *navigation, BrowserPlainWindow *window)
 {
     BrowserPlainWindow *newWindow = browser_plain_window_new(NULL,
-            window->webContext, window->name, window->title);
+            window->webContext, window->name, window->title, WS_EX_WINTYPE_NORMAL);
     WebKitWebViewParam param = window->param;
     param.relatedView = webView;
     browser_plain_window_set_view(newWindow, &param);
@@ -354,7 +403,7 @@ void browser_plain_window_set_view(BrowserPlainWindow *window, WebKitWebViewPara
     g_signal_connect_after(window->browserPane->webView, "close", G_CALLBACK(webViewClose), window);
 
     window->param = *param;
-    ShowWindow(window->hwnd, SW_SHOW);
+    ShowWindow(window->hwnd, SW_SHOWNORMAL);
     SetFocus(window->hwnd);
 
     browserPlainWindowSetupSignalHandlers(window);

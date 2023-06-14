@@ -23,6 +23,7 @@
 #define Common_h
 
 #include <webkit2/webkit2.h>
+#include <purc/purc-pcrdr.h>
 
 #define IDC_BROWSER             140
 #define IDC_PLAIN_WINDOW        141
@@ -34,11 +35,14 @@
 #define IDC_ADDRESS_TOP         3
 #define IDC_ADDRESS_HEIGHT      20
 
+#define KEY_XGUI_APPLICATION    "xgui-application"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern GMainLoop *g_xgui_main_loop;
+extern GApplication *g_xgui_application;
+extern HWND g_xgui_main_window;
 
 typedef struct {
     bool isControlledByAutomation;
@@ -56,6 +60,8 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param);
 
 void xgui_window_inc();
 void xgui_window_dec();
+
+void xgui_destroy_event(pcrdr_msg *msg);
 
 #ifdef __cplusplus
 }

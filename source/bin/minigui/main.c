@@ -29,7 +29,6 @@
 #include "config.h"
 
 #include "main.h"
-#include "BrowserWindow.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "HVMLURISchema.h"
@@ -76,8 +75,6 @@ static gboolean enableSandbox;
 static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
-
-GMainLoop *g_xgui_main_loop = NULL;
 
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
 static gboolean parseAutoplayPolicy(const char *optionName, const char *value, gpointer data, GError **error)
@@ -634,6 +631,7 @@ static void setDefaultWebsitePolicies(WebKitSettings *webkitSettings)
 
 static void startup(GApplication *application, WebKitSettings *webkitSettings)
 {
+    g_object_set_data(G_OBJECT(webkitSettings), KEY_XGUI_APPLICATION, application);
     setDefaultWebsiteDataManager(webkitSettings);
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
     setDefaultWebsitePolicies(webkitSettings);
@@ -797,7 +795,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     webkit_web_context_set_automation_allowed(webContext, automationMode);
 
     BrowserPlainWindow *mainWindow = browser_plain_window_new(NULL, webContext,
-        BROWSER_DEFAULT_TITLE, BROWSER_DEFAULT_TITLE);
+        BROWSER_DEFAULT_TITLE, BROWSER_DEFAULT_TITLE, WS_EX_WINTYPE_LAUNCHER);
     WebKitWebViewParam param = {
         .webContext = webContext,
         .settings = webkitSettings,
@@ -810,6 +808,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     };
     browser_plain_window_set_view(mainWindow, &param);
     browser_plain_window_load_uri(mainWindow, BROWSER_DEFAULT_URL);
+    g_xgui_main_window = browser_plain_window_get_hwnd(mainWindow);
 }
 
 void performMessageLoopTasks()
@@ -820,8 +819,8 @@ void performMessageLoopTasks()
 gboolean minigui_msg_loop(gpointer user_data)
 {
     MSG Msg;
-    if (HavePendingMessage(HWND_DESKTOP)) {
-        if (GetMessage(&Msg, HWND_DESKTOP)) {
+    if (HavePendingMessage(g_xgui_main_window)) {
+        if (GetMessage(&Msg, g_xgui_main_window)) {
             TranslateMessage(&Msg);
             DispatchMessage(&Msg);
         }
@@ -831,8 +830,8 @@ gboolean minigui_msg_loop(gpointer user_data)
 
 gboolean on_sigint(gpointer data)
 {
-    if (g_xgui_main_loop) {
-        g_main_loop_quit(g_xgui_main_loop);
+    if (g_xgui_application) {
+        g_application_quit(g_xgui_application);
     }
     return FALSE;
 }
@@ -885,17 +884,16 @@ int MiniGUIMain (int argc, const char* argv[])
     JoinLayer(NAME_DEF_LAYER , "xGUI Pro" , 0 , 0);
 #endif
 
-    startup(NULL, webkitSettings);
-    activate(NULL, webkitSettings);
-
     g_unix_signal_add(SIGINT, on_sigint, NULL);
 
-    g_xgui_main_loop = g_main_loop_new(NULL, FALSE);
-    g_timeout_add(10, minigui_msg_loop, NULL);
-    g_main_loop_run(g_xgui_main_loop);
-    g_main_loop_unref(g_xgui_main_loop);
+    g_xgui_application = g_application_new(APP_NAME, G_APPLICATION_NON_UNIQUE);
+    g_signal_connect(g_xgui_application, "startup", G_CALLBACK(startup), webkitSettings);
+    g_signal_connect(g_xgui_application, "activate", G_CALLBACK(activate), webkitSettings);
+    g_signal_connect(g_xgui_application, "shutdown", G_CALLBACK(shutdown), webkitSettings);
 
-    shutdown(NULL, webkitSettings);
+    g_timeout_add(10, minigui_msg_loop, NULL);
+    g_application_run(g_xgui_application, 0, NULL);
+    g_object_unref(g_xgui_application);
 
     return exitAfterLoad && webProcessCrashed ? 1 : 0;
 }

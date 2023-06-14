@@ -60,6 +60,7 @@ void pcmc_gtk_cleanup(purcmc_server *srv)
         if (workspace->layouter) {
             ws_layouter_delete(workspace->layouter, NULL);
         }
+        free(workspace);
     }
 
     kvlist_free(&kv_app_workspace);
@@ -441,6 +442,10 @@ int gtk_remove_session(purcmc_session *sess)
     }
     kvlist_free(&sess->pending_responses);
 
+    if (sess->uri_prefix) {
+        free(sess->uri_prefix);
+    }
+
     LOG_DEBUG("free session...\n");
     free(sess);
 
@@ -479,6 +484,9 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
                 event.targetValue = PTR2U64(container);
                 purcmc_endpoint_post_event(sess->srv, endpoint, &event);
             }
+            else {
+                xgui_destroy_event(&event);
+            }
 
             purc_page_ostack_t ostack = g_object_get_data(G_OBJECT(webview),
                 "purcmc-owner-stack");
@@ -495,6 +503,12 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
                 event.targetValue = PTR2U64(container);
                 purcmc_endpoint_post_event(sess->srv, endpoint, &event);
             }
+            else {
+                xgui_destroy_event(&event);
+            }
+            purc_page_ostack_t ostack = g_object_get_data(G_OBJECT(webview),
+                "purcmc-owner-stack");
+            purc_page_ostack_delete(sess->workspace->page_owners, ostack);
         }
     }
 
@@ -815,6 +829,7 @@ purcmc_page *gtk_find_page(purcmc_session *sess,
     return NULL;
 }
 
+#if 0
 static void *get_widget_from_udom(purcmc_session *sess, purcmc_udom *udom,
         int *retv)
 {
@@ -832,6 +847,7 @@ static void *get_widget_from_udom(purcmc_session *sess, purcmc_udom *udom,
     *retv = PCRDR_SC_OK;
     return g_object_get_data(G_OBJECT(udom), "purcmc-container");
 }
+#endif
 
 static inline WebKitWebView *validate_handle(purcmc_session *sess,
         purcmc_page *page, int *retv)
@@ -944,6 +960,7 @@ done:
     return (purcmc_page *)plainwin;
 }
 
+#if 0
 static void *get_plainwin_from_udom(purcmc_session *sess,
         purcmc_udom *udom, int *retv)
 {
@@ -979,6 +996,7 @@ static void *get_plainwin_from_udom(purcmc_session *sess,
 done:
     return plainwin;
 }
+#endif
 
 int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         purcmc_page *page, const char *property, purc_variant_t value)
