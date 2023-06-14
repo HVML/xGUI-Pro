@@ -808,6 +808,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     };
     browser_plain_window_set_view(mainWindow, &param);
     browser_plain_window_load_uri(mainWindow, BROWSER_DEFAULT_URL);
+    g_xgui_main_window = browser_plain_window_get_hwnd(mainWindow);
 }
 
 void performMessageLoopTasks()
@@ -818,8 +819,8 @@ void performMessageLoopTasks()
 gboolean minigui_msg_loop(gpointer user_data)
 {
     MSG Msg;
-    if (HavePendingMessage(HWND_DESKTOP)) {
-        if (GetMessage(&Msg, HWND_DESKTOP)) {
+    if (HavePendingMessage(g_xgui_main_window)) {
+        if (GetMessage(&Msg, g_xgui_main_window)) {
             TranslateMessage(&Msg);
             DispatchMessage(&Msg);
         }

@@ -386,7 +386,7 @@ void browser_plain_window_set_view(BrowserPlainWindow *window, WebKitWebViewPara
     g_signal_connect_after(window->browserPane->webView, "close", G_CALLBACK(webViewClose), window);
 
     window->param = *param;
-    ShowWindow(window->hwnd, SW_SHOW);
+    ShowWindow(window->hwnd, SW_SHOWNORMAL);
     SetFocus(window->hwnd);
 
     browserPlainWindowSetupSignalHandlers(window);

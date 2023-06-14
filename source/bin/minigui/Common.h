@@ -42,6 +42,7 @@ extern "C" {
 #endif
 
 extern GApplication *g_xgui_application;
+extern HWND g_xgui_main_window;
 
 typedef struct {
     bool isControlledByAutomation;

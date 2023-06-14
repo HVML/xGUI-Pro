@@ -94,7 +94,7 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
         WebKitWebViewParam *web_view_param, const struct ws_widget_info *style)
 {
     BrowserPlainWindow *plainwin;
-    plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(NULL,
+    plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(g_xgui_main_window,
                 sess->web_context, style->name, style->title));
 
     HWND hwnd = browser_plain_window_get_hwnd(plainwin);
@@ -207,7 +207,7 @@ create_tabbedwin(purcmc_workspace *workspace, purcmc_session *sess,
         void *init_arg, const struct ws_widget_info *style)
 {
     BrowserTabbedWindow *window;
-    window = BROWSER_TABBED_WINDOW(browser_tabbed_window_new(NULL,
+    window = BROWSER_TABBED_WINDOW(browser_tabbed_window_new(g_xgui_main_window,
                 sess->web_context, style->name, style->title,
                 style->w, style->h));
 
