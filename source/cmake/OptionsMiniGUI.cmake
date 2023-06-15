@@ -24,6 +24,7 @@ find_package(CairoHBD REQUIRED)
 
 XGUIPRO_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC ON)
 
+XGUIPRO_OPTION_DEFAULT_PORT_VALUE(USE_SOUP2 PUBLIC ON)
 XGUIPRO_OPTION_DEFAULT_PORT_VALUE(ENABLE_DEVELOPER_MODE PUBLIC OFF)
 
 if (USE_SOUP2)
@@ -34,6 +35,7 @@ else ()
     set(SOUP_API_VERSION 3.0)
     set(ENABLE_SERVER_PRECONNECT ON)
 endif ()
+
 find_package(LibSoup ${SOUP_MINIMUM_VERSION})
 
 if (NOT LibSoup_FOUND)
@@ -58,8 +60,6 @@ else ()
 endif ()
 
 find_package(WebKit2HBD 2.34.0 REQUIRED)
-
-
 
 XGUIPRO_OPTION_END()
 
