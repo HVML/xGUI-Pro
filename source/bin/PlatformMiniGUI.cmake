@@ -43,7 +43,7 @@ list(APPEND xguipro_LIBRARIES
     ${GLIB_GIO_LIBRARIES}
     ${GLIB_GOBJECT_LIBRARIES}
     ${GLIB_LIBRARIES}
-    CairoHbd::CairoHbd
+    CairoHBD::CairoHBD
     MiniGUI::MiniGUI
 )
 

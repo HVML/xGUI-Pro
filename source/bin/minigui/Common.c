@@ -27,7 +27,7 @@
 #include <assert.h>
 
 GApplication *g_xgui_application = NULL;
-HWND g_xgui_main_window = HWND_INVALID;
+HWND g_xgui_main_window = HWND_NULL;
 uint32_t g_xgui_window_count = 0;
 
 WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)

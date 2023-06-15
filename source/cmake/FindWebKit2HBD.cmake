@@ -22,7 +22,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #[=======================================================================[.rst:
-FindWebKit2Hbd
+FindWebKit2HBD
 --------------
 
 Find WebKit headers and libraries.
@@ -56,15 +56,15 @@ find_package(PkgConfig QUIET)
 
 pkg_check_modules(PC_WEBKIT2HBD QUIET ${WEBKIT2HBD_PC_NAME})
 set(WebKit_COMPILE_OPTIONS ${PC_WEBKIT2HBD_CFLAGS_OTHER})
-set(WebKit2Hbd_VERSION ${PC_WEBKIT2HBD_VERSION})
+set(WebKit2HBD_VERSION ${PC_WEBKIT2HBD_VERSION})
 
-find_path(WebKit2Hbd_INCLUDE_DIR
+find_path(WebKit2HBD_INCLUDE_DIR
     NAMES webkit2/webkit2.h
     HINTS ${PC_WEBKIT2HBD_INCLUDE_DIRS}
 )
 
-find_library(WebKit2Hbd_LIBRARY
-    NAMES ${WebKit2Hbd_NAMES} ${WEBKIT2HBD_PC_NAME}
+find_library(WebKit2HBD_LIBRARY
+    NAMES ${WebKit2HBD_NAMES} ${WEBKIT2HBD_PC_NAME}
     HINTS ${PC_WEBKIT2HBD_LIBDIR} ${PC_WEBKIT2HBD_LIBRARY_DIRS}
 )
 
@@ -74,35 +74,35 @@ find_library(JavaScriptCoreHbd_LIBRARY
 )
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(WebKit2Hbd
-    FOUND_VAR WebKit2Hbd_FOUND
-    REQUIRED_VARS WebKit2Hbd_INCLUDE_DIR WebKit2Hbd_LIBRARY JavaScriptCoreHbd_LIBRARY
-    VERSION_VAR WebKit2Hbd_VERSION
+find_package_handle_standard_args(WebKit2HBD
+    FOUND_VAR WebKit2HBD_FOUND
+    REQUIRED_VARS WebKit2HBD_INCLUDE_DIR WebKit2HBD_LIBRARY JavaScriptCoreHbd_LIBRARY
+    VERSION_VAR WebKit2HBD_VERSION
 )
 
 pkg_get_variable(WEBKIT2HBD_BUILD_REVISION ${WEBKIT2HBD_PC_NAME} revision)
 
-if (WebKit2Hbd_FOUND AND NOT TARGET WebKit::WebKit)
+if (WebKit2HBD_FOUND AND NOT TARGET WebKit::WebKit)
     add_library(WebKit::WebKit UNKNOWN IMPORTED GLOBAL)
     set_target_properties(WebKit::WebKit PROPERTIES
-        IMPORTED_LOCATION "${WebKit2Hbd_LIBRARY}"
+        IMPORTED_LOCATION "${WebKit2HBD_LIBRARY}"
         INTERFACE_COMPILE_OPTIONS "${WebKit_COMPILE_OPTIONS}"
-        INTERFACE_INCLUDE_DIRECTORIES "${WebKit2Hbd_INCLUDE_DIR}"
+        INTERFACE_INCLUDE_DIRECTORIES "${WebKit2HBD_INCLUDE_DIR}"
     )
 
     add_library(WebKit::JSC UNKNOWN IMPORTED GLOBAL)
     set_target_properties(WebKit::JSC PROPERTIES
         IMPORTED_LOCATION "${JavaScriptCoreHbd_LIBRARY}"
         INTERFACE_COMPILE_OPTIONS "${WebKit_COMPILE_OPTIONS}"
-        INTERFACE_INCLUDE_DIRECTORIES "${WebKit2Hbd_INCLUDE_DIR}"
+        INTERFACE_INCLUDE_DIRECTORIES "${WebKit2HBD_INCLUDE_DIR}"
     )
 endif ()
 
-if (WebKit2Hbd_FOUND)
+if (WebKit2HBD_FOUND)
     set(WebKit_FOUND TRUE)
-    set(WebKit_VERSION ${WebKit2Hbd_VERSION})
-    set(WebKit_LIBRARIES ${WebKit2Hbd_LIBRARY} ${JavaScriptCoreHbd_LIBRARY})
-    set(WebKit_INCLUDE_DIRS ${WebKit2Hbd_INCLUDE_DIR})
+    set(WebKit_VERSION ${WebKit2HBD_VERSION})
+    set(WebKit_LIBRARIES ${WebKit2HBD_LIBRARY} ${JavaScriptCoreHbd_LIBRARY})
+    set(WebKit_INCLUDE_DIRS ${WebKit2HBD_INCLUDE_DIR})
     mark_as_advanced(WebKit_FOUND WebKit_VERSION WebKit_INCLUDE_DIRS WebKit_LIBRARIES)
 endif ()
 

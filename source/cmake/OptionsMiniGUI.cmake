@@ -20,7 +20,7 @@ find_package(GLIB 2.44.0 REQUIRED COMPONENTS gio gio-unix gmodule gobject)
 find_package(PurC 0.9.12 REQUIRED)
 find_package(DOMRuler 0.9.12 REQUIRED)
 find_package(MiniGUI 5.0.2 REQUIRED)
-find_package(CairoHbd REQUIRED)
+find_package(CairoHBD REQUIRED)
 
 XGUIPRO_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC ON)
 
@@ -57,7 +57,7 @@ else ()
     set(WEBKIT2HBD_API_DOC_VERSION 4.0)
 endif ()
 
-find_package(WebKit2Hbd 2.28.0 REQUIRED)
+find_package(WebKit2HBD 2.34.0 REQUIRED)
 
 
 

@@ -714,6 +714,20 @@ static void shutdown(GApplication *application, WebKitSettings *webkitSettings)
     g_object_unref(webkitSettings);
 }
 
+static gboolean minigui_msg_loop(gpointer user_data)
+{
+    MSG Msg;
+#if 0
+    if (HavePendingMessage(g_xgui_main_window)) {
+#endif
+    while (PeekMessageEx(&Msg, g_xgui_main_window, 0, 0, FALSE, PM_REMOVE)) {
+        TranslateMessage(&Msg);
+        DispatchMessage(&Msg);
+    }
+
+    return G_SOURCE_CONTINUE;
+}
+
 static void activate(GApplication *application, WebKitSettings *webkitSettings)
 {
     WebKitWebsiteDataManager *manager;
@@ -809,26 +823,18 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     browser_plain_window_set_view(mainWindow, &param);
     browser_plain_window_load_uri(mainWindow, BROWSER_DEFAULT_URL);
     g_xgui_main_window = browser_plain_window_get_hwnd(mainWindow);
+
+    GMainContext *context = g_main_context_default();
+
+    GSource *source;
+    source = g_timeout_source_new(10);
+    g_source_set_callback(source,
+            G_SOURCE_FUNC(minigui_msg_loop), NULL, NULL);
+    g_source_attach(source, context);
+    g_source_unref(source);
 }
 
-void performMessageLoopTasks()
-{
-    g_main_context_iteration(0, false);
-}
-
-gboolean minigui_msg_loop(gpointer user_data)
-{
-    MSG Msg;
-    if (HavePendingMessage(g_xgui_main_window)) {
-        if (GetMessage(&Msg, g_xgui_main_window)) {
-            TranslateMessage(&Msg);
-            DispatchMessage(&Msg);
-        }
-    }
-    return G_SOURCE_CONTINUE;
-}
-
-gboolean on_sigint(gpointer data)
+static gboolean on_sigint(gpointer data)
 {
     if (g_xgui_application) {
         g_application_quit(g_xgui_application);
@@ -891,7 +897,6 @@ int MiniGUIMain (int argc, const char* argv[])
     g_signal_connect(g_xgui_application, "activate", G_CALLBACK(activate), webkitSettings);
     g_signal_connect(g_xgui_application, "shutdown", G_CALLBACK(shutdown), webkitSettings);
 
-    g_timeout_add(10, minigui_msg_loop, NULL);
     g_application_run(g_xgui_application, 0, NULL);
     g_object_unref(g_xgui_application);
 
