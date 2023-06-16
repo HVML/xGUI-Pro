@@ -144,7 +144,7 @@ static const GOptionEntry commandLineOptions[] =
 #endif
     { "enable-sandbox", 0, 0, G_OPTION_ARG_NONE, &enableSandbox, "Enable web process sandbox support", NULL },
     { "exit-after-load", 0, 0, G_OPTION_ARG_NONE, &exitAfterLoad, "Quit the browser after the load finishes", NULL },
-    { "version", 'v', 0, G_OPTION_ARG_NONE, &printVersion, "Print the WebKitGTK version", NULL },
+    { "version", 'v', 0, G_OPTION_ARG_NONE, &printVersion, "Print the WebKitHBD version", NULL },
     { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &uriArguments, 0, "[URL…]" },
     { 0, 0, 0, 0, 0, 0, 0 }
 };
@@ -638,40 +638,40 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
 #endif
 
     purcmc_server_callbacks cbs = {
-        .prepare = pcmc_gtk_prepare,
-        .cleanup = pcmc_gtk_cleanup,
+        .prepare = pcmc_mg_prepare,
+        .cleanup = pcmc_mg_cleanup,
 
-        .create_session = gtk_create_session,
-        .remove_session = gtk_remove_session,
+        .create_session = mg_create_session,
+        .remove_session = mg_remove_session,
 
-        .find_page = gtk_find_page,
+        .find_page = mg_find_page,
 
-        .get_special_plainwin = gtk_get_special_plainwin,
-        .create_plainwin = gtk_create_plainwin,
-        .update_plainwin = gtk_update_plainwin,
-        .destroy_plainwin = gtk_destroy_plainwin,
+        .get_special_plainwin = mg_get_special_plainwin,
+        .create_plainwin = mg_create_plainwin,
+        .update_plainwin = mg_update_plainwin,
+        .destroy_plainwin = mg_destroy_plainwin,
 
-        .set_page_groups = gtk_set_page_groups,
-        .add_page_groups = gtk_add_page_groups,
-        .remove_page_group = gtk_remove_page_group,
+        .set_page_groups = mg_set_page_groups,
+        .add_page_groups = mg_add_page_groups,
+        .remove_page_group = mg_remove_page_group,
 
-        .get_special_widget = gtk_get_special_widget,
-        .create_widget = gtk_create_widget,
-        .update_widget = gtk_update_widget,
-        .destroy_widget = gtk_destroy_widget,
+        .get_special_widget = mg_get_special_widget,
+        .create_widget = mg_create_widget,
+        .update_widget = mg_update_widget,
+        .destroy_widget = mg_destroy_widget,
 
-        .load = gtk_load_or_write,
-        .write = gtk_load_or_write,
-        .register_crtn = gtk_register_crtn,
-        .revoke_crtn = gtk_revoke_crtn,
+        .load = mg_load_or_write,
+        .write = mg_load_or_write,
+        .register_crtn = mg_register_crtn,
+        .revoke_crtn = mg_revoke_crtn,
 
-        .update_dom = gtk_update_dom,
+        .update_dom = mg_update_dom,
 
-        .call_method_in_dom = gtk_call_method_in_dom,
-        .get_property_in_dom = gtk_get_property_in_dom,
-        .set_property_in_dom = gtk_set_property_in_dom,
+        .call_method_in_dom = mg_call_method_in_dom,
+        .get_property_in_dom = mg_get_property_in_dom,
+        .set_property_in_dom = mg_set_property_in_dom,
 
-        .pend_response = gtk_pend_response,
+        .pend_response = mg_pend_response,
     };
 
     pcmc_srvcfg.app_name = APP_NAME;
@@ -717,15 +717,17 @@ static void shutdown(GApplication *application, WebKitSettings *webkitSettings)
 static gboolean minigui_msg_loop(gpointer user_data)
 {
     MSG Msg;
-#if 0
-    if (HavePendingMessage(g_xgui_main_window)) {
-#endif
-    while (PeekMessageEx(&Msg, g_xgui_main_window, 0, 0, FALSE, PM_REMOVE)) {
-        TranslateMessage(&Msg);
-        DispatchMessage(&Msg);
+
+    if (g_xgui_main_window) {
+        while (PeekMessageEx(&Msg, g_xgui_main_window, 0, 0, FALSE, PM_REMOVE)) {
+            TranslateMessage(&Msg);
+            DispatchMessage(&Msg);
+        }
+
+        return G_SOURCE_CONTINUE;
     }
 
-    return G_SOURCE_CONTINUE;
+    return FALSE;
 }
 
 static void activate(GApplication *application, WebKitSettings *webkitSettings)
@@ -872,7 +874,7 @@ int MiniGUIMain (int argc, const char* argv[])
     g_option_context_free(context);
 
     if (printVersion) {
-        g_print("WebKitGTK %u.%u.%u",
+        g_print("WebKitHBD %u.%u.%u",
             webkit_get_major_version(),
             webkit_get_minor_version(),
             webkit_get_micro_version());

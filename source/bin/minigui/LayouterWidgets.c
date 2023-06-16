@@ -37,7 +37,7 @@
 #include <string.h>
 #include <webkit2/webkit2.h>
 
-void gtk_imp_convert_style(struct ws_widget_info *style,
+void mg_imp_convert_style(struct ws_widget_info *style,
         purc_variant_t toolkit_style)
 {
     style->darkMode = false;
@@ -120,12 +120,12 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
 
 #if 0
     if (style->darkMode) {
-        g_object_set(gtk_widget_get_settings(GTK_WIDGET(plainwin)),
+        g_object_set(mg_widget_get_settings(GTK_WIDGET(plainwin)),
                 "gtk-application-prefer-dark-theme", TRUE, NULL);
     }
 
     if (style->fullScreen) {
-        gtk_window_fullscreen(GTK_WINDOW(plainwin));
+        mg_window_fullscreen(GTK_WINDOW(plainwin));
     }
 
     if (style->backgroundColor) {
@@ -217,12 +217,12 @@ create_tabbedwin(purcmc_workspace *workspace, purcmc_session *sess,
     }
 
     if (style->darkMode) {
-        g_object_set(gtk_widget_get_settings(GTK_WIDGET(window)),
+        g_object_set(mg_widget_get_settings(GTK_WIDGET(window)),
                 "gtk-application-prefer-dark-theme", TRUE, NULL);
     }
 
     if (style->fullScreen) {
-        gtk_window_fullscreen(GTK_WINDOW(window));
+        mg_window_fullscreen(GTK_WINDOW(window));
     }
 
     if (style->backgroundColor) {
@@ -331,7 +331,7 @@ create_tab(purcmc_workspace *workspace, purcmc_session *sess,
 }
 
 void *
-gtk_imp_create_widget(void *workspace, void *session, ws_widget_type_t type,
+mg_imp_create_widget(void *workspace, void *session, ws_widget_type_t type,
         void *window, void *container, void *init_arg,
         const struct ws_widget_info *style)
 {
@@ -433,7 +433,7 @@ destroy_pane_or_tab_in_tabbedwin(purcmc_workspace *workspace,
 }
 
 int
-gtk_imp_destroy_widget(void *workspace, void *session, void *window, void *widget,
+mg_imp_destroy_widget(void *workspace, void *session, void *window, void *widget,
         ws_widget_type_t type)
 {
     switch (type) {
@@ -460,7 +460,7 @@ gtk_imp_destroy_widget(void *workspace, void *session, void *window, void *widge
 }
 
 void
-gtk_imp_update_widget(void *workspace, void *session, void *widget,
+mg_imp_update_widget(void *workspace, void *session, void *widget,
         ws_widget_type_t type, const struct ws_widget_info *style)
 {
 }

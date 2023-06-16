@@ -101,22 +101,12 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 void xgui_window_inc()
 {
     g_xgui_window_count++;
-#if 0
-    if (g_xgui_window_count == 2) {
-        ShowWindow(g_xgui_main_window, SW_HIDE);
-    }
-#endif
     g_application_hold(g_xgui_application);
 }
 
 void xgui_window_dec()
 {
     g_xgui_window_count--;
-#if 0
-    if (g_xgui_window_count == 1) {
-        ShowWindow(g_xgui_main_window, SW_SHOWNORMAL);
-    }
-#endif
     g_application_release(g_xgui_application);
 }
 

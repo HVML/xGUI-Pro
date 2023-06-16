@@ -720,7 +720,14 @@ init_server(void)
         return -1;
     }
 
-    purc_enable_log(true, false);
+    if (the_srvcfg->accesslog) {
+        purc_enable_log_ex(PURC_LOG_MASK_DEFAULT |
+                PURC_LOG_MASK_DEBUG | PURC_LOG_MASK_INFO,
+                PURC_LOG_FACILITY_STDOUT);
+    }
+    else {
+        purc_enable_log_ex(PURC_LOG_MASK_DEFAULT, PURC_LOG_FACILITY_STDOUT);
+    }
 
 #if !HAVE(SYS_EPOLL_H) && HAVE(SYS_SELECT_H)
     the_server.maxfd = -1;
@@ -938,11 +945,12 @@ error:
 int
 purcmc_rdrsrv_deinit(purcmc_server *srv)
 {
+    deinit_server();
+
     if (srv->cbs.cleanup) {
         srv->cbs.cleanup(srv);
     }
 
-    deinit_server();
     purc_cleanup();
     return 0;
 }

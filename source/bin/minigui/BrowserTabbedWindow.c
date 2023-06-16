@@ -120,7 +120,7 @@ static void browserTabbedWindowConstructed(GObject *gObject)
         GetClientRect(parent, &rc);
     }
     else {
-        parent = HWND_DESKTOP;
+        parent = g_xgui_main_window;
         rc = GetScreenRect();
     }
 
