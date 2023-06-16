@@ -63,6 +63,8 @@ void xgui_window_dec();
 
 void xgui_destroy_event(pcrdr_msg *msg);
 
+double xgui_get_current_time();
+
 #ifdef __cplusplus
 }
 #endif

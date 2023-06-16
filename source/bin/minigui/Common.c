@@ -25,6 +25,7 @@
 #include "config.h"
 #include "Common.h"
 #include <assert.h>
+#include <sys/time.h>
 
 GApplication *g_xgui_application = NULL;
 HWND g_xgui_main_window = HWND_NULL;
@@ -136,4 +137,11 @@ void xgui_destroy_event(pcrdr_msg *msg)
     if (msg->dataType == PCRDR_MSG_DATA_TYPE_JSON) {
         purc_variant_unref(msg->data);
     }
+}
+
+double xgui_get_current_time()
+{
+      struct timeval now;
+      gettimeofday(&now, 0);
+      return now.tv_sec + now.tv_usec / 1000000.0;
 }
