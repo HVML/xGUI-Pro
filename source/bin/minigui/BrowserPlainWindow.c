@@ -118,7 +118,7 @@ static void browserPlainWindowConstructed(GObject *gObject)
         GetClientRect(parent, &rc);
     }
     else {
-        parent = HWND_DESKTOP;
+        parent = g_xgui_main_window;
         rc = GetScreenRect();
     }
     int w = RECTW(rc);
@@ -312,12 +312,16 @@ browser_plain_window_get_web_context(BrowserPlainWindow *window)
     return window->webContext;
 }
 
+extern HWND g_xgui_main_window;
 static void webViewClose(WebKitWebView *webView, BrowserPlainWindow *window)
 {
     HWND hwnd = window->hwnd;
     DestroyAllControls(hwnd);
     DestroyMainWindow(hwnd);
     MainWindowCleanup(hwnd);
+
+    if (hwnd == g_xgui_main_window)
+        g_xgui_main_window = HWND_NULL;
 }
 
 #if 0

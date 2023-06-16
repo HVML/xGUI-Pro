@@ -43,12 +43,12 @@
 
 static KVLIST(kv_app_workspace, NULL);
 
-int pcmc_gtk_prepare(purcmc_server *srv)
+int pcmc_mg_prepare(purcmc_server *srv)
 {
     return 0;
 }
 
-void pcmc_gtk_cleanup(purcmc_server *srv)
+void pcmc_mg_cleanup(purcmc_server *srv)
 {
     const char *name;
     void *next, *data;
@@ -125,7 +125,7 @@ struct packed_result {
     char plain[0];
 };
 
-bool gtk_pend_response(purcmc_session* sess, const char *operation,
+bool mg_pend_response(purcmc_session* sess, const char *operation,
         const char *request_id, void *result_value, const char *plain)
 {
     if (strcmp(request_id, PCRDR_REQUESTID_NORETURN) == 0) {
@@ -327,7 +327,7 @@ user_message_received_callback(WebKitWebView *webview,
     return TRUE;
 }
 
-purcmc_session *gtk_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
+purcmc_session *mg_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
 {
     purcmc_session* sess = calloc(1, sizeof(purcmc_session));
 
@@ -395,6 +395,7 @@ failed:
 static int on_each_ostack(void *ctxt, const char *name, void *data)
 {
     (void)name;
+    LOG_DEBUG("called for %s\n", name);
 
     purcmc_session *sess = ctxt;
     purc_page_ostack_t ostack = *(purc_page_ostack_t *)data;
@@ -415,7 +416,7 @@ static int on_each_ostack(void *ctxt, const char *name, void *data)
     return 0;
 }
 
-int gtk_remove_session(purcmc_session *sess)
+int mg_remove_session(purcmc_session *sess)
 {
     LOG_DEBUG("removing session (%p)...\n", sess);
 
@@ -492,7 +493,7 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
                 "purcmc-owner-stack");
             purc_page_ostack_delete(sess->workspace->page_owners, ostack);
             /* Not necessary to call this explicitly.
-            gtk_imp_destroy_widget(&sess->workspace, plainwin,
+            mg_imp_destroy_widget(&sess->workspace, plainwin,
                     WS_WIDGET_TYPE_PLAINWINDOW); */
         }
         else {
@@ -704,7 +705,7 @@ static int cb_find_active_page(void *ctxt, const char *id, void *data)
     }
 
 #if 0
-    if (gtk_widget_has_focus(widget)) {
+    if (mg_widget_has_focus(widget)) {
         info->found = widget;
         return -1;  /* stop the travel */
     }
@@ -714,7 +715,7 @@ done:
     return 0;
 }
 
-purcmc_page *gtk_get_special_plainwin(purcmc_session *sess,
+purcmc_page *mg_get_special_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace, const char *group,
         pcrdr_resname_page_k page_type)
 {
@@ -763,7 +764,7 @@ purcmc_page *gtk_get_special_plainwin(purcmc_session *sess,
     return page;
 }
 
-purcmc_page *gtk_get_special_widget(purcmc_session *sess,
+purcmc_page *mg_get_special_widget(purcmc_session *sess,
         purcmc_workspace *workspace, const char *group,
         pcrdr_resname_page_k page_type)
 {
@@ -812,7 +813,7 @@ purcmc_page *gtk_get_special_widget(purcmc_session *sess,
     return page;
 }
 
-purcmc_page *gtk_find_page(purcmc_session *sess,
+purcmc_page *mg_find_page(purcmc_session *sess,
         purcmc_workspace *workspace, const char *page_id)
 {
     workspace = sess->workspace;
@@ -891,7 +892,7 @@ WebKitWebView *widget_get_web_view(void *widget)
     return NULL;
 }
 
-purcmc_page *gtk_create_plainwin(purcmc_session *sess,
+purcmc_page *mg_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace, const char *request_id,
         const char *page_id, const char *group, const char *name,
         const char *klass, const char *title, const char *layout_style,
@@ -917,8 +918,8 @@ purcmc_page *gtk_create_plainwin(purcmc_session *sess,
         style.flags = WSWS_FLAG_NAME | WSWS_FLAG_TITLE;
         style.name = name;
         style.title = title;
-        gtk_imp_convert_style(&style, toolkit_style);
-        plainwin = gtk_imp_create_widget(workspace, sess,
+        mg_imp_convert_style(&style, toolkit_style);
+        plainwin = mg_imp_create_widget(workspace, sess,
                 WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, &webview_param, &style);
 
     }
@@ -998,7 +999,7 @@ done:
 }
 #endif
 
-int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
+int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         purcmc_page *page, const char *property, purc_variant_t value)
 {
     int retv;
@@ -1038,7 +1039,7 @@ int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
     return PCRDR_SC_OK;
 }
 
-int gtk_destroy_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
+int mg_destroy_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         purcmc_page *page)
 {
     int retv;
@@ -1048,7 +1049,7 @@ int gtk_destroy_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
 
     void *plainwin = page;
     workspace = sess->workspace;
-    return gtk_imp_destroy_widget(workspace, sess, plainwin, plainwin,
+    return mg_imp_destroy_widget(workspace, sess, plainwin, plainwin,
         WS_WIDGET_TYPE_PLAINWINDOW);
 }
 
@@ -1081,7 +1082,7 @@ request_ready_callback(GObject* obj, GAsyncResult* result, gpointer user_data)
 }
 
 uint64_t
-gtk_register_crtn(purcmc_session *sess, purcmc_page *page,
+mg_register_crtn(purcmc_session *sess, purcmc_page *page,
         uint64_t crtn, int *retv)
 {
     WebKitWebView *webview = validate_handle(sess, page, retv);
@@ -1103,7 +1104,7 @@ gtk_register_crtn(purcmc_session *sess, purcmc_page *page,
 }
 
 uint64_t
-gtk_revoke_crtn(purcmc_session *sess, purcmc_page *page,
+mg_revoke_crtn(purcmc_session *sess, purcmc_page *page,
         uint64_t crtn, int *retv)
 {
     WebKitWebView *webview = validate_handle(sess, page, retv);
@@ -1129,7 +1130,7 @@ gtk_revoke_crtn(purcmc_session *sess, purcmc_page *page,
         "\"requestId\":\"%s\","     \
         "\"data\":\"%s\"}"
 
-purcmc_udom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
+purcmc_udom *mg_load_or_write(purcmc_session *sess, purcmc_page *page,
             int op, const char *op_name, const char* request_id,
             const char *content, size_t length,
             uint64_t crtn, char *buff, int *retv)
@@ -1184,7 +1185,7 @@ purcmc_udom *gtk_load_or_write(purcmc_session *sess, purcmc_page *page,
         "\"dataType\":\"%s\","      \
         "\"data\":\"%s\"}"
 
-int gtk_update_dom(purcmc_session *sess, purcmc_udom *dom,
+int mg_update_dom(purcmc_session *sess, purcmc_udom *dom,
             int op, const char *op_name, const char* request_id,
             const char* element_type, const char* element_value,
             const char* property, pcrdr_msg_data_type text_type,
@@ -1244,7 +1245,7 @@ int gtk_update_dom(purcmc_session *sess, purcmc_udom *dom,
         "\"arg\":%s}}"
 
 purc_variant_t
-gtk_call_method_in_dom(purcmc_session *sess, const char *request_id,
+mg_call_method_in_dom(purcmc_session *sess, const char *request_id,
         purcmc_udom *dom, const char* element_type, const char* element_value,
         const char *method, purc_variant_t arg, int* retv)
 {
@@ -1308,7 +1309,7 @@ gtk_call_method_in_dom(purcmc_session *sess, const char *request_id,
         "\"property\":\"%s\"}"                  \
 
 purc_variant_t
-gtk_get_property_in_dom(purcmc_session *sess, const char *request_id,
+mg_get_property_in_dom(purcmc_session *sess, const char *request_id,
         purcmc_udom *dom, const char* element_type, const char* element_value,
         const char *property, int *retv)
 {
@@ -1353,7 +1354,7 @@ gtk_get_property_in_dom(purcmc_session *sess, const char *request_id,
         "\"value\":%s}"
 
 purc_variant_t
-gtk_set_property_in_dom(purcmc_session *sess, const char *request_id,
+mg_set_property_in_dom(purcmc_session *sess, const char *request_id,
         purcmc_udom *dom, const char* element_type, const char* element_value,
         const char *property, purc_variant_t value, int *retv)
 {
@@ -1420,7 +1421,7 @@ static void get_monitor_geometry(struct ws_metrics *ws_geometry)
     ws_geometry->density = 27;
 }
 
-int gtk_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
+int mg_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
         const char *content, size_t length)
 {
     int retv;
@@ -1432,8 +1433,8 @@ int gtk_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
         LOG_INFO("Monitor size: %u x %u\n", metrics.width, metrics.height);
 
         workspace->layouter = ws_layouter_new(&metrics, content, length,
-                workspace, gtk_imp_convert_style, gtk_imp_create_widget,
-                gtk_imp_destroy_widget, gtk_imp_update_widget, &retv);
+                workspace, mg_imp_convert_style, mg_imp_create_widget,
+                mg_imp_destroy_widget, mg_imp_update_widget, &retv);
         if (workspace->layouter == NULL) {
             LOG_ERROR("Failed to create layouter\n");
         }
@@ -1445,7 +1446,7 @@ int gtk_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
     return retv;
 }
 
-int gtk_add_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
+int mg_add_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
         const char *content, size_t length)
 {
     int retv;
@@ -1462,7 +1463,7 @@ int gtk_add_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
     return retv;
 }
 
-int gtk_remove_page_group(purcmc_session *sess, purcmc_workspace *workspace,
+int mg_remove_page_group(purcmc_session *sess, purcmc_workspace *workspace,
         const char* group)
 {
     int retv;
@@ -1479,7 +1480,7 @@ int gtk_remove_page_group(purcmc_session *sess, purcmc_workspace *workspace,
 }
 
 purcmc_page *
-gtk_create_widget(purcmc_session *sess, purcmc_workspace *workspace,
+mg_create_widget(purcmc_session *sess, purcmc_workspace *workspace,
             const char *request_id,
             const char *page_id, const char *group, const char *name,
             const char *klass, const char *title, const char *layout_style,
@@ -1524,7 +1525,7 @@ gtk_create_widget(purcmc_session *sess, purcmc_workspace *workspace,
     return (purcmc_page *)widget;
 }
 
-int gtk_update_widget(purcmc_session *sess, purcmc_workspace *workspace,
+int mg_update_widget(purcmc_session *sess, purcmc_workspace *workspace,
             purcmc_page *page, const char *property, purc_variant_t value)
 {
     int retv;
@@ -1553,7 +1554,7 @@ int gtk_update_widget(purcmc_session *sess, purcmc_workspace *workspace,
     return retv;
 }
 
-int gtk_destroy_widget(purcmc_session *sess, purcmc_workspace *workspace,
+int mg_destroy_widget(purcmc_session *sess, purcmc_workspace *workspace,
             purcmc_page *page)
 {
     int retv;
