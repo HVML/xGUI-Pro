@@ -51,7 +51,7 @@ This will define the following variables in your project:
 #]=======================================================================]
 
 find_package(PkgConfig QUIET)
-pkg_check_modules(PC_HICAIRO QUIET hicairo)
+pkg_check_modules(PC_HICAIRO QUIET cairohbd)
 set(CairoHBD_COMPILE_OPTIONS ${PC_HICAIRO_CFLAGS_OTHER})
 set(CairoHBD_VERSION ${PC_HICAIRO_VERSION})
 
@@ -62,7 +62,7 @@ find_path(CairoHBD_INCLUDE_DIR
 )
 
 find_library(CairoHBD_LIBRARY
-    NAMES ${CairoHBD_NAMES} hicairo
+    NAMES ${CairoHBD_NAMES} cairohbd
     HINTS ${PC_HICAIRO_LIBDIR} ${PC_HICAIRO_LIBRARY_DIRS}
 )
 
