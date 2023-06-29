@@ -43,6 +43,7 @@ extern "C" {
 
 extern GApplication *g_xgui_application;
 extern HWND g_xgui_main_window;
+extern PBITMAP g_xgui_window_bg;
 
 typedef struct {
     bool isControlledByAutomation;
@@ -64,6 +65,9 @@ void xgui_window_dec();
 void xgui_destroy_event(pcrdr_msg *msg);
 
 double xgui_get_current_time();
+
+void xgui_load_window_bg();
+void xgui_unload_window_bg();
 
 #ifdef __cplusplus
 }

@@ -97,6 +97,38 @@ static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
                 xgui_window_dec();
             }
             break;
+
+        case MSG_ERASEBKGND:
+            {
+                BrowserPlainWindow *window = (BrowserPlainWindow *)
+                    GetWindowAdditionalData(hWnd);
+                WebKitWebView *webView = browser_pane_get_web_view(
+                        window->browserPane);
+                HWND webHwnd = webkit_web_view_get_hwnd(webView);
+                HDC hdc = GetClientDC(webHwnd);
+                RECT rc;
+                GetClientRect(webHwnd, &rc);
+                int rw = RECTW(rc);
+                int rh = RECTH(rc);
+
+                gal_pixel oldBrushColor = SetBrushColor(hdc, PIXEL_black);
+                FillBox(hdc, rc.left, rc.top, rw, rh);
+                SetBrushColor(hdc, oldBrushColor);
+
+                int bw = g_xgui_window_bg->bmWidth;
+                int bh = g_xgui_window_bg->bmHeight;
+
+                if (bw < rw || bh < rh) {
+                    int x = (RECTW(rc) - g_xgui_window_bg->bmWidth) / 2;
+                    int y = (RECTH(rc) - g_xgui_window_bg->bmHeight) / 2;
+                    FillBoxWithBitmap(hdc, x, y, bw, bh, g_xgui_window_bg);
+                }
+                else {
+                    FillBoxWithBitmap(hdc, 0, 0, rw, rh, g_xgui_window_bg);
+                }
+                return 0;
+            }
+            break;
     }
 
     return DefaultMainWinProc(hWnd, message, wParam, lParam);

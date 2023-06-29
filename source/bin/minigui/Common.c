@@ -24,14 +24,19 @@
 
 #include "config.h"
 #include "Common.h"
+#include "xguipro-features.h"
+
 #include <assert.h>
 #include <sys/time.h>
 
 #define WEBVIEW_PARAM_COUNT   10
+#define XGUI_WINDOW_BG        "assets/xgui-bg.png"
 
 GApplication *g_xgui_application = NULL;
 HWND g_xgui_main_window = HWND_NULL;
 uint32_t g_xgui_window_count = 0;
+BITMAP xgui_window_bg;
+PBITMAP g_xgui_window_bg = NULL;
 
 WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 {
@@ -141,4 +146,28 @@ double xgui_get_current_time()
       struct timeval now;
       gettimeofday(&now, 0);
       return now.tv_sec + now.tv_usec / 1000000.0;
+}
+
+void xgui_load_window_bg()
+{
+    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
+    if (webext_dir == NULL) {
+        webext_dir = WEBKIT_WEBEXT_DIR;
+    }
+
+    gchar *path = g_strdup_printf("%s/%s", webext_dir ? webext_dir : ".", XGUI_WINDOW_BG);
+
+    if (path) {
+        LoadBitmapFromFile(HDC_SCREEN, &xgui_window_bg, path);
+        g_xgui_window_bg = &xgui_window_bg;
+        g_free(path);
+    }
+}
+
+void xgui_unload_window_bg()
+{
+    if (g_xgui_window_bg) {
+        UnloadBitmap(g_xgui_window_bg);
+        g_xgui_window_bg = NULL;
+    }
 }

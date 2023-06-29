@@ -684,6 +684,8 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
         exit(EXIT_FAILURE);
     }
 
+    xgui_load_window_bg();
+
     GMainContext *context = g_main_context_default();
 
     GSource *source;
@@ -696,6 +698,8 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
 
 static void shutdown(GApplication *application, WebKitSettings *webkitSettings)
 {
+    xgui_unload_window_bg();
+
     g_source_remove_by_user_data(pcmc_srv);
     purcmc_rdrsrv_deinit(pcmc_srv);
 
