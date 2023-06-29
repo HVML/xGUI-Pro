@@ -27,14 +27,16 @@
 #include <assert.h>
 #include <sys/time.h>
 
+#define WEBVIEW_PARAM_COUNT   10
+
 GApplication *g_xgui_application = NULL;
 HWND g_xgui_main_window = HWND_NULL;
 uint32_t g_xgui_window_count = 0;
 
 WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 {
-    const char *names[9];
-    GValue    values[9] = {0, };
+    const char *names[WEBVIEW_PARAM_COUNT];
+    GValue    values[WEBVIEW_PARAM_COUNT] = {0, };
     guint nr_params = 0;
 
     names[nr_params] = "is-controlled-by-automation";
@@ -92,6 +94,11 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
     names[nr_params] = "web-view-parent";
     g_value_init(&values[nr_params], G_TYPE_POINTER);
     g_value_set_pointer(&values[nr_params], param->webViewParent);
+    nr_params++;
+
+    names[nr_params] = "draw-default-background";
+    g_value_init(&values[nr_params], G_TYPE_BOOLEAN);
+    g_value_set_boolean(&values[nr_params], false);
     nr_params++;
 
     return WEBKIT_WEB_VIEW(g_object_new_with_properties(WEBKIT_TYPE_WEB_VIEW,
