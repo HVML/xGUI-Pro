@@ -1201,7 +1201,8 @@ int mg_update_dom(purcmc_session *sess, purcmc_udom *dom,
 
     if (property) {
         if (strncmp(property, "attr.", 5) == 0) {
-            if (!purc_is_valid_token(property + 5, PURC_LEN_PROPERTY_NAME)) {
+            if (!purc_is_valid_token(property + 5, PURC_LEN_PROPERTY_NAME)
+                    && strcmp(property + 5, "hvml-events") != 0) {
                 LOG_WARN("Bad property: %s.\n", property);
                 return PCRDR_SC_BAD_REQUEST;
             }
