@@ -69,6 +69,8 @@ double xgui_get_current_time();
 void xgui_load_window_bg();
 void xgui_unload_window_bg();
 
+void xgui_webview_draw_background_callback(HWND hWnd, HDC hdc, RECT rect);
+
 #ifdef __cplusplus
 }
 #endif

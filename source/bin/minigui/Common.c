@@ -29,7 +29,7 @@
 #include <assert.h>
 #include <sys/time.h>
 
-#define WEBVIEW_PARAM_COUNT   10
+#define WEBVIEW_PARAM_COUNT   9
 #define XGUI_WINDOW_BG        "assets/xgui-bg.png"
 
 GApplication *g_xgui_application = NULL;
@@ -101,11 +101,6 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
     g_value_set_pointer(&values[nr_params], param->webViewParent);
     nr_params++;
 
-    names[nr_params] = "draw-default-background";
-    g_value_init(&values[nr_params], G_TYPE_BOOLEAN);
-    g_value_set_boolean(&values[nr_params], false);
-    nr_params++;
-
     return WEBKIT_WEB_VIEW(g_object_new_with_properties(WEBKIT_TYPE_WEB_VIEW,
                 nr_params, names, values));
 }
@@ -171,3 +166,26 @@ void xgui_unload_window_bg()
         g_xgui_window_bg = NULL;
     }
 }
+
+void xgui_webview_draw_background_callback(HWND hWnd, HDC hdc, RECT rect)
+{
+    int rw = RECTW(rect);
+    int rh = RECTH(rect);
+
+    gal_pixel oldBrushColor = SetBrushColor(hdc, PIXEL_black);
+    FillBox(hdc, rect.left, rect.top, rw, rh);
+    SetBrushColor(hdc, oldBrushColor);
+
+    int bw = g_xgui_window_bg->bmWidth;
+    int bh = g_xgui_window_bg->bmHeight;
+
+    if (bw < rw || bh < rh) {
+        int x = (rw - g_xgui_window_bg->bmWidth) / 2;
+        int y = (rh - g_xgui_window_bg->bmHeight) / 2;
+        FillBoxWithBitmap(hdc, x, y, bw, bh, g_xgui_window_bg);
+    }
+    else {
+        FillBoxWithBitmap(hdc, 0, 0, rw, rh, g_xgui_window_bg);
+    }
+}
+
