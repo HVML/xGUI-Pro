@@ -30,7 +30,7 @@
 #include <sys/time.h>
 
 #define WEBVIEW_PARAM_COUNT   9
-#define XGUI_WINDOW_BG        "assets/xgui-bg.png"
+#define XGUI_WINDOW_BG        "assets/splash.jpg"
 
 GApplication *g_xgui_application = NULL;
 HWND g_xgui_main_window = HWND_NULL;
@@ -167,25 +167,73 @@ void xgui_unload_window_bg()
     }
 }
 
+static calc_pos(int w, int h, int cw, int ch, int *ox, int *oy, int *ow, int *oh)
+{
+    float sw = (float) w / (float) cw;
+    float sh = (float) h / (float) ch;
+
+    if (sw > sh) {
+        if (sh > 1.0f) {
+            *ox = -(w - cw) / 2;
+            *oy = -(h - ch) / 2;
+            *ow = w;
+            *oh = h;
+        }
+        else if (sh < 1.0f) {
+            *ow = w / sh;
+            *oh = ch;
+            *ox = -(*ow - cw) / 2;
+            *oy = 0;
+        }
+        else {
+            *ox = -(w - cw) / 2;
+            *oy = 0;
+            *ow = w;
+            *oh = h;
+        }
+    }
+    else if (sh > sw) {
+        if (sw > 1.0f) {
+            *ox = -(w - cw) / 2;
+            *oy = -(h - ch) / 2;
+            *ow = w;
+            *oh = h;
+        }
+        else if (sw < 1.0f) {
+            *ow = cw;;
+            *oh =  h / sw;
+            *ox = 0;
+            *oy = -(*oh - ch) / 2;
+        }
+        else {
+            *ox = 0;
+            *oy = -(h - ch) / 2;
+            *ow = w;
+            *oh = h;
+        }
+    }
+    else {
+        *ox = 0;
+        *oy = 0;
+        *ow = cw;
+        *oh = ch;
+    }
+
+}
+
 void xgui_webview_draw_background_callback(HWND hWnd, HDC hdc, RECT rect)
 {
     int rw = RECTW(rect);
     int rh = RECTH(rect);
 
-    gal_pixel oldBrushColor = SetBrushColor(hdc, PIXEL_black);
-    FillBox(hdc, rect.left, rect.top, rw, rh);
-    SetBrushColor(hdc, oldBrushColor);
-
     int bw = g_xgui_window_bg->bmWidth;
     int bh = g_xgui_window_bg->bmHeight;
 
-    if (bw < rw || bh < rh) {
-        int x = (rw - g_xgui_window_bg->bmWidth) / 2;
-        int y = (rh - g_xgui_window_bg->bmHeight) / 2;
-        FillBoxWithBitmap(hdc, x, y, bw, bh, g_xgui_window_bg);
-    }
-    else {
-        FillBoxWithBitmap(hdc, 0, 0, rw, rh, g_xgui_window_bg);
-    }
+    int x = 0;
+    int y = 0;
+    int dw = 0;
+    int dh = 0;
+    calc_pos(bw, bh, rw, rh, &x, &y, &dw, &dh);
+    FillBoxWithBitmap(hdc, x, y, dw, dh, g_xgui_window_bg);
 }
 
