@@ -4,8 +4,6 @@
 #define SIZEOF_UINTMAX_T @SIZEOF_UINTMAX_T@
 #endif
 
-#define PACKAGE_NAME    "@PACKAGE_NAME@"
-
 #define SYSCONFDIR      "@SYSCONFDIR@"
 #define DATADIR         "@DATADIR@"
 #define EXTHELPERSDIR   "@EXTHELPERSDIR@"
