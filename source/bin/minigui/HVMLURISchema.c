@@ -44,7 +44,9 @@
         STR2(WEBKIT_MAJOR_VERSION) "." STR2(WEBKIT_MAJOR_VERSION)
 #endif
 
-#define SPLASH_FILE        "assets/splash.jpg"
+#define DEFAULT_SPLASH_FILE        "assets/splash.jpg"
+#define SPLASH_FILE_NAME           "splash"
+#define SPLASH_FILE_SUFFIX         "jpg"
 
 void initializeWebExtensionsCallback(WebKitWebContext *context,
         gpointer user_data)
@@ -198,11 +200,18 @@ static const char *footer_on_error = ""
 "";
 
 static char *load_app_runner_asset_content(const char *app, const char *runner,
-        const char *file, size_t *length, unsigned flags)
+        const char *name, const char *suffix, size_t *length, unsigned flags)
 {
     char *buf = NULL;
+    gchar *path;
 
-    gchar *path = g_strdup_printf("/app/%s/%s", app, file);
+    if (runner) {
+        path = g_strdup_printf("/app/%s/shared/assets/%s_%s.%s", app, name,
+                runner, suffix);
+    }
+    else {
+        path = g_strdup_printf("/app/%s/shared/assets/%s.%s", app, name, suffix);
+    }
 
     if (path) {
         FILE *f = fopen(path, "r");
@@ -250,11 +259,17 @@ static char *build_blank_page_with_bg(const char *app, const char *runner)
 {
     gsize data_len;
     char *blank_page_with_bg = NULL;
-    char *data = load_app_runner_asset_content(app, runner, SPLASH_FILE,
-            &data_len, 0);
+    char *data = load_app_runner_asset_content(app, runner, SPLASH_FILE_NAME,
+            SPLASH_FILE_SUFFIX, &data_len, 0);
+
+    if (!data) {
+        data = load_app_runner_asset_content(app, NULL, SPLASH_FILE_NAME,
+            SPLASH_FILE_SUFFIX, &data_len, 0);
+    }
+
     if (!data) {
         data = load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
-            SPLASH_FILE, &data_len, 0);
+            DEFAULT_SPLASH_FILE, &data_len, 0);
     }
 
     if (!data) {
