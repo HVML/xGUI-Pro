@@ -44,6 +44,8 @@
         STR2(WEBKIT_MAJOR_VERSION) "." STR2(WEBKIT_MAJOR_VERSION)
 #endif
 
+#define SPLASH_FILE        "assets/splash.jpg"
+
 void initializeWebExtensionsCallback(WebKitWebContext *context,
         gpointer user_data)
 {
@@ -58,6 +60,21 @@ void initializeWebExtensionsCallback(WebKitWebContext *context,
 }
 
 static const char *blank_page = "<html></html>";
+
+static const char *blank_page_tmpl = ""
+    "<html>"
+    "  <head>"
+    "    <style>"
+    "body {"
+    "  background: url('data:image/jpg;base64,%s');"
+    "  background-position: center center;"
+    "}"
+    "    </style>"
+    "  </head>"
+    "  <body>"
+    "  </body>"
+    "</html>"
+"";
 
 static const char *cover_page = ""
     "<!DOCTYPE html>"
@@ -179,6 +196,93 @@ static const char *footer_on_error = ""
     "  </body>"
     "</html>"
 "";
+
+static char *load_app_runner_asset_content(const char *app, const char *runner,
+        const char *file, size_t *length, unsigned flags)
+{
+    char *buf = NULL;
+
+    gchar *path = g_strdup_printf("/app/%s/%s", app, file);
+
+    if (path) {
+        FILE *f = fopen(path, "r");
+
+        if (f) {
+            if (fseek(f, 0, SEEK_END))
+                goto failed;
+
+            long len = ftell(f);
+            if (len < 0)
+                goto failed;
+
+            buf = malloc(len + 1);
+            if (buf == NULL)
+                goto failed;
+
+            fseek(f, 0, SEEK_SET);
+            if (fread(buf, 1, len, f) < (size_t)len) {
+                free(buf);
+                buf = NULL;
+            }
+            buf[len] = '\0';
+
+            if (length)
+                *length = (size_t)len;
+failed:
+            fclose(f);
+
+            if (flags & ASSET_FLAG_ONCE)
+                remove(path);
+        }
+        else {
+            goto done;
+        }
+
+    }
+
+done:
+    if (path)
+        free(path);
+    return buf;
+}
+
+static char *build_blank_page_with_bg(const char *app, const char *runner)
+{
+    gsize data_len;
+    char *blank_page_with_bg = NULL;
+    char *data = load_app_runner_asset_content(app, runner, SPLASH_FILE,
+            &data_len, 0);
+    if (!data) {
+        data = load_asset_content("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
+            SPLASH_FILE, &data_len, 0);
+    }
+
+    if (!data) {
+        goto out;
+    }
+
+    gchar *base64 = g_base64_encode((guchar*)data, data_len);
+    if (!base64) {
+        goto out_clear_data;
+    }
+
+    size_t nr = strlen(blank_page_tmpl) + strlen(base64);
+    blank_page_with_bg = (char *)malloc(nr + 1);
+    if (blank_page_with_bg == NULL) {
+        goto out_clear_base64;
+    }
+
+    snprintf(blank_page_with_bg, nr, blank_page_tmpl, base64);
+
+out_clear_base64:
+    g_free(base64);
+
+out_clear_data:
+    free(data);
+
+out:
+    return blank_page_with_bg;
+}
 
 void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext)
@@ -334,7 +438,16 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
     }
 
 error:
-    if (contents == cover_page || contents == blank_page) {
+    if (contents == cover_page) {
+        content_length = strlen(contents);
+        content_type = g_strdup("text/html");
+        max_to_load = content_length;
+    }
+    else if (contents == blank_page) {
+        char *data = build_blank_page_with_bg(app, runner);
+        if (data != NULL) {
+            contents = data;
+        }
         content_length = strlen(contents);
         content_type = g_strdup("text/html");
         max_to_load = content_length;
