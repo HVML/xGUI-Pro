@@ -167,7 +167,7 @@ void xgui_unload_window_bg()
     }
 }
 
-static calc_pos(int w, int h, int cw, int ch, int *ox, int *oy, int *ow, int *oh)
+static void calc_pos(int w, int h, int cw, int ch, int *ox, int *oy, int *ow, int *oh)
 {
     float sw = (float) w / (float) cw;
     float sh = (float) h / (float) ch;
