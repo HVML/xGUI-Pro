@@ -99,8 +99,9 @@ purc_variant_t gtk_set_property_in_dom(purcmc_session *, const char *,
         purcmc_udom *, const char* element_type, const char* element_value,
         const char *property, purc_variant_t value, int *retv);
 
-bool gtk_pend_response(purcmc_session* sess, const char *operation,
-        const char *request_id, void *result_value, const char *plain);
+bool gtk_pend_response(purcmc_session* sess, purcmc_page *page,
+        const char *operation, const char *request_id, void *result_value,
+        const char *plain);
 
 /*
  * Use this function to retrieve the endpoint of a session.

@@ -188,7 +188,7 @@ typedef struct purcmc_server_callbacks {
             purcmc_udom *, const char* element_type, const char* element_value,
             const char *property, purc_variant_t value, int *retv);
 
-    bool (*pend_response)(purcmc_session *, const char *operation,
+    bool (*pend_response)(purcmc_session *, purcmc_page *, const char *operation,
             const char *request_id, void *result_value, const char *plain);
 } purcmc_server_callbacks;
 

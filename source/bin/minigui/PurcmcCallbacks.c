@@ -119,14 +119,46 @@ purcmc_endpoint* purcmc_get_endpoint_by_session(purcmc_session *sess)
     return purcmc_endpoint_from_name(sess->srv, endpoint_name);
 }
 
+static inline WebKitWebView *validate_handle(purcmc_session *sess,
+        purcmc_page *page, int *retv)
+{
+    void *data;
+    if (!sorted_array_find(sess->all_handles, PTR2U64(page), &data)) {
+        *retv = PCRDR_SC_NOT_FOUND;
+        return NULL;
+    }
+
+    if ((uintptr_t)data == HT_PLAINWIN) {
+        BrowserPlainWindow *plainwin = BROWSER_PLAIN_WINDOW(page);
+        return browser_plain_window_get_view(plainwin);
+    }
+    else if ((uintptr_t)data == HT_PANE_TAB) {
+        BrowserPane *pane = BROWSER_PANE(page);
+        return browser_pane_get_web_view(pane);
+    }
+    else if ((uintptr_t)data == HT_WEBVIEW) {
+        return (WebKitWebView *)page;
+    }
+    else {
+        *retv = PCRDR_SC_BAD_REQUEST;
+        return NULL;
+    }
+
+    return (WebKitWebView *)page;
+}
+
+
 struct packed_result {
     void *result_value;
+    WebKitWebView *webview;
+    char *operation;
     size_t plain_len;
     char plain[0];
 };
 
-bool mg_pend_response(purcmc_session* sess, const char *operation,
-        const char *request_id, void *result_value, const char *plain)
+bool mg_pend_response(purcmc_session* sess, purcmc_page *page,
+        const char *operation, const char *request_id, void *result_value,
+        const char *plain)
 {
     if (strcmp(request_id, PCRDR_REQUESTID_NORETURN) == 0) {
         LOG_WARN("Trying to pend a noreturn request\n");
@@ -142,10 +174,18 @@ bool mg_pend_response(purcmc_session* sess, const char *operation,
         size_t plain_len = plain ? strlen(plain) + 1 : 0;
         size_t sz = sizeof(*packed) + plain_len;
         packed = malloc(sz);
+        packed->operation = NULL;
         packed->result_value = result_value;
         packed->plain_len = plain_len;
         if (plain_len > 0) {
             memcpy(packed->plain, plain, plain_len);
+        }
+        if (page) {
+            int retv;
+            packed->webview = validate_handle(sess, page, &retv);
+            if (operation) {
+                packed->operation = strdup(operation);
+            }
         }
 
         kvlist_set(&sess->pending_responses, request_id, &packed);
@@ -189,6 +229,9 @@ static void finish_response(purcmc_session* sess, const char *request_id,
             purcmc_endpoint_send_response(sess->srv, endpoint, &response);
         }
 
+        if (packed->operation) {
+            free(packed->operation);
+        }
         free(packed);
         kvlist_delete(&sess->pending_responses, request_id);
     }
@@ -849,34 +892,6 @@ static void *get_widget_from_udom(purcmc_session *sess, purcmc_udom *udom,
     return g_object_get_data(G_OBJECT(udom), "purcmc-container");
 }
 #endif
-
-static inline WebKitWebView *validate_handle(purcmc_session *sess,
-        purcmc_page *page, int *retv)
-{
-    void *data;
-    if (!sorted_array_find(sess->all_handles, PTR2U64(page), &data)) {
-        *retv = PCRDR_SC_NOT_FOUND;
-        return NULL;
-    }
-
-    if ((uintptr_t)data == HT_PLAINWIN) {
-        BrowserPlainWindow *plainwin = BROWSER_PLAIN_WINDOW(page);
-        return browser_plain_window_get_view(plainwin);
-    }
-    else if ((uintptr_t)data == HT_PANE_TAB) {
-        BrowserPane *pane = BROWSER_PANE(page);
-        return browser_pane_get_web_view(pane);
-    }
-    else if ((uintptr_t)data == HT_WEBVIEW) {
-        return (WebKitWebView *)page;
-    }
-    else {
-        *retv = PCRDR_SC_BAD_REQUEST;
-        return NULL;
-    }
-
-    return (WebKitWebView *)page;
-}
 
 WebKitWebView *widget_get_web_view(void *widget)
 {

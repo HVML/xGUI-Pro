@@ -124,8 +124,9 @@ struct packed_result {
     char plain[0];
 };
 
-bool gtk_pend_response(purcmc_session* sess, const char *operation,
-        const char *request_id, void *result_value, const char *plain)
+bool gtk_pend_response(purcmc_session* sess, purcmc_page *page,
+        const char *operation, const char *request_id, void *result_value,
+        const char *plain)
 {
     if (strcmp(request_id, PCRDR_REQUESTID_NORETURN) == 0) {
         LOG_WARN("Trying to pend a noreturn request\n");

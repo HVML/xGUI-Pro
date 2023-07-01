@@ -555,7 +555,7 @@ static int on_create_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
     workspace = srv->cbs.create_workspace(endpoint->session,
             name, title, msg->data, &retv);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 workspace, NULL);
@@ -617,7 +617,7 @@ static int on_update_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
     retv = srv->cbs.update_workspace(endpoint->session, workspace, property,
             purc_variant_get_string_const(msg->data));
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 workspace, NULL);
@@ -669,7 +669,7 @@ static int on_destroy_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     retv = srv->cbs.destroy_workspace(endpoint->session, workspace);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 workspace, NULL);
@@ -725,7 +725,7 @@ static int on_set_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
     retv = srv->cbs.set_page_groups(endpoint->session, workspace,
             content, length);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 workspace, NULL);
@@ -782,7 +782,7 @@ static int on_add_page_groups(purcmc_server* srv, purcmc_endpoint* endpoint,
     retv = srv->cbs.add_page_groups(endpoint->session, workspace,
             content, length);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 workspace, NULL);
@@ -836,7 +836,7 @@ static int on_remove_page_group(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     retv = srv->cbs.remove_page_group(endpoint->session, workspace, gid);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 workspace, NULL);
@@ -945,7 +945,7 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
             request_id, idbuf, group, name, class, title, layout_style,
             toolkit_style, &retv);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 request_id, page, NULL);
         return PCRDR_SC_OK;
@@ -1007,7 +1007,7 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
     retv = srv->cbs.update_plainwin(endpoint->session, workspace, page,
             property, msg->data);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 page, NULL);
@@ -1060,7 +1060,7 @@ static int on_destroy_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint
 
     retv = srv->cbs.destroy_plainwin(endpoint->session, workspace, page);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 page, NULL);
@@ -1179,7 +1179,7 @@ static int on_create_widget(purcmc_server* srv, purcmc_endpoint* endpoint,
             request_id, idbuf, group, name, class, title, layout_style,
             toolkit_style, &retv);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 request_id,
                 page, NULL);
@@ -1247,7 +1247,7 @@ static int on_update_widget(purcmc_server* srv, purcmc_endpoint* endpoint,
     retv = srv->cbs.update_widget(endpoint->session, workspace,
             page, property, msg->data);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 page, NULL);
@@ -1305,7 +1305,7 @@ static int on_destroy_widget(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     retv = srv->cbs.destroy_widget(endpoint->session, workspace, page);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 page, NULL);
@@ -1372,7 +1372,7 @@ static int on_load(purcmc_server* srv, purcmc_endpoint* endpoint,
             purc_variant_get_string_const(msg->requestId),
             doc_text, doc_len, crtn, suppressed, &retv);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, page,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 dom, suppressed);
@@ -1447,7 +1447,7 @@ static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
             purc_variant_get_string_const(msg->requestId),
             doc_text, doc_len, crtn, suppressed, &retv);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, page,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 dom, suppressed);
@@ -1532,7 +1532,7 @@ static int on_register(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     suppressed = srv->cbs.register_crtn(endpoint->session, page, crtn, &retv);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, page,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 page, NULL);
@@ -1582,7 +1582,7 @@ static int on_revoke(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     to_reload = srv->cbs.revoke_crtn(endpoint->session, page, crtn, &retv);
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, page,
                 purc_variant_get_string_const(msg->operation),
                 purc_variant_get_string_const(msg->requestId),
                 page, NULL);
@@ -1674,7 +1674,7 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
     if (retv == 0) {
         // Check if requestId is `noreturn`
         if (strcmp(request_id, PCRDR_REQUESTID_NORETURN)) {
-            srv->cbs.pend_response(endpoint->session,
+            srv->cbs.pend_response(endpoint->session, (purcmc_page *)dom,
                     purc_variant_get_string_const(msg->operation),
                     request_id, dom, NULL);
         }
@@ -1844,7 +1844,7 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
     if (retv == 0) {
         // Check if requestId is `noreturn`
         if (strcmp(request_id, PCRDR_REQUESTID_NORETURN)) {
-            srv->cbs.pend_response(endpoint->session,
+            srv->cbs.pend_response(endpoint->session, NULL,
                     purc_variant_get_string_const(msg->operation),
                     request_id,
                     (void *)(uintptr_t)msg->targetValue, NULL);
@@ -1945,7 +1945,7 @@ static int on_get_property(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 
     if (retv == 0) {
-        srv->cbs.pend_response(endpoint->session,
+        srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),
                 request_id,
                 (void *)(uintptr_t)msg->targetValue, NULL);
@@ -2048,7 +2048,7 @@ static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
     if (retv == 0) {
         // Check if requestId is `noreturn`
         if (strcmp(request_id, PCRDR_REQUESTID_NORETURN)) {
-            srv->cbs.pend_response(endpoint->session,
+            srv->cbs.pend_response(endpoint->session, NULL,
                     purc_variant_get_string_const(msg->operation),
                     request_id,
                     (void *)(uintptr_t)msg->targetValue, NULL);
