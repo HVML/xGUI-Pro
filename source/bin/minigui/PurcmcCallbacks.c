@@ -41,6 +41,8 @@
 #include <string.h>
 #include <webkit2/webkit2.h>
 
+#define ENABLE_RENDER_DELAY 200     // ms
+
 static KVLIST(kv_app_workspace, NULL);
 
 int pcmc_mg_prepare(purcmc_server *srv)
@@ -150,8 +152,6 @@ static inline WebKitWebView *validate_handle(purcmc_session *sess,
 
 struct packed_result {
     void *result_value;
-    WebKitWebView *webview;
-    char *operation;
     size_t plain_len;
     char plain[0];
 };
@@ -174,18 +174,10 @@ bool mg_pend_response(purcmc_session* sess, purcmc_page *page,
         size_t plain_len = plain ? strlen(plain) + 1 : 0;
         size_t sz = sizeof(*packed) + plain_len;
         packed = malloc(sz);
-        packed->operation = NULL;
         packed->result_value = result_value;
         packed->plain_len = plain_len;
         if (plain_len > 0) {
             memcpy(packed->plain, plain, plain_len);
-        }
-        if (page) {
-            int retv;
-            packed->webview = validate_handle(sess, page, &retv);
-            if (operation) {
-                packed->operation = strdup(operation);
-            }
         }
 
         kvlist_set(&sess->pending_responses, request_id, &packed);
@@ -229,9 +221,6 @@ static void finish_response(purcmc_session* sess, const char *request_id,
             purcmc_endpoint_send_response(sess->srv, endpoint, &response);
         }
 
-        if (packed->operation) {
-            free(packed->operation);
-        }
         free(packed);
         kvlist_delete(&sess->pending_responses, request_id);
     }
@@ -294,6 +283,15 @@ static void handle_response_from_webpage(purcmc_session *sess,
     purc_variant_unref(result);
 }
 
+gboolean enableRender(gpointer data)
+{
+    HWND hwnd = (HWND)data;
+    ExcludeWindowStyle(hwnd, WEBKIT_WEB_VIEW_VS_DISPLAY_SUPPRESSED);
+    UpdateWindow(hwnd, false);
+    return false;
+}
+
+
 static gboolean
 user_message_received_callback(WebKitWebView *webview,
         WebKitUserMessage *message, gpointer user_data)
@@ -321,6 +319,12 @@ user_message_received_callback(WebKitWebView *webview,
         if (strcmp(type, "as") == 0) {
             size_t len;
             const char **strv = g_variant_get_strv(param, &len);
+            if (strcmp(strv[0], "page-loaded") == 0) {
+                HWND hwnd = webkit_web_view_get_hwnd(webview);
+                g_timeout_add(ENABLE_RENDER_DELAY, enableRender, hwnd);
+                goto out;
+            }
+
             purcmc_endpoint* endpoint = purcmc_get_endpoint_by_session(sess);
 
             if (len == 4 && endpoint) {
@@ -367,6 +371,7 @@ user_message_received_callback(WebKitWebView *webview,
         }
     }
 
+out:
     return TRUE;
 }
 
@@ -1167,6 +1172,8 @@ purcmc_udom *mg_load_or_write(purcmc_session *sess, purcmc_page *page,
             request_ready_callback, sess);
 
     if (op == PCRDR_K_OPERATION_LOAD || op == PCRDR_K_OPERATION_WRITEBEGIN) {
+        HWND hwnd = webkit_web_view_get_hwnd(webview);
+        IncludeWindowStyle(hwnd, WEBKIT_WEB_VIEW_VS_DISPLAY_SUPPRESSED);
         purc_page_ostack_t ostack = g_object_get_data(G_OBJECT(webview),
                 "purcmc-owner-stack");
         struct purc_page_owner owner = { sess, crtn }, suppressed;

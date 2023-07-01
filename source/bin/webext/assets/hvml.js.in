@@ -59,6 +59,15 @@ if (checkHVML()) {
 
         if (msg.operation === 'load') {
             document.open();
+            window.addEventListener("load", (event) => {
+                    let data = {
+                        timeStamp: event.timeStamp,
+                    };
+                    HVML.post("page-loaded", "doc",
+                            "null",
+                            JSON.stringify(data));
+            });
+
             document.write(msg.data);
             document.close();
 
@@ -69,6 +78,14 @@ if (checkHVML()) {
         }
         else if (msg.operation === 'writeBegin') {
             document.open();
+            window.addEventListener("load", (event) => {
+                    let data = {
+                        timeStamp: event.timeStamp,
+                    };
+                    HVML.post("page-loaded", "doc",
+                            "null",
+                            JSON.stringify(data));
+            });
             document.write(msg.data);
             return { requestId: msg.requestId, state: "Ok" };
         }
