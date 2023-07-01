@@ -41,6 +41,7 @@
 #include <string.h>
 #include <webkit2/webkit2.h>
 
+#define ENABLE_RENDER_DELAY_LONG 400     // ms
 #define ENABLE_RENDER_DELAY 200     // ms
 
 static KVLIST(kv_app_workspace, NULL);
@@ -321,7 +322,12 @@ user_message_received_callback(WebKitWebView *webview,
             const char **strv = g_variant_get_strv(param, &len);
             if (strcmp(strv[0], "page-loaded") == 0) {
                 HWND hwnd = webkit_web_view_get_hwnd(webview);
-                g_timeout_add(ENABLE_RENDER_DELAY, enableRender, hwnd);
+                if (strcmp(strv[2], "load") == 0) {
+                    g_timeout_add(ENABLE_RENDER_DELAY_LONG, enableRender, hwnd);
+                }
+                else {
+                    g_timeout_add(ENABLE_RENDER_DELAY, enableRender, hwnd);
+                }
                 goto out;
             }
 

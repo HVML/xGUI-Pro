@@ -61,10 +61,10 @@ if (checkHVML()) {
             document.open();
             window.addEventListener("load", (event) => {
                     let data = {
-                        timeStamp: event.timeStamp,
+                        "src": "load",
                     };
                     HVML.post("page-loaded", "doc",
-                            "null",
+                            "load",
                             JSON.stringify(data));
             });
 
@@ -78,14 +78,6 @@ if (checkHVML()) {
         }
         else if (msg.operation === 'writeBegin') {
             document.open();
-            window.addEventListener("load", (event) => {
-                    let data = {
-                        timeStamp: event.timeStamp,
-                    };
-                    HVML.post("page-loaded", "doc",
-                            "null",
-                            JSON.stringify(data));
-            });
             document.write(msg.data);
             return { requestId: msg.requestId, state: "Ok" };
         }
@@ -96,6 +88,12 @@ if (checkHVML()) {
         else if (msg.operation === 'writeEnd') {
             document.write(msg.data);
             document.close();
+            let data = {
+                "src": "writeEnd",
+            };
+            HVML.post("page-loaded", "doc",
+                    "writeEnd",
+                    JSON.stringify(data));
 
             const interestedElements = document.querySelectorAll("[hvml-events]");
             if (interestedElements.length > 0)
