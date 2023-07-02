@@ -278,6 +278,15 @@ user_message_received_callback(WebKitWebView *webview,
         if (strcmp(type, "as") == 0) {
             size_t len;
             const char **strv = g_variant_get_strv(param, &len);
+            if (strcmp(strv[0], "page-load-begin") == 0) {
+                // TODO
+                goto out;
+            }
+            else if (strcmp(strv[0], "page-loaded") == 0) {
+                // TODO
+                goto out;
+            }
+
             purcmc_endpoint* endpoint = purcmc_get_endpoint_by_session(sess);
 
             if (len == 4 && endpoint) {
@@ -324,6 +333,7 @@ user_message_received_callback(WebKitWebView *webview,
         }
     }
 
+out:
     return TRUE;
 }
 

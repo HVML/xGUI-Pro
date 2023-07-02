@@ -51,6 +51,15 @@ function checkHVML() {
 }
 
 if (checkHVML()) {
+    // blank page handle this event
+    window.addEventListener("load", (event) => {
+        let data = {
+            "src": "load",
+        };
+        HVML.post("page-loaded", "doc",
+            "blank",
+            JSON.stringify(data));
+    });
     HVML.onrequest = function (json) {
         const dom_update_ops = ['append', 'prepend', 'insertAfter',
               'insertBefore', 'displace'];
@@ -58,6 +67,12 @@ if (checkHVML()) {
         msg = JSON.parse(json);
 
         if (msg.operation === 'load') {
+            let data = {
+                "src": "load",
+            };
+            HVML.post("page-load-begin", "doc",
+                    "load",
+                    JSON.stringify(data));
             document.open();
             window.addEventListener("load", (event) => {
                     let data = {
@@ -77,6 +92,12 @@ if (checkHVML()) {
             return { requestId: msg.requestId, state: "Ok" };
         }
         else if (msg.operation === 'writeBegin') {
+            let data = {
+                "src": "writeBegin",
+            };
+            HVML.post("page-load-begin", "doc",
+                    "writeBegin",
+                    JSON.stringify(data));
             document.open();
             document.write(msg.data);
             return { requestId: msg.requestId, state: "Ok" };

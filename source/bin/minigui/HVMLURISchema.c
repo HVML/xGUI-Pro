@@ -463,6 +463,8 @@ error:
         if (data != NULL) {
             contents = data;
         }
+        WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
+        webkit_web_view_set_display_suppressed(webview, true);
         content_length = strlen(contents);
         content_type = g_strdup("text/html");
         max_to_load = content_length;

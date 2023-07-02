@@ -284,15 +284,6 @@ static void handle_response_from_webpage(purcmc_session *sess,
     purc_variant_unref(result);
 }
 
-gboolean enableRender(gpointer data)
-{
-    HWND hwnd = (HWND)data;
-    ExcludeWindowStyle(hwnd, WEBKIT_WEB_VIEW_VS_DISPLAY_SUPPRESSED);
-    UpdateWindow(hwnd, false);
-    return false;
-}
-
-
 static gboolean
 user_message_received_callback(WebKitWebView *webview,
         WebKitUserMessage *message, gpointer user_data)
@@ -320,14 +311,12 @@ user_message_received_callback(WebKitWebView *webview,
         if (strcmp(type, "as") == 0) {
             size_t len;
             const char **strv = g_variant_get_strv(param, &len);
-            if (strcmp(strv[0], "page-loaded") == 0) {
-                HWND hwnd = webkit_web_view_get_hwnd(webview);
-                if (strcmp(strv[2], "load") == 0) {
-                    g_timeout_add(ENABLE_RENDER_DELAY_LONG, enableRender, hwnd);
-                }
-                else {
-                    g_timeout_add(ENABLE_RENDER_DELAY, enableRender, hwnd);
-                }
+            if (strcmp(strv[0], "page-load-begin") == 0) {
+                webkit_web_view_set_display_suppressed(webview, true);
+                goto out;
+            }
+            else if (strcmp(strv[0], "page-loaded") == 0) {
+                webkit_web_view_set_display_suppressed(webview, false);
                 goto out;
             }
 
@@ -1178,8 +1167,6 @@ purcmc_udom *mg_load_or_write(purcmc_session *sess, purcmc_page *page,
             request_ready_callback, sess);
 
     if (op == PCRDR_K_OPERATION_LOAD || op == PCRDR_K_OPERATION_WRITEBEGIN) {
-        HWND hwnd = webkit_web_view_get_hwnd(webview);
-        IncludeWindowStyle(hwnd, WEBKIT_WEB_VIEW_VS_DISPLAY_SUPPRESSED);
         purc_page_ostack_t ostack = g_object_get_data(G_OBJECT(webview),
                 "purcmc-owner-stack");
         struct purc_page_owner owner = { sess, crtn }, suppressed;
