@@ -418,6 +418,10 @@ function updateProperty(elem, property, data)
     else if (property.startsWith("attr.")) {
         let attr = property.substring(5);
         elem.setAttribute(attr, data);
+        if (attr === 'hvml-events') {
+            var elems = [elem];
+            registerEventsListener(elems);
+        }
         return true;
     }
     else if (property.startsWith("prop.")) {
