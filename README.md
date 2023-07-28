@@ -196,6 +196,7 @@ and WebKit. So please wait patiently.
 
 ## Current Status
 
+- July 2023: Version 0.8.2. (PurC 0.9.14+)
 - June 2023: Version 0.8.1. (PurC 0.9.13+)
 - May 2023: Version 0.8.0. (PurC 0.9.12+)
 - Apr. 2023: Version 0.7.0. (PurC 0.9.10+)
@@ -211,7 +212,7 @@ and WebKit. So please wait patiently.
 
 ## Copying
 
-Copyright (C) 2022 [FMSoft Technologies]
+Copyright (C) 2022, 2023 [FMSoft Technologies]
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
