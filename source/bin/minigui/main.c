@@ -815,7 +815,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     webkit_web_context_set_automation_allowed(webContext, automationMode);
 
     BrowserPlainWindow *mainWindow = browser_plain_window_new(NULL, webContext,
-        BROWSER_DEFAULT_TITLE, BROWSER_DEFAULT_TITLE, WS_EX_WINTYPE_LAUNCHER);
+        BROWSER_DEFAULT_TITLE, BROWSER_DEFAULT_TITLE, WS_EX_WINTYPE_NORMAL);
     WebKitWebViewParam param = {
         .webContext = webContext,
         .settings = webkitSettings,
