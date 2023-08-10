@@ -1,3 +1,9 @@
+![GitHub Repo stars](https://img.shields.io/github/stars/hvml/xgui-pro?style=for-the-badge&labelColor=%2300B0F0)
+![GitHub](https://img.shields.io/github/license/hvml/xgui-pro?style=for-the-badge&labelColor=%2300B0F0)
+![GitHub top language](https://img.shields.io/github/languages/top/hvml/xgui-pro?style=for-the-badge&labelColor=%2300B0F0)
+![GitHub tag (with filter)](https://img.shields.io/github/v/tag/hvml/xgui-pro?style=for-the-badge&labelColor=%2300B0F0)
+![GitHub repo size](https://img.shields.io/github/repo-size/hvml/xgui-pro?style=for-the-badge&labelColor=%2300B0F0)
+
 # xGUI Pro
 
 xGUI Pro is a modern, cross-platform, and advanced [HVML] renderer which is based on tailored [WebKit].
@@ -209,6 +215,10 @@ and WebKit. So please wait patiently.
 - Vincent Wei (<https://github.com/VincentWei>)
 - @ninexue
 - @taotieren
+
+<a href="https://github.com/hvml/xgui-pro/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=hvml/xgui-pro" />
+</a>
 
 ## Copying
 
