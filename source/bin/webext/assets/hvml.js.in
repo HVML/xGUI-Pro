@@ -116,9 +116,11 @@ if (checkHVML()) {
                     "writeEnd",
                     JSON.stringify(data));
 
-            const interestedElements = document.querySelectorAll("[hvml-events]");
-            if (interestedElements.length > 0)
-                registerEventsListener(interestedElements);
+            window.addEventListener("load", (event) => {
+                const interestedElements = document.querySelectorAll("[hvml-events]");
+                if (interestedElements.length > 0)
+                    registerEventsListener(interestedElements);
+            });
             return { requestId: msg.requestId, state: "Ok" };
         }
         else if (msg.operation === 'update') {
