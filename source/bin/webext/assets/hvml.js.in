@@ -81,14 +81,14 @@ if (checkHVML()) {
                     HVML.post("page-loaded", "doc",
                             "load",
                             JSON.stringify(data));
+                    const interestedElements = document.querySelectorAll("[hvml-events]");
+                    if (interestedElements.length > 0)
+                        registerEventsListener(interestedElements);
             });
 
             document.write(msg.data);
             document.close();
 
-            const interestedElements = document.querySelectorAll("[hvml-events]");
-            if (interestedElements.length > 0)
-                registerEventsListener(interestedElements);
             return { requestId: msg.requestId, state: "Ok" };
         }
         else if (msg.operation === 'writeBegin') {
