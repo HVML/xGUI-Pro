@@ -32,6 +32,10 @@
 #define WEBVIEW_PARAM_COUNT   9
 #define XGUI_WINDOW_BG        "assets/splash.jpg"
 
+#define XGUI_SPECIAL_WINDOW_RECT
+#define XGUI_SPECIAL_WINDOW_WIDTH  480
+#define XGUI_SPECIAL_WINDOW_HEIGHT 480
+
 GApplication *g_xgui_application = NULL;
 HWND g_xgui_main_window = HWND_NULL;
 uint32_t g_xgui_window_count = 0;
@@ -237,3 +241,28 @@ void xgui_webview_draw_background_callback(HWND hWnd, HDC hdc, RECT rect)
     FillBoxWithBitmap(hdc, x, y, dw, dh, g_xgui_window_bg);
 }
 
+RECT xgui_get_screen_rect()
+{
+    static RECT rc;
+
+    if (RECTH (rc) == 0) {
+        RECT screen = GetScreenRect();
+        rc = screen;
+
+#ifdef XGUI_SPECIAL_WINDOW_RECT
+        int sw = RECTW(screen);
+        int sh = RECTH(screen);
+        if (sw > XGUI_SPECIAL_WINDOW_WIDTH) {
+            rc.left = (sw - XGUI_SPECIAL_WINDOW_WIDTH) / 2;
+            rc.right = rc.left + XGUI_SPECIAL_WINDOW_WIDTH;
+        }
+
+        if (sh > XGUI_SPECIAL_WINDOW_HEIGHT) {
+            rc.top = (sh - XGUI_SPECIAL_WINDOW_HEIGHT) / 2;
+            rc.bottom = rc.top + XGUI_SPECIAL_WINDOW_HEIGHT;
+        }
+#endif
+    }
+
+    return rc;
+}

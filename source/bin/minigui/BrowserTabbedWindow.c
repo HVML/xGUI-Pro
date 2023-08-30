@@ -121,7 +121,7 @@ static void browserTabbedWindowConstructed(GObject *gObject)
     }
     else {
         parent = g_xgui_main_window;
-        rc = GetScreenRect();
+        rc = xgui_get_screen_rect();
     }
 
     int w = window->width > 0 ? window->width : RECTW(rc);

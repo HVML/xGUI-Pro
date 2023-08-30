@@ -71,6 +71,8 @@ void xgui_unload_window_bg();
 
 void xgui_webview_draw_background_callback(HWND hWnd, HDC hdc, RECT rect);
 
+RECT xgui_get_screen_rect();
+
 #ifdef __cplusplus
 }
 #endif

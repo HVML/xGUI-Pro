@@ -115,12 +115,14 @@ static void browserPlainWindowConstructed(GObject *gObject)
     HWND parent;
     if (window->parentWindow) {
         parent = window->parentWindow;
-        GetClientRect(parent, &rc);
+        GetWindowRect(parent, &rc);
     }
     else {
         parent = g_xgui_main_window;
-        rc = GetScreenRect();
+        rc = xgui_get_screen_rect();
     }
+    int x = rc.left;
+    int y = rc.top;
     int w = RECTW(rc);
     int h = RECTH(rc);
 
@@ -132,10 +134,10 @@ static void browserPlainWindowConstructed(GObject *gObject)
     CreateInfo.hCursor = GetSystemCursor(0);
     CreateInfo.hIcon = 0;
     CreateInfo.MainWindowProc = PlainWindowProc;
-    CreateInfo.lx = 0;
-    CreateInfo.ty = 0;
-    CreateInfo.rx = w;
-    CreateInfo.by = h;
+    CreateInfo.lx = x;
+    CreateInfo.ty = y;
+    CreateInfo.rx = x + w;
+    CreateInfo.by = y + h;
     CreateInfo.iBkColor = COLOR_lightwhite;
     CreateInfo.dwAddData = 0;
     CreateInfo.hHosting = parent;
@@ -402,7 +404,7 @@ void browser_plain_window_set_view(BrowserPlainWindow *window, WebKitWebViewPara
 
     RECT rc;
     GetClientRect(window->hwnd, &rc);
-    SetRect(&param->webViewRect, 0, 0, RECTW(rc), RECTH(rc));
+    SetRect(&param->webViewRect, rc.left, rc.top, RECTW(rc), RECTH(rc));
     window->browserPane = (BrowserPane*)browser_pane_new(param);
     webkit_web_view_set_draw_background_callback(
             browser_pane_get_web_view(window->browserPane),
