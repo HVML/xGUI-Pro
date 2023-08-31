@@ -95,7 +95,7 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
 {
     BrowserPlainWindow *plainwin;
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(g_xgui_main_window,
-                sess->web_context, style->name, style->title, WS_EX_WINTYPE_HIGHER));
+                sess->web_context, style->name, style->title, WS_EX_WINTYPE_NORMAL));
 
     HWND hwnd = browser_plain_window_get_hwnd(plainwin);
     RECT rect;
