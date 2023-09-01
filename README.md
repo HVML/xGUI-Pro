@@ -202,6 +202,7 @@ and WebKit. So please wait patiently.
 
 ## Current Status
 
+- Sept. 2023: Version 0.8.3. (PurC 0.9.15+)
 - July 2023: Version 0.8.2. (PurC 0.9.14+)
 - June 2023: Version 0.8.1. (PurC 0.9.13+)
 - May 2023: Version 0.8.0. (PurC 0.9.12+)
