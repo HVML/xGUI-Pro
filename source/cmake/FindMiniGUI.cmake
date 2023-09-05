@@ -1,87 +1,81 @@
 # - Try to find MiniGUI
 # Once done, this will define
 #
-#  MINIGUI_FOUND - system has MINIGUI.
-#  MINIGUI_INCLUDE_DIRS - the MiniGui include directories
-#  MINIGUI_LIBRARIES - link these to use MINIGUI.
+#  MINIGUI_FOUND - system has MiniGUI.
+#  MINIGUI_RUNMODE - the runtime mode of MiniGUI.
+#  MINIGUI_INCLUDE_DIRS - the MiniGUI include directories
+#  MINIGUI_LIBRARIES - the libraries to link to use MiniGUI.
+#
+# You can use predefined MINIGUI_LIBSUFFIX variable to override the default
+# library suffix which was defined in minigui.pc file.
 #
 # Copyright (C) 2020, 2023 Beijing FMSoft Technologies Co., Ltd.
-# 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-# 
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-# 
-# Or,
-# 
-# As this component is a program released under LGPLv3, which claims
-# explicitly that the program could be modified by any end user
-# even if the program is conveyed in non-source form on the system it runs.
-# Generally, if you distribute this program in embedded devices,
-# you might not satisfy this condition. Under this situation or you can
-# not accept any condition of LGPLv3, you need to get a commercial license
-# from FMSoft, along with a patent license for the patents owned by FMSoft.
-# 
-# If you have got a commercial/patent license of this program, please use it
-# under the terms and conditions of the commercial license.
-# 
-# For more information about the commercial license and patent license,
-# please refer to
-# <https://hybridos.fmsoft.cn/blog/hybridos-licensing-policy/>.
-# 
-# Also note that the LGPLv3 license does not apply to any entity in the
-# Exception List published by Beijing FMSoft Technologies Co., Ltd.
-# 
-# If you are or the entity you represent is listed in the Exception List,
-# the above open source or free software license does not apply to you
-# or the entity you represent. Regardless of the purpose, you should not
-# use the software in any way whatsoever, including but not limited to
-# downloading, viewing, copying, distributing, compiling, and running.
-# If you have already downloaded it, you MUST destroy all of its copies.
-# 
-# The Exception List is published by FMSoft and may be updated
-# from time to time. For more information, please see
-# <https://www.fmsoft.cn/exception-list>.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1.  Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+# 2.  Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND ITS CONTRIBUTORS ``AS
+# IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR ITS
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 find_package(PkgConfig)
-pkg_check_modules(MINIGUI minigui)
+pkg_check_modules(PC_MINIGUI minigui)
+set(MINIGUI_COMPILE_OPTIONS ${PC_MINIGUI_CFLAGS_OTHER})
+set(MINIGUI_VERSION ${PC_MINIGUI_VERSION})
 
-set(MINIGUI_HEADS minigui/common.h)
-find_path(MINIGUI_INCLUDE_DIR ${MINIGUI_HEADS})
+find_path(MINIGUI_INCLUDE_DIR
+    NAMES "minigui/common.h"
+    HINTS ${PC_MINIGUI_INCLUDEDIR} ${PC_MINIGUI_INCLUDE_DIR}
+)
 
-set(MINIGUI_NAMES
-    minigui minigui_ths minigui_procs minigui_sa minigui_msd
-    libminigui_ths libminigui_procs libminigui_sa libminigui_msd )
-find_library(MINIGUI_LIBRARY NAMES ${MINIGUI_NAMES})
+pkg_get_variable(PC_MINIGUI_RUNMODE minigui "runmode")
+message(STATUS "Found MiniGUI runtime mode: ${PC_MINIGUI_RUNMODE}")
+
+if (NOT MINIGUI_LIBSUFFIX)
+    pkg_get_variable(PC_MINIGUI_LIBSUFFIX minigui "libsuffix")
+    message(STATUS "Found MiniGUI library suffix: ${PC_MINIGUI_LIBSUFFIX}")
+    set(MINIGUI_LIBSUFFIX ${PC_MINIGUI_LIBSUFFIX})
+endif ()
+
+find_library(MINIGUI_LIBRARY
+    NAMES ${MINIGUI_NAMES} "minigui_${MINIGUI_LIBSUFFIX}"
+    HINTS ${PC_MINIGUI_LIBDIR} ${PC_MINIGUI_LIBRARY_DIRS}
+)
 
 set(VERSION_OK TRUE)
 
-if (MINIGUI_VERSION)
+if (PC_MINIGUI_VERSION)
     if (MINIGUI_FIND_VERSION_EXACT)
-        if (NOT("${MINIGUI_FIND_VERSION}" VERSION_EQUAL "${MINIGUI_VERSION}"))
+        if (NOT("${MINIGUI_FIND_VERSION}" VERSION_EQUAL "${PC_MINIGUI_VERSION}"))
             set(VERSION_OK FALSE)
         endif ()
     else ()
-        if ("${MINIGUI_VERSION}" VERSION_LESS "${MINIGUI_FIND_VERSION}")
+        if ("${PC_MINIGUI_VERSION}" VERSION_LESS "${MINIGUI_FIND_VERSION}")
             set(VERSION_OK FALSE)
         endif ()
     endif ()
 endif ()
 
-if (NOT MINIGUI_INCLUDE_DIRS)
-    set(MINIGUI_INCLUDE_DIRS ${MINIGUI_INCLUDEDIR})
-endif ()
-
 include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(MiniGUI DEFAULT_MSG MINIGUI_INCLUDE_DIRS MINIGUI_LIBRARIES VERSION_OK)
+find_package_handle_standard_args(MiniGUI
+    FOUND_VAR MINIGUI_FOUND
+    REQUIRED_VARS MINIGUI_LIBRARY MINIGUI_INCLUDE_DIR
+    VERSION_VAR MINIGUI_VERSION
+)
 
 if (MINIGUI_LIBRARY AND NOT TARGET MiniGUI::MiniGUI)
     add_library(MiniGUI::MiniGUI UNKNOWN IMPORTED GLOBAL)
@@ -90,5 +84,13 @@ if (MINIGUI_LIBRARY AND NOT TARGET MiniGUI::MiniGUI)
         INTERFACE_COMPILE_OPTIONS "${MINIGUI_COMPILE_OPTIONS}"
         INTERFACE_INCLUDE_DIRECTORIES "${MINIGUI_INCLUDE_DIR}"
     )
+endif ()
+
+mark_as_advanced(MINIGUI_INCLUDE_DIR MINIGUI_LIBRARIES)
+
+if (MINIGUI_FOUND)
+    set(MINIGUI_RUNMODE ${PC_MINIGUI_RUNMODE})
+    set(MINIGUI_INCLUDE_DIRS ${MINIGUI_INCLUDE_DIR})
+    set(MINIGUI_LIBRARIES ${MINIGUI_LIBRARY})
 endif ()
 
