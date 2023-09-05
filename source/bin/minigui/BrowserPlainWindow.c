@@ -25,6 +25,7 @@
 #endif
 #include "main.h"
 #include "BrowserPlainWindow.h"
+#include "FloatingToolWindow.h"
 
 #include "BrowserPane.h"
 #include "Common.h"
@@ -36,7 +37,7 @@ enum {
     PROP_TITLE,
     PROP_NAME,
     PROP_PARENT_WINDOW,
-    PROP_EX_STYLE,
+    PROP_FOR_HVML,
 
     N_PROPERTIES
 };
@@ -50,10 +51,11 @@ struct _BrowserPlainWindow {
 
     gchar *name;
     gchar *title;
-    guint exStyle;
+    gboolean forHVML;
 
     HWND parentWindow;
     HWND hwnd;
+    HWND toolWindow;
 };
 
 struct _BrowserPlainWindowClass {
@@ -127,8 +129,8 @@ static void browserPlainWindowConstructed(GObject *gObject)
     int h = RECTH(rc);
 
     MAINWINCREATE CreateInfo;
-    CreateInfo.dwStyle = WS_CHILD | WS_VISIBLE;
-    CreateInfo.dwExStyle = window->exStyle;
+    CreateInfo.dwStyle = window->forHVML ? WS_VISIBLE : WS_NONE;
+    CreateInfo.dwExStyle = WS_EX_WINTYPE_NORMAL;
     CreateInfo.spCaption = window->title ? window->title : BROWSER_DEFAULT_TITLE;
     CreateInfo.hMenu = 0;
     CreateInfo.hCursor = GetSystemCursor(0);
@@ -141,10 +143,10 @@ static void browserPlainWindowConstructed(GObject *gObject)
     CreateInfo.iBkColor = COLOR_lightwhite;
     CreateInfo.dwAddData = 0;
     CreateInfo.hHosting = parent;
-    window->hwnd = CreateMainWindow (&CreateInfo);
+    window->hwnd = CreateMainWindow(&CreateInfo);
     if (window->hwnd != HWND_INVALID) {
         SetWindowAdditionalData(window->hwnd, (DWORD)window);
-        ShowWindow(window->hwnd, SW_SHOWNORMAL);
+        // ShowWindow(window->hwnd, SW_SHOWNORMAL);
     }
 }
 
@@ -178,9 +180,9 @@ static void browserPlainWindowSetProperty(GObject *object, guint propId,
             }
         }
         break;
-    case PROP_EX_STYLE:
+    case PROP_FOR_HVML:
         {
-            window->exStyle = g_value_get_uint(value);
+            window->forHVML = g_value_get_boolean(value);
         }
         break;
     default:
@@ -263,13 +265,12 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
                 G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
     g_object_class_install_property(
             gobjectClass,
-            PROP_EX_STYLE,
-            g_param_spec_uint(
-                "ex-style",
-                "window exStyle",
-                "The window exStyle",
-                WS_EX_NONE, WS_EX_INTERNAL_MASK, WS_EX_NONE,
-                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+            PROP_FOR_HVML,
+            g_param_spec_boolean(
+                "for-hvml",
+                "for HVML",
+                "Boolean for HVML or not",
+                FALSE, G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
       signals[DESTROY] =
           g_signal_new("destroy",
@@ -284,14 +285,14 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
 /* Public API. */
 BrowserPlainWindow *
 browser_plain_window_new(HWND parent, WebKitWebContext *webContext,
-        const char *name, const char *title, uint32_t exStyle)
+        const char *name, const char *title, BOOL forHVML)
 {
     BrowserPlainWindow *window =
           BROWSER_PLAIN_WINDOW(g_object_new(BROWSER_TYPE_PLAIN_WINDOW,
                       "name", name,
                       "title", title,
                       "parent-window", parent,
-                      "ex-style", exStyle,
+                      "for-hvml", forHVML,
                       NULL));
 
     if (webContext) {
@@ -358,18 +359,82 @@ static void webViewTitleChanged(WebKitWebView *webView,
     SetWindowCaption(window->hwnd,
             privateTitle ? privateTitle : title);
     g_free(privateTitle);
+
+    if (window->toolWindow)
+        SendNotifyMessage(window->toolWindow, MSG_XGUIPRO_LOAD_STATE, XGUIPRO_LOAD_STATE_TITLE_CHANGED, (LPARAM)title);
+}
+
+static void webViewLoadProgressChanged(WebKitWebView *webView, GParamSpec *pspec, BrowserPlainWindow *window)
+{
+    gdouble progress = webkit_web_view_get_estimated_load_progress(webView);
+
+    unsigned percent = (unsigned)(progress * 100);
+    if (window->toolWindow)
+        SendNotifyMessage(window->toolWindow, MSG_XGUIPRO_LOAD_STATE, XGUIPRO_LOAD_STATE_PROGRESS_CHANGED, percent);
+}
+
+static gboolean webViewLoadFailed(WebKitWebView *webView, WebKitLoadEvent loadEvent, const char *failingURI, GError *error, BrowserPlainWindow *window)
+{
+    if (window->toolWindow)
+        SendNotifyMessage(window->toolWindow, MSG_XGUIPRO_LOAD_STATE, XGUIPRO_LOAD_STATE_FAILED, 0);
+    return FALSE;
+}
+
+static void webViewLoadChanged(WebKitWebView *webView, WebKitLoadEvent loadEvent, BrowserPlainWindow *window)
+{
+    const char *uri;
+
+    switch (loadEvent) {
+    case WEBKIT_LOAD_STARTED:
+        // New load, we have now a provisional URI
+        // provisional_uri = webkit_web_view_get_uri (web_view);
+        // Here we could start a spinner or update the
+        // location bar with the provisional URI
+        uri = webkit_web_view_get_uri(webView);
+        if (strncmp(uri, "hvml://", 5)) {
+            window->toolWindow = create_floating_tool_window(window->hwnd, "Untitled");
+            if (window->toolWindow != HWND_INVALID) {
+                g_signal_connect(webView, "notify::estimated-load-progress", G_CALLBACK(webViewLoadProgressChanged), window);
+                g_signal_connect(webView, "load-failed", G_CALLBACK(webViewLoadFailed), window);
+            }
+            else
+                window->toolWindow = HWND_NULL;
+        }
+        break;
+
+    case WEBKIT_LOAD_REDIRECTED:
+        if (window->toolWindow)
+            SendNotifyMessage(window->toolWindow, MSG_XGUIPRO_LOAD_STATE, XGUIPRO_LOAD_STATE_REDIRECTED, 0);
+        break;
+
+    case WEBKIT_LOAD_COMMITTED:
+        // The load is being performed. Current URI is
+        // the final one and it won't change unless a new
+        // load is requested or a navigation within the
+        // same page is performed
+        if (window->toolWindow)
+            SendNotifyMessage(window->toolWindow, MSG_XGUIPRO_LOAD_STATE, XGUIPRO_LOAD_STATE_COMMITTED, 0);
+        break;
+
+    case WEBKIT_LOAD_FINISHED:
+        // Load finished, we can now stop the spinner
+        if (window->toolWindow)
+            SendNotifyMessage(window->toolWindow, MSG_XGUIPRO_LOAD_STATE, XGUIPRO_LOAD_STATE_FINISHED, 0);
+        break;
+    }
 }
 
 static void webViewReadyToShow(WebKitWebView *webView,
         BrowserPlainWindow *window)
 {
+    g_signal_connect(webView, "load-changed", G_CALLBACK(webViewLoadChanged), window);
 }
 
 static WebKitWebView *webViewCreate(WebKitWebView *webView,
         WebKitNavigationAction *navigation, BrowserPlainWindow *window)
 {
     BrowserPlainWindow *newWindow = browser_plain_window_new(NULL,
-            window->webContext, window->name, window->title, WS_EX_WINTYPE_NORMAL);
+            window->webContext, window->name, window->title, FALSE);
     WebKitWebViewParam param = window->param;
     param.relatedView = webView;
     browser_plain_window_set_view(newWindow, &param);
@@ -419,7 +484,7 @@ void browser_plain_window_set_view(BrowserPlainWindow *window, WebKitWebViewPara
     g_signal_connect_after(window->browserPane->webView, "close", G_CALLBACK(webViewClose), window);
 
     window->param = *param;
-    ShowWindow(window->hwnd, SW_SHOWNORMAL);
+    // ShowWindow(window->hwnd, SW_SHOWNORMAL);
     SetFocus(window->hwnd);
 
     browserPlainWindowSetupSignalHandlers(window);

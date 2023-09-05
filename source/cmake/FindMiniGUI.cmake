@@ -70,6 +70,63 @@ if (PC_MINIGUI_VERSION)
     endif ()
 endif ()
 
+# Additional MiniGUI components.  We only look for libraries, as not all of them
+# have corresponding headers and all headers are installed alongside the main
+# glib ones.
+foreach (_component ${MiniGUI_FIND_COMPONENTS})
+    if (${_component} STREQUAL "mGEff")
+        pkg_check_modules(PC_MGEFF mgeff)
+        set(MGEFF_COMPILE_OPTIONS ${PC_MGEFF_CFLAGS_OTHER})
+        set(MGEFF_VERSION ${PC_MGEFF_VERSION})
+        find_path(MGEFF_INCLUDE_DIR
+                NAMES "mgeff/mgeff.h"
+                HINTS ${PC_MGEFF_INCLUDEDIR} ${PC_MGEFF_INCLUDE_DIR})
+        find_library(MGEFF_LIBRARY
+                NAMES "mgeff"
+                HINTS ${PC_MINIGUI_LIBDIR} ${PC_MINIGUI_LIBRARY_DIRS})
+    elseif (${_component} STREQUAL "mGUtils")
+        pkg_check_modules(PC_MGUTILS mgutils)
+        set(MGUTILS_COMPILE_OPTIONS ${PC_MGUTILS_CFLAGS_OTHER})
+        set(MGUTILS_VERSION ${PC_MGUTILS_VERSION})
+        find_path(MGUTILS_INCLUDE_DIR
+                NAMES "mgutils/mgutils.h"
+                HINTS ${PC_MGUTILS_INCLUDEDIR} ${PC_MGUTILS_INCLUDE_DIR})
+        find_library(MGUTILS_LIBRARY
+                NAMES "mgutils"
+                HINTS ${PC_MINIGUI_LIBDIR} ${PC_MINIGUI_LIBRARY_DIRS})
+    elseif (${_component} STREQUAL "mGPlus")
+        pkg_check_modules(PC_MGPLUS mgplus)
+        set(MGPLUS_COMPILE_OPTIONS ${PC_MGPLUS_CFLAGS_OTHER})
+        set(MGPLUS_VERSION ${PC_MGPLUS_VERSION})
+        find_path(MGPLUS_INCLUDE_DIR
+                NAMES "mgplus/mgplus.h"
+                HINTS ${PC_MGPLUS_INCLUDEDIR} ${PC_MGPLUS_INCLUDE_DIR})
+        find_library(MGPLUS_LIBRARY
+                NAMES "mgplus"
+                HINTS ${PC_MINIGUI_LIBDIR} ${PC_MINIGUI_LIBRARY_DIRS})
+    elseif (${_component} STREQUAL "mGNCS")
+        pkg_check_modules(PC_MGNCS mgncs)
+        set(MGNCS_COMPILE_OPTIONS ${PC_MGNCS_CFLAGS_OTHER})
+        set(MGNCS_VERSION ${PC_MGNCS_VERSION})
+        find_path(MGNCS_INCLUDE_DIR
+                NAMES "mgncs/mgncs.h"
+                HINTS ${PC_MGNCS_INCLUDEDIR} ${PC_MGNCS_INCLUDE_DIR})
+        find_library(MGNCS_LIBRARY
+                NAMES "mgncs"
+                HINTS ${PC_MINIGUI_LIBDIR} ${PC_MINIGUI_LIBRARY_DIRS})
+    elseif (${_component} STREQUAL "mGNCS4Touch")
+        pkg_check_modules(PC_MGNCS4TOUCH mgncs4touch)
+        set(MGNCS4TOUCH_COMPILE_OPTIONS ${PC_MGNCS4TOUCH_CFLAGS_OTHER})
+        set(MGNCS4TOUCH_VERSION ${PC_MGNCS4TOUCH_VERSION})
+        find_path(MGNCS4TOUCH_INCLUDE_DIR
+                NAMES "mgncs4touch/mgncs4touch.h"
+                HINTS ${PC_MGNCS4TOUCH_INCLUDEDIR} ${PC_MGNCS4TOUCH_INCLUDE_DIR})
+        find_library(MGNCS4TOUCH_LIBRARY
+                NAMES "mgncs4touch"
+                HINTS ${PC_MINIGUI_LIBDIR} ${PC_MINIGUI_LIBRARY_DIRS})
+    endif ()
+endforeach ()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(MiniGUI
     FOUND_VAR MINIGUI_FOUND
@@ -93,4 +150,59 @@ if (MINIGUI_FOUND)
     set(MINIGUI_INCLUDE_DIRS ${MINIGUI_INCLUDE_DIR})
     set(MINIGUI_LIBRARIES ${MINIGUI_LIBRARY})
 endif ()
+
+if (MGEFF_LIBRARY AND NOT TARGET MiniGUI::mGEff)
+    add_library(MiniGUI::mGEff UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(MiniGUI::mGEff PROPERTIES
+        IMPORTED_LOCATION "${MGEFF_LIBRARY}"
+        INTERFACE_COMPILE_OPTIONS "${MGEFF_COMPILE_OPTIONS}"
+        INTERFACE_INCLUDE_DIRECTORIES "${MGEFF_INCLUDE_DIR}"
+    )
+endif ()
+
+mark_as_advanced(MGEFF_INCLUDE_DIR MGEFF_LIBRARIES)
+
+if (MGUTILS_LIBRARY AND NOT TARGET MiniGUI::mGUtils)
+    add_library(MiniGUI::mGUtils UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(MiniGUI::mGUtils PROPERTIES
+        IMPORTED_LOCATION "${MGUTILS_LIBRARY}"
+        INTERFACE_COMPILE_OPTIONS "${MGUTILS_COMPILE_OPTIONS}"
+        INTERFACE_INCLUDE_DIRECTORIES "${MGUTILS_INCLUDE_DIR}"
+    )
+endif ()
+
+mark_as_advanced(MGUTILS_INCLUDE_DIR MGUTILS_LIBRARIES)
+
+if (MGPLUS_LIBRARY AND NOT TARGET MiniGUI::mGPlus)
+    add_library(MiniGUI::mGPlus UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(MiniGUI::mGPlus PROPERTIES
+        IMPORTED_LOCATION "${MGPLUS_LIBRARY}"
+        INTERFACE_COMPILE_OPTIONS "${MGPLUS_COMPILE_OPTIONS}"
+        INTERFACE_INCLUDE_DIRECTORIES "${MGPLUS_INCLUDE_DIR}"
+    )
+endif ()
+
+mark_as_advanced(MGPLUS_INCLUDE_DIR MGPLUS_LIBRARIES)
+
+if (MGNCS_LIBRARY AND NOT TARGET MiniGUI::mGNCS)
+    add_library(MiniGUI::mGNCS UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(MiniGUI::mGNCS PROPERTIES
+        IMPORTED_LOCATION "${MGNCS_LIBRARY}"
+        INTERFACE_COMPILE_OPTIONS "${MGNCS_COMPILE_OPTIONS}"
+        INTERFACE_INCLUDE_DIRECTORIES "${MGNCS_INCLUDE_DIR}"
+    )
+endif ()
+
+mark_as_advanced(MGNCS_INCLUDE_DIR MGNCS_LIBRARIES)
+
+if (MGNCS4TOUCH_LIBRARY AND NOT TARGET MiniGUI::mGNCS4Touch)
+    add_library(MiniGUI::mGNCS4Touch UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(MiniGUI::mGNCS4Touch PROPERTIES
+        IMPORTED_LOCATION "${MGNCS4TOUCH_LIBRARY}"
+        INTERFACE_COMPILE_OPTIONS "${MGNCS4TOUCH_COMPILE_OPTIONS}"
+        INTERFACE_INCLUDE_DIRECTORIES "${MGNCS4TOUCH_INCLUDE_DIR}"
+    )
+endif ()
+
+mark_as_advanced(MGNCS4TOUCH_INCLUDE_DIR MGNCS4TOUCH_LIBRARIES)
 

@@ -23,7 +23,6 @@ if (NOT HAS_RUN_XGUIPRO_COMMON)
     find_package(Perl 5.10.0)
 
     set(Python_ADDITIONAL_VERSIONS 3)
-    find_package(PythonInterp 2.7.0)
     find_package(Python3 COMPONENTS Interpreter)
 
     # -----------------------------------------------------------------------------

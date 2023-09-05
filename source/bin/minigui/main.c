@@ -41,6 +41,7 @@
 #include <string.h>
 #include <webkit2/webkit2.h>
 #include <glib-unix.h>
+#include <mgeff/mgeff.h>
 
 #define APP_NAME        "cn.fmsoft.hvml.xGUIPro"
 #define RUNNER_NAME     "purcmc"
@@ -815,7 +816,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     webkit_web_context_set_automation_allowed(webContext, automationMode);
 
     BrowserPlainWindow *mainWindow = browser_plain_window_new(NULL, webContext,
-        BROWSER_DEFAULT_TITLE, BROWSER_DEFAULT_TITLE, WS_EX_WINTYPE_NORMAL);
+        BROWSER_DEFAULT_TITLE, BROWSER_DEFAULT_TITLE, TRUE);
     WebKitWebViewParam param = {
         .webContext = webContext,
         .settings = webkitSettings,
@@ -896,6 +897,8 @@ int MiniGUIMain (int argc, const char* argv[])
     JoinLayer(NAME_DEF_LAYER , "xGUI Pro" , 0 , 0);
 #endif
 
+    mGEffInit();
+
     g_unix_signal_add(SIGINT, on_sigint, NULL);
 
     g_xgui_application = g_application_new(APP_NAME, G_APPLICATION_NON_UNIQUE);
@@ -905,6 +908,8 @@ int MiniGUIMain (int argc, const char* argv[])
 
     g_application_run(g_xgui_application, 0, NULL);
     g_object_unref(g_xgui_application);
+
+    mGEffDeinit();
 
     return exitAfterLoad && webProcessCrashed ? 1 : 0;
 }

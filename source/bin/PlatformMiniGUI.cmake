@@ -36,6 +36,7 @@ list(APPEND xguipro_SOURCES
     minigui/LayouterWidgets.c
     minigui/LayouterWidgets.h
     minigui/main.c
+    minigui/FloatingToolWindow.c
 )
 
 list(APPEND xguipro_LIBRARIES
@@ -45,6 +46,7 @@ list(APPEND xguipro_LIBRARIES
     ${GLIB_LIBRARIES}
     CairoHBD::CairoHBD
     MiniGUI::MiniGUI
+    MiniGUI::mGEff
 )
 
 if (HAVE_LIBSSL)
