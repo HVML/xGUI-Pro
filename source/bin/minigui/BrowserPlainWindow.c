@@ -360,6 +360,11 @@ static void webViewTitleChanged(WebKitWebView *webView,
     g_free(privateTitle);
 }
 
+static void webViewReadyToShow(WebKitWebView *webView,
+        BrowserPlainWindow *window)
+{
+}
+
 static WebKitWebView *webViewCreate(WebKitWebView *webView,
         WebKitNavigationAction *navigation, BrowserPlainWindow *window)
 {
@@ -371,6 +376,8 @@ static WebKitWebView *webViewCreate(WebKitWebView *webView,
     WebKitWebView *newWebView = browser_plain_window_get_view(newWindow);
     webkit_web_view_set_settings(newWebView,
             webkit_web_view_get_settings(webView));
+    g_signal_connect(newWebView, "ready-to-show",
+            G_CALLBACK(webViewReadyToShow), newWindow);
     return newWebView;
 }
 
