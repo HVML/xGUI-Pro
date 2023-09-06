@@ -32,10 +32,6 @@
 #define WEBVIEW_PARAM_COUNT   9
 #define XGUI_WINDOW_BG        "assets/splash.jpg"
 
-#define XGUI_SPECIAL_WINDOW_RECT
-#define XGUI_SPECIAL_WINDOW_WIDTH  480
-#define XGUI_SPECIAL_WINDOW_HEIGHT 480
-
 GApplication *g_xgui_application = NULL;
 HWND g_xgui_main_window = HWND_NULL;
 uint32_t g_xgui_window_count = 0;
