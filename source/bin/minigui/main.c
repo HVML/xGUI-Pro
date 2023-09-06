@@ -46,7 +46,6 @@
 #define APP_NAME        "cn.fmsoft.hvml.xGUIPro"
 #define RUNNER_NAME     "purcmc"
 
-
 static purcmc_server_config pcmc_srvcfg;
 static purcmc_server *pcmc_srv;
 
@@ -76,6 +75,32 @@ static gboolean enableSandbox;
 static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
+
+static int defWindowWidth;
+static int defWindowHeight;
+RECT xphbd_get_default_window_rect(void)
+{
+    RECT rcScreen = GetScreenRect();
+    RECT rcWin = rcScreen;
+
+    if (defWindowWidth > 0) {
+        rcWin.left = (RECTW(rcScreen) - defWindowWidth) / 2;
+        rcWin.right = rcWin.left + defWindowWidth;
+    }
+
+    if (defWindowHeight > 0) {
+        rcWin.top = (RECTH(rcScreen) - defWindowHeight) / 2;
+        rcWin.bottom = rcWin.top + defWindowHeight;
+    }
+
+    return rcWin;
+}
+
+static gboolean useFloatingToolWindow = TRUE;
+gboolean xphbd_use_floating_tool_window(void)
+{
+    return useFloatingToolWindow;
+}
 
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
 static gboolean parseAutoplayPolicy(const char *optionName, const char *value, gpointer data, GError **error)
@@ -145,6 +170,9 @@ static const GOptionEntry commandLineOptions[] =
 #endif
     { "enable-sandbox", 0, 0, G_OPTION_ARG_NONE, &enableSandbox, "Enable web process sandbox support", NULL },
     { "exit-after-load", 0, 0, G_OPTION_ARG_NONE, &exitAfterLoad, "Quit the browser after the load finishes", NULL },
+    { "def-win-width", 0, 0, G_OPTION_ARG_INT, &defWindowWidth, "The default window width", "NUMBER" },
+    { "def-win-height", 0, 0, G_OPTION_ARG_INT, &defWindowHeight, "The default window height", "NUMBER" },
+    { "floating-toolwin", 0, 0, G_OPTION_ARG_NONE, &useFloatingToolWindow, "Use the floating tool window when browsing a web page", NULL },
     { "version", 'v', 0, G_OPTION_ARG_NONE, &printVersion, "Print the WebKitHBD version", NULL },
     { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &uriArguments, 0, "[URL…]" },
     { 0, 0, 0, 0, 0, 0, 0 }

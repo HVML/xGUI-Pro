@@ -26,8 +26,9 @@
 #include "xguipro-version.h"
 #include "xguipro-features.h"
 
-#include <purc/purc-helpers.h>
 #include <glib.h>
+#include <purc/purc-helpers.h>
+#include <minigui/common.h>
 
 #define BROWSER_DEFAULT_TITLE           "xGUI Pro"
 #define BROWSER_DEFAULT_URL             "hvml://localhost/default"
@@ -65,6 +66,9 @@ static inline GQuark xguipro_error_quark()
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+RECT xphbd_get_default_window_rect(void);
+gboolean xphbd_use_floating_tool_window(void);
 
 #ifdef __cplusplus
 }

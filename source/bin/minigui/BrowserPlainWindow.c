@@ -121,7 +121,7 @@ static void browserPlainWindowConstructed(GObject *gObject)
     }
     else {
         parent = g_xgui_main_window;
-        rc = xgui_get_screen_rect();
+        rc = xphbd_get_default_window_rect();
     }
     int x = rc.left;
     int y = rc.top;
@@ -391,7 +391,7 @@ static void webViewLoadChanged(WebKitWebView *webView, WebKitLoadEvent loadEvent
         // Here we could start a spinner or update the
         // location bar with the provisional URI
         uri = webkit_web_view_get_uri(webView);
-        if (strncmp(uri, "hvml://", 5)) {
+        if (xphbd_use_floating_tool_window() && strncmp(uri, "hvml://", 5)) {
             window->toolWindow = create_floating_tool_window(window->hwnd, "Untitled");
             if (window->toolWindow != HWND_INVALID) {
                 g_signal_connect(webView, "notify::estimated-load-progress", G_CALLBACK(webViewLoadProgressChanged), window);

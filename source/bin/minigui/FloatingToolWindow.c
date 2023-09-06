@@ -151,8 +151,7 @@ static void animated_cb(MGEFF_ANIMATION handle, HWND hwnd, int id, POINT *pt)
     RECT rcWnd;
     GetWindowRect(hwnd, &rcWnd);
 
-    MoveWindow(hwnd, rcWnd.right - pt->x, rcWnd.bottom - pt->y,
-            pt->x, pt->y, FALSE);
+    MoveWindow(hwnd, pt->x, pt->y, RECTW(rcWnd), RECTH(rcWnd), FALSE);
 }
 
 static void minimize_tool_window(HWND hwnd)
@@ -166,25 +165,42 @@ static void minimize_tool_window(HWND hwnd)
     if (animation) {
         POINT start_pt, end_pt;
 
-        start_pt.x = RECTW(rcWnd);
-        start_pt.y = RECTH(rcWnd);
-        end_pt.x = MINIMIZED_WIDTH;
-        end_pt.y = MINIMIZED_HEIGHT;
-
+        start_pt.x = rcWnd.left;
+        start_pt.y = rcWnd.top;
+        end_pt.x = rcWnd.right;
+        end_pt.y = rcWnd.bottom;
         mGEffAnimationSetStartValue(animation, &start_pt);
         mGEffAnimationSetEndValue(animation, &end_pt);
         mGEffAnimationSetDuration(animation, 200);
         mGEffAnimationSetProperty(animation, MGEFF_PROP_LOOPCOUNT, 1);
         mGEffAnimationSetCurve(animation, OutExpo);
         mGEffAnimationSyncRun(animation);
-        mGEffAnimationDelete(animation);
+
         IncludeWindowStyle(hwnd, WS_MINIMIZE);
-        UpdateWindow(hwnd, TRUE);
+        MoveWindow(hwnd, rcWnd.right, rcWnd.bottom,
+                MINIMIZED_WIDTH, MINIMIZED_HEIGHT, TRUE);
+
+        start_pt.x = rcWnd.right;
+        start_pt.y = rcWnd.bottom;
+        end_pt.x = rcWnd.right - MINIMIZED_WIDTH;
+        end_pt.y = rcWnd.bottom - MINIMIZED_HEIGHT;
+
+        mGEffAnimationSetStartValue(animation, &start_pt);
+        mGEffAnimationSetEndValue(animation, &end_pt);
+        mGEffAnimationSetDuration(animation, 100);
+        mGEffAnimationSetProperty(animation, MGEFF_PROP_LOOPCOUNT, 1);
+        mGEffAnimationSetCurve(animation, InExpo);
+        mGEffAnimationSyncRun(animation);
+
+        mGEffAnimationDelete(animation);
     }
     else {
         MoveWindow(hwnd,
-                rcWnd.right - MINIMIZED_WIDTH, rcWnd.bottom - MINIMIZED_HEIGHT,
-                MINIMIZED_WIDTH, MINIMIZED_HEIGHT, TRUE);
+                rcWnd.right - MINIMIZED_WIDTH,
+                rcWnd.bottom - MINIMIZED_HEIGHT,
+                MINIMIZED_WIDTH, MINIMIZED_HEIGHT, FALSE);
+        IncludeWindowStyle(hwnd, WS_MINIMIZE);
+        UpdateWindow(hwnd, TRUE);
     }
 }
 
@@ -214,6 +230,9 @@ static void on_paint(HWND hwnd, HDC hdc)
 {
     if (GetWindowStyle(hwnd) & WS_MINIMIZE) {
         MG_RWops* area;
+
+        RECT client_rc;
+        GetClientRect(hwnd, &client_rc);
 
         SetBrushColor(hdc, DWORD2Pixel(hdc, 0x00000000));
         FillBox(hdc, 0, 0, MINIMIZED_WIDTH, MINIMIZED_HEIGHT);
