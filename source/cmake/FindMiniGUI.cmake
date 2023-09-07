@@ -1,4 +1,4 @@
-# - Try to find MiniGUI
+# - Try to find MiniGUI and/or MiniGUI components
 # Once done, this will define
 #
 #  MINIGUI_FOUND - system has MiniGUI.
@@ -70,9 +70,7 @@ if (PC_MINIGUI_VERSION)
     endif ()
 endif ()
 
-# Additional MiniGUI components.  We only look for libraries, as not all of them
-# have corresponding headers and all headers are installed alongside the main
-# glib ones.
+# Additional MiniGUI components.
 foreach (_component ${MiniGUI_FIND_COMPONENTS})
     if (${_component} STREQUAL "mGEff")
         pkg_check_modules(PC_MGEFF mgeff)

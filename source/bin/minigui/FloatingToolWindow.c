@@ -167,7 +167,7 @@ static void minimize_tool_window(HWND hwnd)
 
         start_pt.x = rcWnd.left;
         start_pt.y = rcWnd.top;
-        end_pt.x = rcWnd.right;
+        end_pt.x = rcWnd.left;
         end_pt.y = rcWnd.bottom;
         mGEffAnimationSetStartValue(animation, &start_pt);
         mGEffAnimationSetEndValue(animation, &end_pt);
@@ -177,12 +177,12 @@ static void minimize_tool_window(HWND hwnd)
         mGEffAnimationSyncRun(animation);
 
         IncludeWindowStyle(hwnd, WS_MINIMIZE);
-        MoveWindow(hwnd, rcWnd.right, rcWnd.bottom,
-                MINIMIZED_WIDTH, MINIMIZED_HEIGHT, TRUE);
+        MoveWindow(hwnd, rcWnd.left, rcWnd.bottom,
+                RECTW(rcWnd), MINIMIZED_HEIGHT, TRUE);
 
-        start_pt.x = rcWnd.right;
+        start_pt.x = rcWnd.left;
         start_pt.y = rcWnd.bottom;
-        end_pt.x = rcWnd.right - MINIMIZED_WIDTH;
+        end_pt.x = rcWnd.left;
         end_pt.y = rcWnd.bottom - MINIMIZED_HEIGHT;
 
         mGEffAnimationSetStartValue(animation, &start_pt);
@@ -196,9 +196,9 @@ static void minimize_tool_window(HWND hwnd)
     }
     else {
         MoveWindow(hwnd,
-                rcWnd.right - MINIMIZED_WIDTH,
+                rcWnd.left,
                 rcWnd.bottom - MINIMIZED_HEIGHT,
-                MINIMIZED_WIDTH, MINIMIZED_HEIGHT, FALSE);
+                rcWnd.right, MINIMIZED_HEIGHT, FALSE);
         IncludeWindowStyle(hwnd, WS_MINIMIZE);
         UpdateWindow(hwnd, TRUE);
     }
@@ -226,6 +226,12 @@ static void get_bar_rc(HWND hwnd, const RECT *title_rc, RECT *bar_rc)
             title_rc->right, title_rc->bottom + 3);
 }
 
+static void get_minimized_bar_rc(HWND hwnd, RECT *client_rc, RECT *bar_rc)
+{
+    SetRect(bar_rc, MARGIN_PADDING, client_rc->bottom - 3,
+            client_rc->right - MARGIN_PADDING, client_rc->bottom);
+}
+
 static void on_paint(HWND hwnd, HDC hdc)
 {
     if (GetWindowStyle(hwnd) & WS_MINIMIZE) {
@@ -235,11 +241,23 @@ static void on_paint(HWND hwnd, HDC hdc)
         GetClientRect(hwnd, &client_rc);
 
         SetBrushColor(hdc, DWORD2Pixel(hdc, 0x00000000));
-        FillBox(hdc, 0, 0, MINIMIZED_WIDTH, MINIMIZED_HEIGHT);
+        FillBox(hdc, 0, 0, client_rc.right, client_rc.bottom);
+
+        unsigned percent = (unsigned)GetWindowAdditionalData(hwnd);
+        if (percent <= 100) {
+            RECT bar_rc;
+            get_minimized_bar_rc(hwnd, &client_rc, &bar_rc);
+            SetPenColor(hdc, DWORD2Pixel(hdc, 0xFF2E3436));
+            SetBrushColor(hdc, DWORD2Pixel(hdc, 0xFF2E3436));
+            Rectangle(hdc, bar_rc.left, bar_rc.top, bar_rc.right, bar_rc.bottom);
+
+            FillBox(hdc, bar_rc.left, bar_rc.top, RECTW(bar_rc) * percent / 100,
+                    RECTH(bar_rc));
+        }
 
         area = MGUI_RWFromMem((void *)_png_close_data, sizeof(_png_close_data));
         if (area) {
-            PaintImageEx(hdc, 0, 0, area, "png");
+            PaintImageEx(hdc, client_rc.right - MINIMIZED_HEIGHT, 0, area, "png");
             MGUI_FreeRW(area);
         }
     }
@@ -276,14 +294,42 @@ FloatingToolWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case MSG_LBUTTONDOWN:
             break;
 
+        case MSG_IDLE:
+            if (GetWindowStyle(hWnd) & WS_MINIMIZE) {
+                unsigned percent = (unsigned)GetWindowAdditionalData(hWnd);
+                if (percent == 100) {
+                    RECT client_rc, bar_rc;
+                    GetClientRect(hWnd, &client_rc);
+
+                    get_minimized_bar_rc(hWnd, &client_rc, &bar_rc);
+                    SetWindowAdditionalData(hWnd, 111);
+                    InvalidateRect(hWnd, &bar_rc, FALSE);
+                }
+            }
+            break;
+
         case MSG_LBUTTONUP:
             if (GetWindowStyle(hWnd) & WS_MINIMIZE) {
-                SendNotifyMessage(GetHosting(hWnd), MSG_CLOSE, 0, 0);
+                RECT client_rc;
+                GetClientRect(hWnd, &client_rc);
+                int x = LOSWORD(lParam);
+                if (x >= client_rc.right - MINIMIZED_HEIGHT)
+                    SendNotifyMessage(GetHosting(hWnd), MSG_CLOSE, 0, 0);
             }
             break;
 
         case MSG_XGUIPRO_LOAD_STATE:
             if (GetWindowStyle(hWnd) & WS_MINIMIZE) {
+                if (wParam == XGUIPRO_LOAD_STATE_PROGRESS_CHANGED) {
+                    RECT client_rc, bar_rc;
+                    GetClientRect(hWnd, &client_rc);
+
+                    get_minimized_bar_rc(hWnd, &client_rc, &bar_rc);
+                    SetWindowAdditionalData(hWnd, lParam);
+                    InvalidateRect(hWnd, &bar_rc, FALSE);
+                }
+
+                /* do not handle others */
                 break;
             }
 
@@ -310,7 +356,8 @@ FloatingToolWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 SetWindowAdditionalData(hWnd, lParam);
                 InvalidateRect(hWnd, &bar_rc, TRUE);
             }
-            else if (wParam == XGUIPRO_LOAD_STATE_FINISHED ||
+            else if (wParam == XGUIPRO_LOAD_STATE_COMMITTED ||
+                    wParam == XGUIPRO_LOAD_STATE_FINISHED ||
                     wParam == XGUIPRO_LOAD_STATE_FAILED) {
                 ShowWindow(GetHosting(hWnd), SW_SHOWNORMAL);
                 minimize_tool_window(hWnd);
