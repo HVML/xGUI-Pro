@@ -21,9 +21,8 @@ set(assets_SOURCES
     "${XGUIPRO_BIN_DIR}/webext/assets/splash.jpg"
 )
 
-set(bootstrap_DIRECTORY
-    "assets/bootstrap-5.1.3-dist"
-)
+set(bootstrap_VERSION "5.1.3")
+set(bootstrap_icons_VERSION "1.8.3")
 
 set(assets_FILES
     "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}/hvml.js"
@@ -42,19 +41,19 @@ add_custom_target(assets DEPENDS ${assets_FILES})
 add_dependencies(WebExtensionHVML assets)
 
 file(ARCHIVE_EXTRACT
-        INPUT "${XGUIPRO_BIN_DIR}/webext/assets/bootstrap-5.1.3-dist.zip"
+        INPUT "${XGUIPRO_BIN_DIR}/webext/assets/bootstrap-${bootstrap_VERSION}-dist.zip"
         DESTINATION "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}")
 
 file(ARCHIVE_EXTRACT
-        INPUT "${XGUIPRO_BIN_DIR}/webext/assets/bootstrap-icons-1.8.3.zip"
+        INPUT "${XGUIPRO_BIN_DIR}/webext/assets/bootstrap-icons-${bootstrap_icons_VERSION}.zip"
         DESTINATION "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}")
 
 install(FILES ${assets_SOURCES}
         DESTINATION ${XGUIPRO_WEBEXT_ASSETS_INSTALL_DIR})
 
-install(DIRECTORY "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}/bootstrap-5.1.3-dist"
+install(DIRECTORY "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}/bootstrap-${bootstrap_VERSION}-dist"
         DESTINATION ${XGUIPRO_WEBEXT_ASSETS_INSTALL_DIR})
 
-install(DIRECTORY "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}/bootstrap-icons-1.8.3"
+install(DIRECTORY "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}/bootstrap-icons-${bootstrap_icons_VERSION}"
         DESTINATION ${XGUIPRO_WEBEXT_ASSETS_INSTALL_DIR})
 
