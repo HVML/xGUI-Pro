@@ -21,8 +21,8 @@ set(assets_SOURCES
     "${XGUIPRO_BIN_DIR}/webext/assets/splash.jpg"
 )
 
-set(bootstrap_VERSION "5.1.3")
-set(bootstrap_icons_VERSION "1.8.3")
+set(bootstrap_VERSION "5.3.1")
+set(bootstrap_icons_VERSION "1.10.5")
 
 set(assets_FILES
     "${XGUIPRO_WEBEXT_ASSETS_OUTPUT_DIR}/hvml.js"
