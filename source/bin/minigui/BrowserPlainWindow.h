@@ -28,6 +28,9 @@
 
 G_BEGIN_DECLS
 
+#define WINDOW_LEVEL_NORMAL     "nromal"
+#define WINDOW_LEVEL_HIGHER     "higher"
+
 #define BROWSER_TYPE_PLAIN_WINDOW            (browser_plain_window_get_type())
 #define BROWSER_PLAIN_WINDOW(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), BROWSER_TYPE_PLAIN_WINDOW, BrowserPlainWindow))
 #define BROWSER_PLAIN_WINDOW_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  BROWSER_TYPE_PLAIN_WINDOW, BrowserPlainWindowClass))
@@ -41,7 +44,8 @@ typedef struct _BrowserPlainWindowClass   BrowserPlainWindowClass;
 GType browser_plain_window_get_type(void);
 
 BrowserPlainWindow* browser_plain_window_new(HWND, WebKitWebContext*,
-        const char *name, const char *title, gboolean forHVML);
+        const char *name, const char *title, const char *window_level,
+        gboolean forHVML);
 HWND browser_plain_window_get_hwnd(BrowserPlainWindow*);
 WebKitWebContext* browser_plain_window_get_web_context(BrowserPlainWindow*);
 void browser_plain_window_set_view(BrowserPlainWindow*, WebKitWebViewParam*);

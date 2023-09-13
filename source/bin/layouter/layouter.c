@@ -141,13 +141,14 @@ fill_position(struct ws_widget_info *style, const HLBox *box,
 }
 
 static void get_element_name_title(pcdom_element_t *element,
-        char **name, char **title, char **klass)
+        char **name, char **title, char **klass, char **level)
 {
     pcdom_attr_t *attr;
 
     *name  = NULL;
     *title = NULL;
     *klass = NULL;
+    *level = NULL;
 
     attr = pcdom_element_first_attribute(element);
     while (attr) {
@@ -170,8 +171,13 @@ static void get_element_name_title(pcdom_element_t *element,
             if (sz > 0)
                 *klass = strndup(attr_value, sz);
         }
+        else if (strncasecmp(attr_name, "level", sizeof("level")) == 0) {
+            attr_value = (const char *)pcdom_attr_value(attr, &sz);
+            if (sz > 0)
+                *level = strndup(attr_value, sz);
+        }
 
-        if (*name && *title && *klass)
+        if (*name && *title && *klass && *level)
             break;
 
         attr = pcdom_element_next_attribute(attr);
@@ -222,14 +228,15 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
         return NULL;
     }
 
-    char *name, *title, *klass;
-    get_element_name_title(element, &name, &title, &klass);
+    char *name, *title, *klass, *level;
+    get_element_name_title(element, &name, &title, &klass, &level);
 
     struct ws_widget_info style = { 0, 0, 0, 0 };
     style.flags = WSWS_FLAG_NAME | WSWS_FLAG_GEOMETRY;
     style.name = name ? name : ANONYMOUS_NAME;
     style.title = title ? title: UNTITLED;
     style.klass = klass ? klass: NULL;
+    style.level = level ? level : NULL;
     float off_x, off_y;
     calc_offsets(layouter, pcdom_interface_node(element), &off_x, &off_y);
     fill_position(&style, box, off_x, off_y);
@@ -250,6 +257,7 @@ static void *create_widget_for_element(struct ws_layouter *layouter,
     if (name) free(name);
     if (title) free(title);
     if (klass) free(klass);
+    if (level) free(level);
     if (widget == NULL) {
         return NULL;
     }
@@ -790,12 +798,13 @@ find_page_element(pcdom_document_t *dom_doc,
 }
 
 #define HTML_FRAG_PLAINWINDOW  \
-    "<figure id='%s-%s' class='%s' name='%s' title='%s' style='%s'></figure>"
+    "<figure id='%s-%s' class='%s' name='%s' title='%s' style='%s' level='%s'></figure>"
 
 void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         void *session, const char *group_id, const char *window_name,
         const char *class_name, const char *title, const char *layout_style,
-        purc_variant_t toolkit_style, void *init_arg, int *retv)
+        const char *window_level, purc_variant_t toolkit_style, void *init_arg,
+        int *retv)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
     pcdom_element_t *element = dom_get_element_by_id(dom_doc, group_id);
@@ -824,7 +833,8 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         gchar *html_fragment = g_strdup_printf(HTML_FRAG_PLAINWINDOW,
                 group_id, window_name, class_name ? class_name : "",
                 window_name, title ? title : "",
-                layout_style ? layout_style : "");
+                layout_style ? layout_style : "",
+                window_level ? window_level : "");
         subtree = dom_parse_fragment(dom_doc, element,
             html_fragment, strlen(html_fragment));
         g_free(html_fragment);
@@ -991,7 +1001,7 @@ static void *create_tabbed_window(struct ws_layouter *layouter, void *session,
 }
 
 #define HTML_FRAG_PAGE  \
-    "<li id='%s-%s' class='%s' name='%s' title='%s' style='%s'></li>"
+    "<li id='%s-%s' class='%s' name='%s' title='%s' style='%s' level='%s'></li>"
 
 void *ws_layouter_add_widget(struct ws_layouter *layouter, void *session,
         const char *group_id, const char *page_name,
@@ -1034,7 +1044,7 @@ void *ws_layouter_add_widget(struct ws_layouter *layouter, void *session,
         gchar *html_fragment = g_strdup_printf(HTML_FRAG_PAGE,
                 group_id, page_name, class_name ? class_name : "",
                 page_name, title ? title : "",
-                layout_style ? layout_style : "");
+                layout_style ? layout_style : "", "");
         subtree = dom_parse_fragment(dom_doc, element,
             html_fragment, strlen(html_fragment));
         g_free(html_fragment);

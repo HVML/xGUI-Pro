@@ -920,6 +920,7 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char* class = NULL;
     const char* title = NULL;
     const char* layout_style = NULL;
+    const char* window_level = NULL;
     purc_variant_t toolkit_style = PURC_VARIANT_INVALID;
 
     if (msg->dataType == PCRDR_MSG_DATA_TYPE_JSON
@@ -937,13 +938,18 @@ static int on_create_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
             layout_style = purc_variant_get_string_const(tmp);
         }
 
+        if ((tmp = purc_variant_object_get_by_ckey(msg->data,
+                        "windowLevel"))) {
+            window_level = purc_variant_get_string_const(tmp);
+        }
+
         toolkit_style =
             purc_variant_object_get_by_ckey(msg->data, "toolkitStyle");
     }
     const char *request_id = purc_variant_get_string_const(msg->requestId);
     page = srv->cbs.create_plainwin(endpoint->session, workspace,
             request_id, idbuf, group, name, class, title, layout_style,
-            toolkit_style, &retv);
+            window_level, toolkit_style, &retv);
     if (retv == 0) {
         srv->cbs.pend_response(endpoint->session, NULL,
                 purc_variant_get_string_const(msg->operation),

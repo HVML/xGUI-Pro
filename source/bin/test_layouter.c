@@ -298,13 +298,13 @@ int main(int argc, char *argv[])
 
     ws_layouter_add_plain_window(layouter, NULL,
         "freeWindows", "test", NULL, NULL, NULL,
-        PURC_VARIANT_INVALID, NULL, &retv);
+        NULL, PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_NOT_FOUND);
 
     void *widget;
     widget = ws_layouter_add_plain_window(layouter, NULL,
         "theModals", "test1", "main", "this is a test plain window", NULL,
-        PURC_VARIANT_INVALID, NULL, &retv);
+        NULL, PURC_VARIANT_INVALID, NULL, &retv);
     assert(retv == PCRDR_SC_OK);
     assert(widget != NULL);
 
@@ -313,7 +313,7 @@ int main(int argc, char *argv[])
 
     ws_layouter_add_plain_window(layouter, NULL,
         "theModals", "test2", "main", "this is a test plain window", NULL,
-        PURC_VARIANT_INVALID, NULL, &retv);
+        NULL, PURC_VARIANT_INVALID, NULL, &retv);
     element = dom_get_element_by_id(layouter->dom_doc, "theModals-test2");
     assert(has_tag(element, "FIGURE"));
 

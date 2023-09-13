@@ -37,6 +37,7 @@ enum {
     PROP_TITLE,
     PROP_NAME,
     PROP_PARENT_WINDOW,
+    PROP_WINDOW_LEVEL,
     PROP_FOR_HVML,
 
     N_PROPERTIES
@@ -51,6 +52,7 @@ struct _BrowserPlainWindow {
 
     gchar *name;
     gchar *title;
+    gchar *level;
     gboolean forHVML;
 
     HWND parentWindow;
@@ -128,9 +130,16 @@ static void browserPlainWindowConstructed(GObject *gObject)
     int w = RECTW(rc);
     int h = RECTH(rc);
 
+    DWORD window_level = WS_EX_WINTYPE_NORMAL;
+    if (window->level &&
+            (strcmp(window->level, WINDOW_LEVEL_HIGHER) == 0)) {
+        window_level = WS_EX_WINTYPE_HIGHER;
+    }
+
+    fprintf(stderr, "#####>                                 create window level=%ld\n", window_level);
     MAINWINCREATE CreateInfo;
     CreateInfo.dwStyle = window->forHVML ? WS_VISIBLE : WS_NONE;
-    CreateInfo.dwExStyle = WS_EX_WINTYPE_NORMAL;
+    CreateInfo.dwExStyle = window_level;
     CreateInfo.spCaption = window->title ? window->title : BROWSER_DEFAULT_TITLE;
     CreateInfo.hMenu = 0;
     CreateInfo.hCursor = GetSystemCursor(0);
@@ -180,6 +189,14 @@ static void browserPlainWindowSetProperty(GObject *object, guint propId,
             }
         }
         break;
+    case PROP_WINDOW_LEVEL:
+        {
+            gchar *level = g_value_get_pointer(value);
+            if (level) {
+                window->level = g_strdup(level);
+            }
+        }
+        break;
     case PROP_FOR_HVML:
         {
             window->forHVML = g_value_get_boolean(value);
@@ -226,6 +243,11 @@ static void browserPlainWindowFinalize(GObject *gObject)
         window->title = NULL;
     }
 
+    if (window->level) {
+        g_free(window->level);
+        window->level = NULL;
+    }
+
     G_OBJECT_CLASS(browser_plain_window_parent_class)->finalize(gObject);
 }
 
@@ -265,6 +287,14 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
                 G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
     g_object_class_install_property(
             gobjectClass,
+            PROP_WINDOW_LEVEL,
+            g_param_spec_pointer(
+                "window-level",
+                "window level",
+                "The window level",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+    g_object_class_install_property(
+            gobjectClass,
             PROP_FOR_HVML,
             g_param_spec_boolean(
                 "for-hvml",
@@ -285,13 +315,15 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
 /* Public API. */
 BrowserPlainWindow *
 browser_plain_window_new(HWND parent, WebKitWebContext *webContext,
-        const char *name, const char *title, BOOL forHVML)
+        const char *name, const char *title, const char *window_level,
+        BOOL forHVML)
 {
     BrowserPlainWindow *window =
           BROWSER_PLAIN_WINDOW(g_object_new(BROWSER_TYPE_PLAIN_WINDOW,
                       "name", name,
                       "title", title,
                       "parent-window", parent,
+                      "window-level", window_level,
                       "for-hvml", forHVML,
                       NULL));
 
@@ -434,7 +466,7 @@ static WebKitWebView *webViewCreate(WebKitWebView *webView,
         WebKitNavigationAction *navigation, BrowserPlainWindow *window)
 {
     BrowserPlainWindow *newWindow = browser_plain_window_new(NULL,
-            window->webContext, window->name, window->title, FALSE);
+            window->webContext, window->name, window->title, WINDOW_LEVEL_NORMAL, FALSE);
     WebKitWebViewParam param = window->param;
     param.relatedView = webView;
     browser_plain_window_set_view(newWindow, &param);

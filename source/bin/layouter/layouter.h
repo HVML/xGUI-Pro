@@ -59,6 +59,7 @@ struct ws_widget_info {
     const char *name;
     const char *title;
     const char *klass;
+    const char *level;
 
     /* other styles */
     const char *backgroundColor;
@@ -118,7 +119,8 @@ int ws_layouter_remove_widget_group(struct ws_layouter *layouter,
 void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         void *session, const char *group_id, const char *window_name,
         const char *class_name, const char *title, const char *layout_style,
-        purc_variant_t toolkit_style, void *init_arg, int *retv);
+        const char *window_level, purc_variant_t toolkit_style, void *init_arg,
+        int *retv);
 
 /* Remove a plain window by identifier */
 int ws_layouter_remove_plain_window_by_id(struct ws_layouter *layouter,
