@@ -572,3 +572,14 @@ void browser_plain_window_set_background_color(BrowserPlainWindow *window,
 {
 }
 
+void browser_plain_window_hide(BrowserPlainWindow *window)
+{
+    g_return_if_fail(BROWSER_IS_PLAIN_WINDOW(window));
+    ShowWindow(window->hwnd, SW_HIDE);
+}
+
+void browser_plain_window_show(BrowserPlainWindow *window)
+{
+    g_return_if_fail(BROWSER_IS_PLAIN_WINDOW(window));
+    ShowWindow(window->hwnd, SW_SHOWNORMAL);
+}

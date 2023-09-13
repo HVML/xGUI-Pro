@@ -52,6 +52,8 @@ void browser_plain_window_set_view(BrowserPlainWindow*, WebKitWebViewParam*);
 WebKitWebView* browser_plain_window_get_view(BrowserPlainWindow*);
 const char* browser_plain_window_get_name(BrowserPlainWindow*);
 void browser_plain_window_set_title(BrowserPlainWindow*, const char*);
+void browser_plain_window_hide(BrowserPlainWindow*);
+void browser_plain_window_show(BrowserPlainWindow*);
 
 void browser_plain_window_load_uri(BrowserPlainWindow*, const char *);
 void browser_plain_window_load_session(BrowserPlainWindow*, const char*);

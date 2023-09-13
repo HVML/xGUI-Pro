@@ -44,6 +44,10 @@
 #define ENABLE_RENDER_DELAY_LONG 400     // ms
 #define ENABLE_RENDER_DELAY 200     // ms
 
+#define PLAIN_WINDOW_CALL_METHOD          "call:"
+#define PLAIN_WINDOW_METHOD_HIDE_WINDOW   "hide_window"
+#define PLAIN_WINDOW_METHOD_SHOW_WINDOW   "show_window"
+
 static KVLIST(kv_app_workspace, NULL);
 
 int pcmc_mg_prepare(purcmc_server *srv)
@@ -1038,8 +1042,7 @@ int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
     else if (strcmp(property, "title") == 0) {
         const char *title = purc_variant_get_string_const(value);
         if (title) {
-            browser_plain_window_set_title(BROWSER_PLAIN_WINDOW(plainwin),
-                    title);
+            browser_plain_window_hide(BROWSER_PLAIN_WINDOW(plainwin));
         }
         else {
             return PCRDR_SC_BAD_REQUEST;
@@ -1602,3 +1605,41 @@ int mg_destroy_widget(purcmc_session *sess, purcmc_workspace *workspace,
     return retv;
 }
 
+purc_variant_t mg_call_method_in_session(purcmc_session *,
+        pcrdr_msg_target target, uint64_t target_value,
+        const char *element_type, const char *element_value,
+        const char *property, const char *method, purc_variant_t arg,
+        int* retv)
+{
+    purcmc_page *page = NULL;
+    if (target == PCRDR_MSG_TARGET_PLAINWINDOW) {
+        page = (void *)(uintptr_t)target_value;
+
+        size_t len = strlen(PLAIN_WINDOW_CALL_METHOD);
+        size_t nr_method = strlen(method);
+        if (nr_method <= len ||
+                (strncmp(PLAIN_WINDOW_CALL_METHOD, method, len) != 0)) {
+            *retv = PCRDR_SC_BAD_REQUEST;
+            goto out;
+        }
+
+        const char *p = method + len;
+        if (strcmp(PLAIN_WINDOW_METHOD_HIDE_WINDOW, p) == 0) {
+            browser_plain_window_hide(BROWSER_PLAIN_WINDOW(page));
+        }
+        else if (strcmp(PLAIN_WINDOW_METHOD_SHOW_WINDOW, p) == 0) {
+            browser_plain_window_show(BROWSER_PLAIN_WINDOW(page));
+        }
+        else {
+            *retv = PCRDR_SC_NOT_IMPLEMENTED;
+            goto out;
+        }
+
+        *retv = PCRDR_SC_OK;
+        return purc_variant_make_boolean(true);
+    }
+
+    *retv = PCRDR_SC_NOT_IMPLEMENTED;
+out:
+    return PURC_VARIANT_INVALID;
+}

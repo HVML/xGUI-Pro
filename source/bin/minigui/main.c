@@ -696,6 +696,7 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
 
         .update_dom = mg_update_dom,
 
+        .call_method_in_session = mg_call_method_in_session,
         .call_method_in_dom = mg_call_method_in_dom,
         .get_property_in_dom = mg_get_property_in_dom,
         .set_property_in_dom = mg_set_property_in_dom,

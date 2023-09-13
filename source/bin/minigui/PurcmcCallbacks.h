@@ -103,6 +103,12 @@ bool mg_pend_response(purcmc_session* sess, purcmc_page *page,
         const char *operation, const char *request_id, void *result_value,
         const char *plain);
 
+purc_variant_t mg_call_method_in_session(purcmc_session *,
+        pcrdr_msg_target target, uint64_t target_value,
+        const char *element_type, const char *element_value,
+        const char *property, const char *method, purc_variant_t arg,
+        int* retv);
+
 /*
  * Use this function to retrieve the endpoint of a session.
  * the endpoint might be deleted earlier than session.
