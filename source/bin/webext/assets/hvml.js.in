@@ -296,6 +296,22 @@ if (checkHVML()) {
 
                 return { requestId: msg.requestId, state: state, data: data };
             }
+            else if (msg.elementType === 'css') {
+                let data = null;
+                let state = "Ok";
+                var matches = document.querySelectorAll(msg.element);
+                if (matches.length > 0) {
+                    matches.forEach(function (node) {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            data = callMethod(node, msg.data.method, msg.data.arg);
+                        }
+                    });
+                }
+                else {
+                    state = "NotFound";
+                }
+                return { requestId: msg.requestId, state: state, data: data };
+            }
         }
         else if (msg.operation === 'getProperty') {
             let data = null;
