@@ -1611,7 +1611,6 @@ purc_variant_t mg_call_method_in_plainwin(purcmc_session *sess,
 {
     purc_variant_t val = PURC_VARIANT_INVALID;
     purcmc_page *page = mg_find_page(sess, workspace, page_id);
-    fprintf(stderr, "#####> page_id=%s|method=%s|page=%p\n", page_id, method, page);
 
     if (strcmp(PLAIN_WINDOW_METHOD_HIDE_WINDOW, method) == 0) {
         browser_plain_window_hide(BROWSER_PLAIN_WINDOW(page));
