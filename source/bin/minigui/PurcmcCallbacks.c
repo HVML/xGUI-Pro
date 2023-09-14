@@ -44,9 +44,9 @@
 #define ENABLE_RENDER_DELAY_LONG 400     // ms
 #define ENABLE_RENDER_DELAY 200     // ms
 
-#define PLAIN_WINDOW_CALL_METHOD          "call:"
-#define PLAIN_WINDOW_METHOD_HIDE_WINDOW   "hide_window"
-#define PLAIN_WINDOW_METHOD_SHOW_WINDOW   "show_window"
+#define PAGE_TYPE_PLAIN_WINDOW            "plainwin:"
+#define PLAIN_WINDOW_METHOD_HIDE_WINDOW   "hideWindow"
+#define PLAIN_WINDOW_METHOD_SHOW_WINDOW   "showWindow"
 
 static KVLIST(kv_app_workspace, NULL);
 
@@ -1605,41 +1605,56 @@ int mg_destroy_widget(purcmc_session *sess, purcmc_workspace *workspace,
     return retv;
 }
 
-purc_variant_t mg_call_method_in_session(purcmc_session *,
+purc_variant_t mg_call_method_in_plainwin(purcmc_session *sess,
+        purcmc_workspace* workspace, const char *page_id,
+        const char *method, purc_variant_t arg, int* retv)
+{
+    purc_variant_t val = PURC_VARIANT_INVALID;
+    purcmc_page *page = mg_find_page(sess, workspace, page_id);
+    fprintf(stderr, "#####> page_id=%s|method=%s|page=%p\n", page_id, method, page);
+
+    if (strcmp(PLAIN_WINDOW_METHOD_HIDE_WINDOW, method) == 0) {
+        browser_plain_window_hide(BROWSER_PLAIN_WINDOW(page));
+        *retv = PCRDR_SC_OK;
+        val = purc_variant_make_boolean(true);
+    }
+    else if (strcmp(PLAIN_WINDOW_METHOD_SHOW_WINDOW, method) == 0) {
+        browser_plain_window_show(BROWSER_PLAIN_WINDOW(page));
+        *retv = PCRDR_SC_OK;
+        val = purc_variant_make_boolean(true);
+    }
+    else {
+        *retv = PCRDR_SC_BAD_REQUEST;
+    }
+
+    return val;
+}
+
+
+purc_variant_t mg_call_method_in_session(purcmc_session *sess,
         pcrdr_msg_target target, uint64_t target_value,
         const char *element_type, const char *element_value,
         const char *property, const char *method, purc_variant_t arg,
         int* retv)
 {
-    purcmc_page *page = NULL;
-    if (target == PCRDR_MSG_TARGET_PLAINWINDOW) {
-        page = (void *)(uintptr_t)target_value;
+    purcmc_workspace* workspace = NULL;
+    if (target == PCRDR_MSG_TARGET_WORKSPACE) {
+        workspace = (void *)(uintptr_t)target_value;
+    }
+    else {
+        *retv = PCRDR_SC_BAD_REQUEST;
+        goto done;
+    }
 
-        size_t len = strlen(PLAIN_WINDOW_CALL_METHOD);
-        size_t nr_method = strlen(method);
-        if (nr_method <= len ||
-                (strncmp(PLAIN_WINDOW_CALL_METHOD, method, len) != 0)) {
-            *retv = PCRDR_SC_BAD_REQUEST;
-            goto out;
-        }
-
-        const char *p = method + len;
-        if (strcmp(PLAIN_WINDOW_METHOD_HIDE_WINDOW, p) == 0) {
-            browser_plain_window_hide(BROWSER_PLAIN_WINDOW(page));
-        }
-        else if (strcmp(PLAIN_WINDOW_METHOD_SHOW_WINDOW, p) == 0) {
-            browser_plain_window_show(BROWSER_PLAIN_WINDOW(page));
-        }
-        else {
-            *retv = PCRDR_SC_NOT_IMPLEMENTED;
-            goto out;
-        }
-
-        *retv = PCRDR_SC_OK;
-        return purc_variant_make_boolean(true);
+    size_t len = strlen(PAGE_TYPE_PLAIN_WINDOW);
+    size_t type_len = strlen(element_value);
+    if (type_len > len &&
+            strncmp(PAGE_TYPE_PLAIN_WINDOW, element_value, len) == 0) {
+        return mg_call_method_in_plainwin(sess, workspace,
+                element_value, method, arg, retv);
     }
 
     *retv = PCRDR_SC_NOT_IMPLEMENTED;
-out:
+done:
     return PURC_VARIANT_INVALID;
 }
