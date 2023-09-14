@@ -70,6 +70,20 @@ enum {
     LAST_SIGNAL
 };
 
+static struct window_level_type {
+    const char *name;
+    DWORD level;
+} window_levels[] = {
+    { WINDOW_LEVEL_DOCKER, WS_EX_WINTYPE_DOCKER },
+    { WINDOW_LEVEL_GLOBAL, WS_EX_WINTYPE_GLOBAL },
+    { WINDOW_LEVEL_HIGHER, WS_EX_WINTYPE_HIGHER },
+    { WINDOW_LEVEL_LAUNCHER, WS_EX_WINTYPE_LAUNCHER },
+    { WINDOW_LEVEL_NORMAL, WS_EX_WINTYPE_NORMAL },
+    { WINDOW_LEVEL_SCREENLOCK, WS_EX_WINTYPE_SCREENLOCK },
+    { WINDOW_LEVEL_TOOLTIP, WS_EX_WINTYPE_TOOLTIP },
+};
+
+
 static guint signals[LAST_SIGNAL] = { 0, };
 
 G_DEFINE_TYPE(BrowserPlainWindow, browser_plain_window,
@@ -110,6 +124,35 @@ static void browser_plain_window_init(BrowserPlainWindow *window)
 {
 }
 
+static DWORD find_window_level(const char *name)
+{
+    static ssize_t max = sizeof(window_levels)/sizeof(window_levels[0]) - 1;
+
+    ssize_t low = 0, high = max, mid;
+    while (low <= high) {
+        int cmp;
+
+        mid = (low + high) / 2;
+        cmp = strcasecmp(name, window_levels[mid].name);
+        if (cmp == 0) {
+            goto found;
+        }
+        else {
+            if (cmp < 0) {
+                high = mid - 1;
+            }
+            else {
+                low = mid + 1;
+            }
+        }
+    }
+
+    return WS_EX_WINTYPE_NORMAL;
+
+found:
+    return window_levels[mid].level;
+}
+
 static void browserPlainWindowConstructed(GObject *gObject)
 {
     BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(gObject);
@@ -130,10 +173,12 @@ static void browserPlainWindowConstructed(GObject *gObject)
     int w = RECTW(rc);
     int h = RECTH(rc);
 
-    DWORD window_level = WS_EX_WINTYPE_NORMAL;
-    if (window->level &&
-            (strcmp(window->level, WINDOW_LEVEL_HIGHER) == 0)) {
-        window_level = WS_EX_WINTYPE_HIGHER;
+    DWORD window_level;
+    if (window->level) {
+        window_level = find_window_level(window->level);
+    }
+    else {
+        window_level = WS_EX_WINTYPE_NORMAL;
     }
 
     MAINWINCREATE CreateInfo;

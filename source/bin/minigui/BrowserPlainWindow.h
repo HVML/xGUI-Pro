@@ -28,8 +28,14 @@
 
 G_BEGIN_DECLS
 
-#define WINDOW_LEVEL_NORMAL     "nromal"
-#define WINDOW_LEVEL_HIGHER     "higher"
+#define WINDOW_LEVEL_TOOLTIP       "tooltip"
+#define WINDOW_LEVEL_GLOBAL        "global"
+#define WINDOW_LEVEL_SCREENLOCK    "screenlock"
+#define WINDOW_LEVEL_DOCKER        "docker"
+#define WINDOW_LEVEL_HIGHER        "higher"
+#define WINDOW_LEVEL_NORMAL        "normal"
+#define WINDOW_LEVEL_LAUNCHER      "launcher"
+
 
 #define BROWSER_TYPE_PLAIN_WINDOW            (browser_plain_window_get_type())
 #define BROWSER_PLAIN_WINDOW(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), BROWSER_TYPE_PLAIN_WINDOW, BrowserPlainWindow))
