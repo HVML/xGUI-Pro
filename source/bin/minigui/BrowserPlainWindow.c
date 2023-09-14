@@ -136,7 +136,6 @@ static void browserPlainWindowConstructed(GObject *gObject)
         window_level = WS_EX_WINTYPE_HIGHER;
     }
 
-    fprintf(stderr, "#####>                                 create window level=%ld\n", window_level);
     MAINWINCREATE CreateInfo;
     CreateInfo.dwStyle = window->forHVML ? WS_VISIBLE : WS_NONE;
     CreateInfo.dwExStyle = window_level;
