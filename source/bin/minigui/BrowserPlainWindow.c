@@ -183,7 +183,7 @@ static void browserPlainWindowConstructed(GObject *gObject)
 
     MAINWINCREATE CreateInfo;
     CreateInfo.dwStyle = window->forHVML ? WS_VISIBLE : WS_NONE;
-    CreateInfo.dwExStyle = WS_EX_AUTOSECONDARYDC | window_level;
+    CreateInfo.dwExStyle = window_level;
     CreateInfo.spCaption = window->title ? window->title : BROWSER_DEFAULT_TITLE;
     CreateInfo.hMenu = 0;
     CreateInfo.hCursor = GetSystemCursor(0);
