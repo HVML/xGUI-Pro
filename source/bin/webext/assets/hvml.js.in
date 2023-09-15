@@ -392,6 +392,7 @@ function registerEventsListener(elems)
                         targetHandle: get_element_hvml_handle(evt.target),
                         targetId: evt.target.id,
                         targetClass: evt.target.className,
+                        targetName: evt.target.getAttribute('name'),
                         targetValue: evt.target.value,
                         timeStamp: evt.timeStamp,
                         details: evt};
