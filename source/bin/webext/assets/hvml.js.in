@@ -393,7 +393,7 @@ function registerEventsListener(elems)
                         targetId: evt.target.id,
                         targetClass: evt.target.className,
                         targetName: evt.target.getAttribute('name'),
-                        targetValue: evt.target.value,
+                        targetValue: (typeof(evt.target.value) === 'undefined') ? evt.target.getAttribute('value') : evt.target.value,
                         timeStamp: evt.timeStamp,
                         details: evt};
 
