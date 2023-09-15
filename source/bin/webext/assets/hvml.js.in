@@ -394,7 +394,7 @@ function registerEventsListener(elems)
                         originClass: evt.currentTarget.className,
                         originName: evt.currentTarget.getAttribute('name'),
                         originValue: (typeof(evt.currentTarget.value) === 'undefined') ? evt.currentTarget.getAttribute('value') : evt.currentTarget.value,
-                        targetDiffersOrigin: (evt.currentTarget == evt.target) ? "false" : "true",
+                        targetDiffersOrigin: (evt.currentTarget == evt.target) ? false : true,
                         targetTagName: evt.target.tagName,
                         targetHandle: get_element_hvml_handle(evt.target),
                         targetId: evt.target.id,
@@ -403,6 +403,12 @@ function registerEventsListener(elems)
                         targetValue: (typeof(evt.target.value) === 'undefined') ? evt.target.getAttribute('value') : evt.target.value,
                         timeStamp: evt.timeStamp,
                         details: evt};
+
+                    if (typeof(evt.offsetX) != 'undefined') {
+                        let rect = evt.target.getBoundingClientRect();
+                        data.relativeX = evt.offsetX / rect.width;
+                        data.relativeY = evt.offsetY / rect.height;
+                    }
 
                     // TODO: handle more options
                     if (optList.includes('prevent') && evt.cancelable)
