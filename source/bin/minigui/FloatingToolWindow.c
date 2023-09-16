@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <glib.h>
 
 #define _DEBUG
 #include <minigui/common.h>
@@ -30,6 +31,7 @@
 #include <minigui/window.h>
 #include <mgeff/mgeff.h>
 
+#include "xguipro-features.h"
 #include "FloatingToolWindow.h"
 
 static const unsigned char _png_close_data[] = {
@@ -146,21 +148,21 @@ static const unsigned char _png_close_data[] = {
 #define MINIMIZED_WIDTH     48
 #define MINIMIZED_HEIGHT    48
 
-static void animated_cb(MGEFF_ANIMATION handle, HWND hwnd, int id, POINT *pt)
+static void animated_cb(MGEFF_ANIMATION handle, HWND hWnd, int id, POINT *pt)
 {
     RECT rcWnd;
-    GetWindowRect(hwnd, &rcWnd);
+    GetWindowRect(hWnd, &rcWnd);
 
-    MoveWindow(hwnd, pt->x, pt->y, RECTW(rcWnd), RECTH(rcWnd), FALSE);
+    MoveWindow(hWnd, pt->x, pt->y, RECTW(rcWnd), RECTH(rcWnd), FALSE);
 }
 
-static void minimize_tool_window(HWND hwnd)
+static void minimize_tool_window(HWND hWnd)
 {
     MGEFF_ANIMATION animation;
     RECT rcWnd;
-    GetWindowRect(hwnd, &rcWnd);
+    GetWindowRect(hWnd, &rcWnd);
 
-    animation = mGEffAnimationCreate((void *)hwnd, (void *)animated_cb, 1,
+    animation = mGEffAnimationCreate((void *)hWnd, (void *)animated_cb, 1,
             MGEFF_POINT);
     if (animation) {
         POINT start_pt, end_pt;
@@ -176,8 +178,8 @@ static void minimize_tool_window(HWND hwnd)
         mGEffAnimationSetCurve(animation, OutExpo);
         mGEffAnimationSyncRun(animation);
 
-        IncludeWindowStyle(hwnd, WS_MINIMIZE);
-        MoveWindow(hwnd, rcWnd.left, rcWnd.bottom,
+        IncludeWindowStyle(hWnd, WS_MINIMIZE);
+        MoveWindow(hWnd, rcWnd.left, rcWnd.bottom,
                 RECTW(rcWnd), MINIMIZED_HEIGHT, TRUE);
 
         start_pt.x = rcWnd.left;
@@ -195,23 +197,24 @@ static void minimize_tool_window(HWND hwnd)
         mGEffAnimationDelete(animation);
     }
     else {
-        MoveWindow(hwnd,
+        MoveWindow(hWnd,
                 rcWnd.left,
                 rcWnd.bottom - MINIMIZED_HEIGHT,
                 rcWnd.right, MINIMIZED_HEIGHT, FALSE);
-        IncludeWindowStyle(hwnd, WS_MINIMIZE);
-        UpdateWindow(hwnd, TRUE);
+        IncludeWindowStyle(hWnd, WS_MINIMIZE);
+        UpdateWindow(hWnd, TRUE);
     }
 }
 
 #define MARGIN_PADDING  10
 
-static void get_title_rc(HWND hwnd, RECT *title_rc)
+#if 0
+static void get_title_rc(HWND hWnd, RECT *title_rc)
 {
     RECT client_rc;
     int font_height = GetSysFontHeight(SYSLOGFONT_CAPTION);
 
-    GetClientRect(hwnd, &client_rc);
+    GetClientRect(hWnd, &client_rc);
     int center_v = (client_rc.bottom - font_height) / 2;
 
     SetRect(title_rc, MARGIN_PADDING,
@@ -220,33 +223,90 @@ static void get_title_rc(HWND hwnd, RECT *title_rc)
             center_v + font_height / 2 + MARGIN_PADDING / 2);
 }
 
-static void get_bar_rc(HWND hwnd, const RECT *title_rc, RECT *bar_rc)
+static void get_bar_rc(HWND hWnd, const RECT *title_rc, RECT *bar_rc)
 {
     SetRect(bar_rc, title_rc->left, title_rc->bottom,
             title_rc->right, title_rc->bottom + 3);
 }
+#endif
 
-static void get_minimized_bar_rc(HWND hwnd, RECT *client_rc, RECT *bar_rc)
+#define HVML_LOGO_FILE      "assets/hvml-light-h240.png"
+#define HVML_LOGO_WIDTH     290
+#define HVML_LOGO_HEIGHT    240
+
+static BITMAP bmp_hvml_logo;
+static HDC alpha_mask_dc = HDC_INVALID;
+
+static BOOL load_hvml_logo(HDC hdc)
+{
+    if (alpha_mask_dc != HDC_INVALID)
+        return TRUE;
+
+    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
+    if (webext_dir == NULL) {
+        webext_dir = WEBKIT_WEBEXT_DIR;
+    }
+
+    gchar *path = g_strdup_printf("%s/%s", webext_dir, HVML_LOGO_FILE);
+    if (path) {
+        alpha_mask_dc = CreateMemDC(HVML_LOGO_WIDTH, HVML_LOGO_HEIGHT, 32,
+                MEMDC_FLAG_HWSURFACE | MEMDC_FLAG_SRCALPHA,
+                0x00FF0000, 0x0000FF00, 0x0000FF, 0xFF000000);
+        if (alpha_mask_dc == HDC_INVALID) {
+            goto failed;
+        }
+
+        if (LoadBitmapFromFile(hdc, &bmp_hvml_logo, path))
+            goto failed;
+
+        g_free(path);
+    }
+    else {
+        goto failed;
+    }
+
+    return TRUE;
+
+failed:
+    if (alpha_mask_dc != HDC_INVALID) {
+        DeleteMemDC(alpha_mask_dc);
+        alpha_mask_dc = HDC_INVALID;
+    }
+
+    if (path)
+        g_free(path);
+    return FALSE;
+}
+
+static void get_logo_rect(HWND hWnd, const RECT *client_rc, RECT *logo_rc)
+{
+    logo_rc->left = (client_rc->right - HVML_LOGO_WIDTH) / 2;
+    logo_rc->top = (client_rc->bottom - HVML_LOGO_HEIGHT) / 2;
+    logo_rc->right = logo_rc->left + HVML_LOGO_WIDTH;
+    logo_rc->bottom = logo_rc->top + HVML_LOGO_HEIGHT;
+}
+
+static void get_minimized_bar_rc(HWND hWnd, const RECT *client_rc, RECT *bar_rc)
 {
     SetRect(bar_rc, MARGIN_PADDING, client_rc->bottom - 3,
             client_rc->right - MARGIN_PADDING, client_rc->bottom);
 }
 
-static void on_paint(HWND hwnd, HDC hdc)
+static void on_paint(HWND hWnd, HDC hdc)
 {
-    if (GetWindowStyle(hwnd) & WS_MINIMIZE) {
+    if (GetWindowStyle(hWnd) & WS_MINIMIZE) {
         MG_RWops* area;
 
         RECT client_rc;
-        GetClientRect(hwnd, &client_rc);
+        GetClientRect(hWnd, &client_rc);
 
         SetBrushColor(hdc, DWORD2Pixel(hdc, 0x00000000));
         FillBox(hdc, 0, 0, client_rc.right, client_rc.bottom);
 
-        unsigned percent = (unsigned)GetWindowAdditionalData(hwnd);
+        unsigned percent = (unsigned)GetWindowAdditionalData(hWnd);
         if (percent <= 100) {
             RECT bar_rc;
-            get_minimized_bar_rc(hwnd, &client_rc, &bar_rc);
+            get_minimized_bar_rc(hWnd, &client_rc, &bar_rc);
             SetPenColor(hdc, DWORD2Pixel(hdc, 0xFF2E3436));
             SetBrushColor(hdc, DWORD2Pixel(hdc, 0xFF2E3436));
             Rectangle(hdc, bar_rc.left, bar_rc.top, bar_rc.right, bar_rc.bottom);
@@ -262,25 +322,54 @@ static void on_paint(HWND hwnd, HDC hdc)
         }
     }
     else {
+#if 0
         SelectFont(hdc, GetSystemFont(SYSLOGFONT_CAPTION));
 
         RECT title_rc, bar_rc;
-        get_title_rc(hwnd, &title_rc);
+        get_title_rc(hWnd, &title_rc);
 
         SetTextColor(hdc, DWORD2Pixel(hdc, 0xFFFFFFFF));
         SetBkMode(hdc, BM_TRANSPARENT);
-        DrawText(hdc, GetWindowCaption(hwnd), -1, &title_rc,
+        DrawText(hdc, GetWindowCaption(hWnd), -1, &title_rc,
                 DT_CENTER | DT_TOP | DT_SINGLELINE);
 
-        get_bar_rc(hwnd, &title_rc, &bar_rc);
+        get_bar_rc(hWnd, &title_rc, &bar_rc);
 
         SetPenColor(hdc, DWORD2Pixel(hdc, 0xFFFFFFFF));
         SetBrushColor(hdc, DWORD2Pixel(hdc, 0xFFFFFFFF));
         Rectangle(hdc, bar_rc.left, bar_rc.top, bar_rc.right, bar_rc.bottom);
 
-        unsigned percent = (unsigned)GetWindowAdditionalData(hwnd);
+        unsigned percent = (unsigned)GetWindowAdditionalData(hWnd);
         FillBox(hdc, bar_rc.left, bar_rc.top, RECTW(bar_rc) * percent / 100,
                 RECTH(bar_rc));
+#else
+        if (load_hvml_logo(hdc)) {
+            RECT logo_rc;
+
+            RECT client_rc;
+            GetClientRect(hWnd, &client_rc);
+
+            get_logo_rect(hWnd, &client_rc, &logo_rc);
+
+            FillBoxWithBitmap(hdc, logo_rc.left, logo_rc.top,
+                    RECTW(logo_rc), RECTH(logo_rc), &bmp_hvml_logo);
+
+            BYTE alpha;
+            DWORD count = GetWindowAdditionalData2(hWnd);
+            if (((count / 256) % 2) == 0) {
+                alpha = 255 - (count % 256);
+            }
+            else {
+                alpha = (count % 256);
+            }
+
+            SetBrushColor(alpha_mask_dc,
+                    RGBA2Pixel(alpha_mask_dc, 0x00, 0x00, 0x00, alpha));
+            FillBox(alpha_mask_dc, 0, 0, RECTW(logo_rc), RECTH(logo_rc));
+            BitBlt(alpha_mask_dc, 0, 0, RECTW(logo_rc), RECTH(logo_rc),
+                    hdc, logo_rc.left, logo_rc.top, COLOR_BLEND_PD_SRC_ATOP);
+        }
+#endif
     }
 }
 
@@ -289,6 +378,23 @@ FloatingToolWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
         case MSG_CREATE:
+            SetTimer(hWnd, 100, 5);
+            SetWindowAdditionalData2(hWnd, 0);
+            break;
+
+        case MSG_TIMER:
+            if (GetWindowStyle(hWnd) & WS_MINIMIZE) {
+            }
+            else {
+                RECT client_rc, logo_rc;
+                GetClientRect(hWnd, &client_rc);
+                get_logo_rect(hWnd, &client_rc, &logo_rc);
+                InvalidateRect(hWnd, &logo_rc, TRUE);
+
+                DWORD count = GetWindowAdditionalData2(hWnd);
+                count += 16;
+                SetWindowAdditionalData2(hWnd, count);
+            }
             break;
 
         case MSG_LBUTTONDOWN:
@@ -335,32 +441,40 @@ FloatingToolWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             if (wParam == XGUIPRO_LOAD_STATE_TITLE_CHANGED) {
                 SetWindowCaption(hWnd, (const char *)lParam);
+#if 0
                 RECT title_rc;
                 get_title_rc(hWnd, &title_rc);
                 InvalidateRect(hWnd, &title_rc, TRUE);
+#endif
             }
             else if (wParam == XGUIPRO_LOAD_STATE_REDIRECTED) {
                 SetWindowCaption(hWnd, "Redirected");
-
+#if 0
                 RECT title_rc, bar_rc;
                 get_title_rc(hWnd, &title_rc);
                 get_bar_rc(hWnd, &title_rc, &bar_rc);
                 SetWindowAdditionalData(hWnd, 0);
                 InvalidateRect(hWnd, &title_rc, TRUE);
                 InvalidateRect(hWnd, &bar_rc, TRUE);
+#else
+#endif
             }
             else if (wParam == XGUIPRO_LOAD_STATE_PROGRESS_CHANGED) {
+#if 0
                 RECT title_rc, bar_rc;
                 get_title_rc(hWnd, &title_rc);
                 get_bar_rc(hWnd, &title_rc, &bar_rc);
                 SetWindowAdditionalData(hWnd, lParam);
                 InvalidateRect(hWnd, &bar_rc, TRUE);
+#else
+#endif
             }
             else if (wParam == XGUIPRO_LOAD_STATE_COMMITTED ||
                     wParam == XGUIPRO_LOAD_STATE_FINISHED ||
                     wParam == XGUIPRO_LOAD_STATE_FAILED) {
                 ShowWindow(GetHosting(hWnd), SW_SHOWNORMAL);
                 minimize_tool_window(hWnd);
+                KillTimer(hWnd, 100);
             }
             break;
 
