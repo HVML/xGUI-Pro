@@ -388,14 +388,14 @@ function registerEventsListener(elems)
                 //console.log("eventName:eventOpts " + eventName + ":" + eventOpts);
                 elem.addEventListener(eventName, function (evt) {
                     let data = {
-                        originTagName: evt.currentTarget.tagName,
+                        originTag: evt.currentTarget.tagName,
                         originHandle: get_element_hvml_handle(evt.currentTarget),
                         originId: evt.currentTarget.id,
                         originClass: evt.currentTarget.className,
                         originName: evt.currentTarget.getAttribute('name'),
                         originValue: (typeof(evt.currentTarget.value) === 'undefined') ? evt.currentTarget.getAttribute('value') : evt.currentTarget.value,
                         targetDiffersOrigin: (evt.currentTarget == evt.target) ? false : true,
-                        targetTagName: evt.target.tagName,
+                        targetTag: evt.target.tagName,
                         targetHandle: get_element_hvml_handle(evt.target),
                         targetId: evt.target.id,
                         targetClass: evt.target.className,
