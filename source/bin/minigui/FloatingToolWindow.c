@@ -289,16 +289,15 @@ static void get_logo_rect(HWND hWnd, const RECT *client_rc, RECT *logo_rc)
 static void get_minimized_bar_rc(HWND hWnd, const RECT *client_rc, RECT *bar_rc)
 {
     SetRect(bar_rc, MARGIN_PADDING, client_rc->bottom - 3,
-            client_rc->right - MARGIN_PADDING, client_rc->bottom);
+            client_rc->right - MARGIN_PADDING, client_rc->bottom - 1);
 }
 
 static void on_paint(HWND hWnd, HDC hdc)
 {
-    if (GetWindowStyle(hWnd) & WS_MINIMIZE) {
-        MG_RWops* area;
+    RECT client_rc;
+    GetClientRect(hWnd, &client_rc);
 
-        RECT client_rc;
-        GetClientRect(hWnd, &client_rc);
+    if (GetWindowStyle(hWnd) & WS_MINIMIZE) {
 
         SetBrushColor(hdc, DWORD2Pixel(hdc, 0x00000000));
         FillBox(hdc, 0, 0, client_rc.right, client_rc.bottom);
@@ -307,19 +306,15 @@ static void on_paint(HWND hWnd, HDC hdc)
         if (percent <= 100) {
             RECT bar_rc;
             get_minimized_bar_rc(hWnd, &client_rc, &bar_rc);
-            SetPenColor(hdc, DWORD2Pixel(hdc, 0xFF2E3436));
-            SetBrushColor(hdc, DWORD2Pixel(hdc, 0xFF2E3436));
-            Rectangle(hdc, bar_rc.left, bar_rc.top, bar_rc.right, bar_rc.bottom);
+            SetPenColor(hdc, DWORD2Pixel(hdc, 0xFFFD6E0D));
+            SetBrushColor(hdc, DWORD2Pixel(hdc, 0xFFFD6E0D));
+            Rectangle(hdc, bar_rc.left, bar_rc.top,
+                    bar_rc.right - 1, bar_rc.bottom -1 );
 
             FillBox(hdc, bar_rc.left, bar_rc.top, RECTW(bar_rc) * percent / 100,
                     RECTH(bar_rc));
         }
 
-        area = MGUI_RWFromMem((void *)_png_close_data, sizeof(_png_close_data));
-        if (area) {
-            PaintImageEx(hdc, client_rc.right - MINIMIZED_HEIGHT, 0, area, "png");
-            MGUI_FreeRW(area);
-        }
     }
     else {
 #if 0
@@ -371,6 +366,15 @@ static void on_paint(HWND hWnd, HDC hdc)
         }
 #endif
     }
+
+    MG_RWops* area;
+
+    area = MGUI_RWFromMem((void *)_png_close_data, sizeof(_png_close_data));
+    if (area) {
+        PaintImageEx(hdc, client_rc.right - MINIMIZED_WIDTH,
+                client_rc.bottom - MINIMIZED_HEIGHT, area, "png");
+        MGUI_FreeRW(area);
+    }
 }
 
 static LRESULT
@@ -392,7 +396,7 @@ FloatingToolWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 InvalidateRect(hWnd, &logo_rc, TRUE);
 
                 DWORD count = GetWindowAdditionalData2(hWnd);
-                count += 16;
+                count += 8;
                 SetWindowAdditionalData2(hWnd, count);
             }
             break;
@@ -415,11 +419,13 @@ FloatingToolWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
 
         case MSG_LBUTTONUP:
-            if (GetWindowStyle(hWnd) & WS_MINIMIZE) {
+            {
                 RECT client_rc;
                 GetClientRect(hWnd, &client_rc);
                 int x = LOSWORD(lParam);
-                if (x >= client_rc.right - MINIMIZED_HEIGHT)
+                int y = HISWORD(lParam);
+                if (x >= client_rc.right - MINIMIZED_WIDTH &&
+                        y >= client_rc.bottom - MINIMIZED_HEIGHT)
                     SendNotifyMessage(GetHosting(hWnd), MSG_CLOSE, 0, 0);
             }
             break;
@@ -524,7 +530,7 @@ HWND create_floating_tool_window(HWND hostingWnd, const char *title)
 
     toolWnd = CreateMainWindowEx2(&CreateInfo, 0, NULL, NULL,
             ST_PIXEL_ARGB8888,
-            MakeRGBA(0, 0, 0, 0xA0),
+            MakeRGBA(0, 0, 0, 0xC0),
             CT_ALPHAPIXEL, COLOR_BLEND_PD_SRC_OVER);
 
     if (toolWnd != HWND_INVALID)
