@@ -148,6 +148,7 @@ static const unsigned char _png_close_data[] = {
 #define MINIMIZED_WIDTH     48
 #define MINIMIZED_HEIGHT    48
 
+#ifdef USE_ANIMATION
 static void animated_cb(MGEFF_ANIMATION handle, HWND hWnd, int id, POINT *pt)
 {
     RECT rcWnd;
@@ -158,10 +159,10 @@ static void animated_cb(MGEFF_ANIMATION handle, HWND hWnd, int id, POINT *pt)
 
 static void minimize_tool_window(HWND hWnd)
 {
-    MGEFF_ANIMATION animation;
     RECT rcWnd;
     GetWindowRect(hWnd, &rcWnd);
 
+    MGEFF_ANIMATION animation;
     animation = mGEffAnimationCreate((void *)hWnd, (void *)animated_cb, 1,
             MGEFF_POINT);
     if (animation) {
@@ -200,11 +201,25 @@ static void minimize_tool_window(HWND hWnd)
         MoveWindow(hWnd,
                 rcWnd.left,
                 rcWnd.bottom - MINIMIZED_HEIGHT,
-                rcWnd.right, MINIMIZED_HEIGHT, FALSE);
+                RECTW(rcWnd), MINIMIZED_HEIGHT, FALSE);
         IncludeWindowStyle(hWnd, WS_MINIMIZE);
-        UpdateWindow(hWnd, TRUE);
+        UpdateWindow(hWnd, FALSE);
     }
 }
+#else
+static void minimize_tool_window(HWND hWnd)
+{
+    RECT rcWnd;
+    GetWindowRect(hWnd, &rcWnd);
+
+    MoveWindow(hWnd,
+            rcWnd.left,
+            rcWnd.bottom - MINIMIZED_HEIGHT,
+            RECTW(rcWnd), MINIMIZED_HEIGHT, FALSE);
+    IncludeWindowStyle(hWnd, WS_MINIMIZE);
+    UpdateWindow(hWnd, FALSE);
+}
+#endif
 
 #define MARGIN_PADDING  10
 

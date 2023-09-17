@@ -30,6 +30,7 @@
 #include <purc/purc-helpers.h>
 #include <minigui/common.h>
 
+#undef USE_ANIMATION
 #define BROWSER_DEFAULT_TITLE           "xGUI Pro"
 #define BROWSER_DEFAULT_URL             "hvml://localhost/default"
 #define BROWSER_ABOUT_SCHEME            "xguipro"
