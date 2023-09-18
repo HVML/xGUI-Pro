@@ -389,7 +389,7 @@ function registerEventsListener(elems)
                 elem.addEventListener(eventName, function (evt) {
                     let data = {
                         originTag: evt.currentTarget.tagName,
-                        originHandle: get_element_hvml_handle(evt.currentTarget),
+                        originHandle: evt.currentTarget.hvmlHandleText ? evt.currentTarget.hvmlHandleText : evt.currentTarget.getAttribute('hvml-handle'),
                         originId: evt.currentTarget.id,
                         originClass: evt.currentTarget.className,
                         originName: evt.currentTarget.getAttribute('name'),
