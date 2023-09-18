@@ -926,7 +926,9 @@ int MiniGUIMain (int argc, const char* argv[])
     JoinLayer(NAME_DEF_LAYER , "xGUI Pro" , 0 , 0);
 #endif
 
+#ifdef USE_ANIMATION
     mGEffInit();
+#endif
 
     g_unix_signal_add(SIGINT, on_sigint, NULL);
 
@@ -938,7 +940,9 @@ int MiniGUIMain (int argc, const char* argv[])
     g_application_run(g_xgui_application, 0, NULL);
     g_object_unref(g_xgui_application);
 
+#ifdef USE_ANIMATION
     mGEffDeinit();
+#endif
 
     return exitAfterLoad && webProcessCrashed ? 1 : 0;
 }
