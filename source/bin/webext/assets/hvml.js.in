@@ -416,16 +416,10 @@ function registerEventsListener(elems)
                     if (optList.includes('stop'))
                         evt.stopPropagation();
 
-                    if (get_element_hvml_handle(evt.currentTarget) == "") {
-                        HVML.post(evt.type, "id",
-                                evt.currentTarget.id,
-                                JSON.stringify(data));
-                    }
-                    else {
-                        HVML.post(evt.type, "handle",
-                                get_element_hvml_handle(evt.currentTarget),
-                                JSON.stringify(data));
-                    }
+                    /* always use handle */
+                    HVML.post(evt.type, "handle",
+                            data.originHandle,
+                            JSON.stringify(data));
                 });
             }
         }
