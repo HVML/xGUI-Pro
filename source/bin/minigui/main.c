@@ -863,7 +863,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     GMainContext *context = g_main_context_default();
 
     GSource *source;
-    source = g_timeout_source_new(10);
+    source = g_timeout_source_new(5);
     g_source_set_callback(source,
             G_SOURCE_FUNC(minigui_msg_loop), NULL, NULL);
     g_source_attach(source, context);
