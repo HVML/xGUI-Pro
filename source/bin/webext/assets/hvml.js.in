@@ -312,6 +312,21 @@ if (checkHVML()) {
                 }
                 return { requestId: msg.requestId, state: state, data: data };
             }
+            else if (msg.elementType === 'tag') {
+                let data = null;
+                let state = "Ok";
+                var matches = document.getElementsByTagName(msg.element);
+                if (matches.length > 0) {
+                    for (let i = 0; i < matches.length; i++) {
+                        let node = matches[i];
+                        data = callMethod(node, msg.data.method, msg.data.arg);
+                    }
+                }
+                else {
+                    state = "NotFound";
+                }
+                return { requestId: msg.requestId, state: state, data: data };
+            }
         }
         else if (msg.operation === 'getProperty') {
             let data = null;
