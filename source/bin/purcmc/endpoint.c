@@ -1654,6 +1654,12 @@ static int update_dom(purcmc_server* srv, purcmc_endpoint* endpoint,
         case PCRDR_MSG_ELEMENT_TYPE_ID:
             element_type = "id";
             break;
+        case PCRDR_MSG_ELEMENT_TYPE_CLASS:
+            element_type = "class";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_TAG:
+            element_type = "tag";
+            break;
         case PCRDR_MSG_ELEMENT_TYPE_CSS:
             element_type = "css";
             break;
@@ -1798,6 +1804,12 @@ static int on_call_method(purcmc_server* srv, purcmc_endpoint* endpoint,
         case PCRDR_MSG_ELEMENT_TYPE_ID:
             element_type = "id";
             break;
+        case PCRDR_MSG_ELEMENT_TYPE_CLASS:
+            element_type = "class";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_TAG:
+            element_type = "tag";
+            break;
         case PCRDR_MSG_ELEMENT_TYPE_CSS:
             element_type = "css";
             break;
@@ -1895,6 +1907,12 @@ static int on_get_property(purcmc_server* srv, purcmc_endpoint* endpoint,
             break;
         case PCRDR_MSG_ELEMENT_TYPE_ID:
             element_type = "id";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_CLASS:
+            element_type = "class";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_TAG:
+            element_type = "tag";
             break;
         case PCRDR_MSG_ELEMENT_TYPE_CSS:
             element_type = "css";
@@ -1995,6 +2013,12 @@ static int on_set_property(purcmc_server* srv, purcmc_endpoint* endpoint,
             break;
         case PCRDR_MSG_ELEMENT_TYPE_ID:
             element_type = "id";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_CLASS:
+            element_type = "class";
+            break;
+        case PCRDR_MSG_ELEMENT_TYPE_TAG:
+            element_type = "tag";
             break;
         case PCRDR_MSG_ELEMENT_TYPE_CSS:
             element_type = "css";
