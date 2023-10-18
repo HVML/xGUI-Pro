@@ -389,7 +389,8 @@ if (checkHVML()) {
 function registerEventsListener(elems)
 {
     elems.forEach (function (elem) {
-        if (get_element_hvml_handle(elem) != "" || elem.id != "") {
+        var handle = elem.hvmlHandleText ? elem.hvmlHandleText : elem.getAttribute('hvml-handle')
+        if (handle != "" || elem.id != "") {
             let event_list = get_element_hvml_event_list(elem);
             for (let i = 0; i < event_list.length; i++) {
                 let eventTokens = event_list[i].split(':');
@@ -411,7 +412,7 @@ function registerEventsListener(elems)
                         originValue: (typeof(evt.currentTarget.value) === 'undefined') ? evt.currentTarget.getAttribute('value') : evt.currentTarget.value,
                         targetDiffersOrigin: (evt.currentTarget == evt.target) ? false : true,
                         targetTag: evt.target.tagName,
-                        targetHandle: get_element_hvml_handle(evt.target),
+                        targetHandle: evt.target.hvmlHandleText ? evt.target.hvmlHandleText : evt.target.getAttribute('hvml-handle'),
                         targetId: evt.target.id,
                         targetClass: evt.target.className,
                         targetName: evt.target.getAttribute('name'),
