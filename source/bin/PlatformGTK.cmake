@@ -33,8 +33,6 @@ list(APPEND xguipro_SOURCES
     gtk/BrowserTabbedWindow.h
     gtk/PurcmcCallbacks.c
     gtk/PurcmcCallbacks.h
-    gtk/HVMLURISchema.c
-    gtk/HVMLURISchema.h
     gtk/LayouterWidgets.c
     gtk/LayouterWidgets.h
     gtk/main.c
