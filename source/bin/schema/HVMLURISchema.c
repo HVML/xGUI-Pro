@@ -315,6 +315,82 @@ out:
     return blank_page_with_bg;
 }
 
+bool should_do_http_redirect(WebKitURISchemeRequest *request, const char *host,
+        const char *port, const char *app, const char *runner, const char *group)
+{
+    (void) request;
+    (void) host;
+    (void) port;
+    (void) app;
+    (void) runner;
+    (void) group;
+    return true;
+}
+
+#define QUERY_SEPERATOR     '?'
+
+void do_http_redirect(WebKitURISchemeRequest *request, const char *uri,
+    const char *host, const char *port, const char *app, const char *runner,
+    const char *group, const char *path_to_assets)
+{
+    (void) request;
+    (void) uri;
+    (void) host;
+    (void) port;
+    (void) app;
+    (void) runner;
+    (void) group;
+    (void) path_to_assets;
+    const char *query = uri;
+    while (*query && *query != QUERY_SEPERATOR) {
+        query++;
+    }
+
+    if (query[0] == 0) {
+        query = NULL;
+    }
+    else {
+        query += 1;
+        if (query[0] == 0) {
+            query = NULL;
+        }
+    }
+
+    GInputStream *stream = NULL;
+    WebKitURISchemeResponse *response = NULL;;
+
+    gchar *contents = (gchar *)blank_page;
+    gsize content_length = strlen(contents);
+
+    stream = g_memory_input_stream_new_from_data(contents, content_length, NULL);
+    response = webkit_uri_scheme_response_new(stream, content_length);
+
+    SoupMessageHeaders *header = soup_message_headers_new(SOUP_MESSAGE_HEADERS_RESPONSE);
+    soup_message_headers_append(header, "Location", "http://www.fmsoft.cn");
+    webkit_uri_scheme_response_set_status(response, 302, NULL);
+    webkit_uri_scheme_response_set_http_headers(response, header);
+    webkit_uri_scheme_response_set_content_type(response, "text/html");
+
+    webkit_uri_scheme_request_finish_with_response(request, response);
+
+    g_object_unref(response);
+    g_object_unref(stream);
+}
+
+void load_local_assets(WebKitURISchemeRequest *request, const char *uri,
+    const char *host, const char *port, const char *app, const char *runner,
+    const char *group, const char *path_to_assets)
+{
+    (void) request;
+    (void) uri;
+    (void) host;
+    (void) port;
+    (void) app;
+    (void) runner;
+    (void) group;
+    (void) path_to_assets;
+}
+
 void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext)
 {
@@ -466,6 +542,23 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             webkit_uri_scheme_request_finish_error(request, error);
             goto done;
         }
+    }
+    else if (strncmp(host, PCRDR_ORIGINHOST, strlen(PCRDR_ORIGINHOST)) == 0) {
+        char *port = strstr(host, ":");
+        const char *path_to_assets = page;
+        if (port) {
+            *port = 0;
+            port += 1;
+        }
+        if (should_do_http_redirect(request, host, port, app, runner, group)) {
+            do_http_redirect(request, uri, host, port, app, runner, group,
+                    path_to_assets);
+        }
+        else {
+            load_local_assets(request, uri, host, port, app, runner, group,
+                    path_to_assets);
+        }
+        goto done;
     }
 
 error:
