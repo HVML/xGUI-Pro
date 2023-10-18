@@ -333,14 +333,43 @@ void do_http_redirect(WebKitURISchemeRequest *request, const char *uri,
     const char *host, const char *port, const char *app, const char *runner,
     const char *group, const char *path_to_assets)
 {
-    (void) request;
-    (void) uri;
-    (void) host;
-    (void) port;
-    (void) app;
-    (void) runner;
     (void) group;
-    (void) path_to_assets;
+    GError *error = NULL;
+    char host_name[PURC_LEN_HOST_NAME + 1];
+    char app_name[PURC_LEN_APP_NAME + 1];
+    char runner_name[PURC_LEN_RUNNER_NAME + 1];
+
+    /* TODO get real host name */
+    strcpy(host_name, "www.fmsoft.cn");
+
+    /* TODO get real app name */
+    if (strcmp(app, PCRDR_APP_SELF) == 0) {
+    }
+    else {
+        strcpy(app_name, app);
+    }
+
+    /* runner name is schema */
+    if (strcmp(runner, PCRDR_RUNNER_HTTP) == 0) {
+        strcpy(runner_name, "http");
+    }
+    else if (strcmp(runner, PCRDR_RUNNER_HTTPS) == 0) {
+        strcpy(runner_name, "https");
+    }
+    else if (strcmp(runner, PCRDR_RUNNER_FTP) == 0) {
+        strcpy(runner_name, "ftp");
+    }
+    else if (strcmp(runner, PCRDR_RUNNER_FTPS) == 0) {
+        strcpy(runner_name, "ftps");
+    }
+    else {
+        error = g_error_new(XGUI_PRO_ERROR,
+                XGUI_PRO_ERROR_INVALID_HVML_URI,
+                "Invalid runner name (%s)", runner_name);
+        webkit_uri_scheme_request_finish_error(request, error);
+        return;
+    }
+
     const char *query = uri;
     while (*query && *query != QUERY_SEPERATOR) {
         query++;
@@ -356,6 +385,24 @@ void do_http_redirect(WebKitURISchemeRequest *request, const char *uri,
         }
     }
 
+    size_t nr_url = PURC_LEN_HOST_NAME + PURC_LEN_APP_NAME
+        + PURC_LEN_RUNNER_NAME + strlen(port) + strlen(path_to_assets) +
+        strlen(query);
+    char *url = malloc(nr_url + 1);
+    if (port) {
+        snprintf(url, nr_url, "%s://%s:%s/%s/exported/%s", runner_name,
+                host_name, port, app_name, path_to_assets);
+    }
+    else {
+        snprintf(url, nr_url, "%s://%s/%s/exported/%s", runner_name,
+                host_name, app_name, path_to_assets);
+    }
+
+    if (query) {
+        strcat(url, "?");
+        strcat(url, query);
+    }
+
     GInputStream *stream = NULL;
     WebKitURISchemeResponse *response = NULL;;
 
@@ -366,7 +413,7 @@ void do_http_redirect(WebKitURISchemeRequest *request, const char *uri,
     response = webkit_uri_scheme_response_new(stream, content_length);
 
     SoupMessageHeaders *header = soup_message_headers_new(SOUP_MESSAGE_HEADERS_RESPONSE);
-    soup_message_headers_append(header, "Location", "http://www.fmsoft.cn");
+    soup_message_headers_append(header, "Location", url);
     webkit_uri_scheme_response_set_status(response, 302, NULL);
     webkit_uri_scheme_response_set_http_headers(response, header);
     webkit_uri_scheme_response_set_content_type(response, "text/html");
