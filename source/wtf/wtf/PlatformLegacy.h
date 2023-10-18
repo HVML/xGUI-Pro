@@ -51,6 +51,8 @@
 #define WTF_PLATFORM_GTK 1
 #elif defined(BUILDING_HBD__)
 #define WTF_PLATFORM_HBD 1
+#elif defined(BUILDING_MINIGUI__)
+#define WTF_PLATFORM_MINIGUI 1
 #elif defined(BUILDING_WPE__)
 #define WTF_PLATFORM_WPE 1
 #elif defined(BUILDING_JSCONLY__)

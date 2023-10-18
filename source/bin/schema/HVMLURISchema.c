@@ -22,10 +22,10 @@
 
 #include "config.h"
 
-#include "main.h"
+#include "xguipro-features.h"
 #include "HVMLURISchema.h"
 #include "BuildRevision.h"
-#include "LayouterWidgets.h"
+//#include "LayouterWidgets.h"
 
 #include "utils/hvml-uri.h"
 #include "utils/load-asset.h"
@@ -36,6 +36,14 @@
 #include <gio/gunixinputstream.h>
 
 #include <assert.h>
+
+#if PLATFORM(MINIGUI)
+#include "minigui/LayouterWidgets.h"
+#include "minigui/main.h"
+#else
+#include "gtk/LayouterWidgets.h"
+#include "gtk/main.h"
+#endif
 
 #ifndef WEBKIT_VERSION_STRING
 #   define STR(x)                  #x
@@ -169,7 +177,11 @@ static const char *footer_on_ok = ""
     "        <p>"
     "           <small>Status: <strong hvml-handle='731128'>Checking...</strong>.<br/>"
     "           The contents in this page will be replaced by the HVML runner <span hvml-handle='790715'></span>.<br/>"
-    "           WebKit2GTK API Version " WEBKITHBD_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#if PLATFORM(MINIGUI)
+    "           WebKit2HBD API Version " WEBKITHBD_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#else
+    "           WebKit2GTK API Version " WEBKITGTK_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#endif
     "        </p>"
     "      </footer>"
     ""
@@ -189,7 +201,11 @@ static const char *footer_on_error = ""
     "        <p>"
     "           <small>Status: <strong hvml-handle='731128'>ERROR</strong>.<br/>"
     "           %s <span hvml-handle='790715'></span>.<br/>"
-    "           WebKit2GTK API Version " WEBKITHBD_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#if PLATFORM(MINIGUI)
+    "           WebKit2HBD API Version " WEBKITHBD_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#else
+    "           WebKit2GTK API Version " WEBKITGTK_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#endif
     "        </p>"
     "      </footer>"
     ""
@@ -464,7 +480,9 @@ error:
             contents = data;
         }
         WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
+#if PLATFORM(MINIGUI)
         webkit_web_view_set_display_suppressed(webview, true);
+#endif
         content_length = strlen(contents);
         content_type = g_strdup("text/html");
         max_to_load = content_length;

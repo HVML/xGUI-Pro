@@ -12,6 +12,7 @@ set(LIBEXEC_INSTALL_DIR "${CMAKE_INSTALL_FULL_LIBEXECDIR}/xguipro" CACHE PATH "A
 set(HEADER_INSTALL_DIR "${CMAKE_INSTALL_FULL_INCLUDEDIR}" CACHE PATH "Absolute path to header installation directory")
 set(XGUIPRO_HEADER_INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}/xguipro" CACHE PATH "Absolute path to xGUIPro header installation directory")
 
+add_definitions(-DBUILDING_GTK__=1)
 add_definitions(-DBUILDING_LINUX__=1)
 add_definitions(-DXGUIPRO_API_VERSION_STRING="${XGUIPRO_API_VERSION}")
 
