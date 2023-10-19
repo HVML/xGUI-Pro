@@ -43,6 +43,12 @@ static purcmc_server_config* the_srvcfg;
 #define PTR_FOR_US_LISTENER ((void *)1)
 #define PTR_FOR_WS_LISTENER ((void *)2)
 
+#define DEFAULT_LOCALE      "zh_CN"
+#define DEFAULT_DPI_NAME    "hdpi"
+
+#define MAX_LOCALE_LENGTH   128
+#define MAX_DPI_LENGTH      64
+
 /* callbacks for socket servers */
 // Allocate a purcmc_endpoint structure for a new client and send `auth` packet.
 static int
@@ -892,10 +898,33 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
 
     assert(srvcfg != NULL);
 
+    char locale[MAX_LOCALE_LENGTH];
+    char dpi[MAX_DPI_LENGTH];
+
+    char *str = setlocale(LC_ALL, "");
+    if (true) {
+        char *p = strstr(str, ".");
+        size_t nr = p - str;
+        if (p) {
+            strncpy(locale, str, nr);
+            locale[nr] = 0;
+        }
+        else {
+            strcpy(locale, str);
+        }
+    }
+    else {
+        strcpy(locale, DEFAULT_LOCALE);
+    }
+
+    /* TODO : get real dpi name */
+    strcpy(dpi, DEFAULT_DPI_NAME);
+
     the_srvcfg = srvcfg;
     if (asprintf(&the_server.features, SERVER_FEATURES_FORMAT,
                 markup_langs, nr_workspaces,
-                nr_tabbedwindows, nr_tabbedpages, nr_plainwindows) < 0) {
+                nr_tabbedwindows, nr_tabbedpages, nr_plainwindows,
+                locale, dpi) < 0) {
         purc_log_error("Error during asprintf: %s\n",
                 strerror(errno));
         goto error;
