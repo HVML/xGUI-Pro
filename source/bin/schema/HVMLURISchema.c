@@ -357,8 +357,10 @@ bool should_do_redirect(WebKitURISchemeRequest *request,
         }
     }
     else if (endpoint->type == ET_WEB_SOCKET) {
-        /* TODO: compare real local host name */
         char host_name[PURC_LEN_HOST_NAME + 1] = { 0 };
+        /* TODO: get real local host name */
+        strcpy(host_name, PCRDR_LOCALHOST);
+
         if ((strcmp(host_name, endpoint->host_name) == 0) &&
                 (strcmp(uri_st->group, PCRDR_GROUP_STATIC) == 0)) {
             need_redirect = false;
@@ -479,10 +481,98 @@ void do_redirect(WebKitURISchemeRequest *request, purcmc_endpoint *endpoint,
 void load_local_assets(WebKitURISchemeRequest *request,
         purcmc_endpoint *endpoint, struct hvml_broken_down_uri *uri_st)
 {
-    fprintf(stderr, "######> load local assets endpoint=%p|endpoint->host_name=%s\n", endpoint, endpoint ? endpoint->host_name : NULL);
-    (void) request;
     (void) endpoint;
-    (void) uri_st;
+    GError *error = NULL;
+    int fd = -1;
+    ssize_t max_to_load = 1024 * 4;
+    gchar *contents = NULL;
+    gchar *content_type = NULL;
+    gsize content_length = 0;
+
+    char prefix[PURC_LEN_APP_NAME + PURC_LEN_RUNNER_NAME + 32];
+
+    if (strcmp(uri_st->app, PCRDR_APP_SYSTEM) == 0) {
+        if (strcmp(uri_st->runner, PCRDR_RUNNER_FILESYSTEM) == 0) {
+            /* try to load asset from the system filesystem */
+            strcpy(prefix, "/");
+        }
+        else {
+            /* TODO */
+            strcpy(prefix, "/");
+        }
+    }
+    else {
+        snprintf(prefix, sizeof(prefix), "/app/%s/exported", uri_st->real_app);
+    }
+
+    unsigned asset_flags = 0;
+    char *once_val = NULL;
+    if (purc_hvml_uri_get_query_value_alloc(uri_st->uri,
+                "once", &once_val) && strcmp(once_val, "yes") == 0) {
+        asset_flags |= ASSET_FLAG_ONCE;
+    }
+    if (once_val)
+        free(once_val);
+
+    if (asset_flags & ASSET_FLAG_ONCE) {
+        /* If having ASSET_FLAG_ONCE load whole contents, and remove
+           the asset file. */
+        contents = load_asset_content(NULL, prefix, uri_st->page, &content_length,
+                asset_flags);
+        max_to_load = content_length;
+    }
+    else {
+        contents = open_and_load_asset(NULL, prefix, uri_st->page, &max_to_load,
+                &fd, &content_length);
+    }
+
+    if (contents == NULL) {
+        error = g_error_new(XGUI_PRO_ERROR,
+                XGUI_PRO_ERROR_INVALID_HVML_URI,
+                "Can not load contents from file system (%s/%s)",
+                prefix, uri_st->page);
+        webkit_uri_scheme_request_finish_error(request, error);
+        goto done;
+    }
+
+    gboolean result_uncertain;
+    content_type = g_content_type_guess(uri_st->page,
+            (const guchar *)contents, max_to_load, &result_uncertain);
+
+    LOG_DEBUG("content type of URI (%s): %s (%s)\n",
+            uri_st->uri, content_type,
+            result_uncertain ? "uncertain" : "certain");
+
+    if (result_uncertain) {
+        if (content_type)
+            free(content_type);
+        content_type = NULL;
+    }
+
+    GInputStream *stream = NULL;
+    if (content_length > max_to_load && fd >= 0) {
+        free(contents);
+        stream = g_unix_input_stream_new(fd, TRUE);
+        LOG_DEBUG("make a unix input stream for URI: %s (%s)\n",
+                uri_st->uri, content_type);
+    }
+    else {
+        if (fd >= 0)
+            close(fd);
+
+        stream = g_memory_input_stream_new_from_data(contents, content_length,
+                (contents != cover_page && contents != blank_page) ? g_free : NULL);
+        LOG_DEBUG("make a memory input stream for URI: %s (%s)\n",
+                uri_st->uri, content_type);
+    }
+
+    webkit_uri_scheme_request_finish(request, stream, content_length,
+            content_type ? content_type : "application/octet-stream");
+    g_object_unref(stream);
+
+done:
+    if (content_type)
+        g_free(content_type);
 }
 
 void handle_origin_host_request(WebKitURISchemeRequest *request,
