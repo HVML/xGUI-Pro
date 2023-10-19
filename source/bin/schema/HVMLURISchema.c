@@ -505,6 +505,8 @@ void load_local_assets(WebKitURISchemeRequest *request,
         snprintf(prefix, sizeof(prefix), "/app/%s/exported", uri_st->real_app);
     }
 
+    LOG_WARN("local res: uri=%s|prefix=%s|page=%s\n", uri_st->uri, prefix, uri_st->page);
+
     unsigned asset_flags = 0;
     char *once_val = NULL;
     if (purc_hvml_uri_get_query_value_alloc(uri_st->uri,
