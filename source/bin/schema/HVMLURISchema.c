@@ -29,6 +29,8 @@
 
 #include "utils/hvml-uri.h"
 #include "utils/load-asset.h"
+#include "purcmc/server.h"
+#include "purcmc/purcmc.h"
 
 #include <webkit2/webkit2.h>
 #include <purc/purc-pcrdr.h>
@@ -38,9 +40,11 @@
 #include <assert.h>
 
 #if PLATFORM(MINIGUI)
+#include "minigui/PurcmcCallbacks.h"
 #include "minigui/LayouterWidgets.h"
 #include "minigui/main.h"
 #else
+#include "gtk/PurcmcCallbacks.h"
 #include "gtk/LayouterWidgets.h"
 #include "gtk/main.h"
 #endif
@@ -55,6 +59,20 @@
 #define DEFAULT_SPLASH_FILE        "assets/splash.jpg"
 #define SPLASH_FILE_NAME           "splash"
 #define SPLASH_FILE_SUFFIX         "jpg"
+#define QUERY_SEPERATOR            '?'
+
+
+struct hvml_broken_down_uri {
+    const char *uri;
+    const char *host;
+    const char *port;
+    const char *app;
+    const char *runner;
+    const char *group;
+    const char *page;
+    const char *real_app;
+    const char *real_runner;
+};
 
 void initializeWebExtensionsCallback(WebKitWebContext *context,
         gpointer user_data)
@@ -315,25 +333,18 @@ out:
     return blank_page_with_bg;
 }
 
-bool should_do_http_redirect(WebKitURISchemeRequest *request, const char *host,
-        const char *port, const char *app, const char *runner, const char *group)
+bool should_do_http_redirect(WebKitURISchemeRequest *request, int ct,
+        struct hvml_broken_down_uri *uri_st)
 {
     (void) request;
-    (void) host;
-    (void) port;
-    (void) app;
-    (void) runner;
-    (void) group;
+    (void) ct;
+    (void) uri_st;
     return true;
 }
 
-#define QUERY_SEPERATOR     '?'
-
-void do_http_redirect(WebKitURISchemeRequest *request, const char *uri,
-    const char *host, const char *port, const char *app, const char *runner,
-    const char *group, const char *path_to_assets)
+void do_http_redirect(WebKitURISchemeRequest *request, int ct,
+        struct hvml_broken_down_uri *uri_st)
 {
-    (void) group;
     GError *error = NULL;
     char host_name[PURC_LEN_HOST_NAME + 1];
     char app_name[PURC_LEN_APP_NAME + 1];
@@ -342,24 +353,20 @@ void do_http_redirect(WebKitURISchemeRequest *request, const char *uri,
     /* TODO get real host name */
     strcpy(host_name, "www.fmsoft.cn");
 
-    /* TODO get real app name */
-    if (strcmp(app, PCRDR_APP_SELF) == 0) {
-    }
-    else {
-        strcpy(app_name, app);
-    }
+    /* real app name */
+    strcpy(app_name, uri_st->real_app);
 
     /* runner name is schema */
-    if (strcmp(runner, PCRDR_RUNNER_HTTP) == 0) {
+    if (strcmp(uri_st->runner, PCRDR_RUNNER_HTTP) == 0) {
         strcpy(runner_name, "http");
     }
-    else if (strcmp(runner, PCRDR_RUNNER_HTTPS) == 0) {
+    else if (strcmp(uri_st->runner, PCRDR_RUNNER_HTTPS) == 0) {
         strcpy(runner_name, "https");
     }
-    else if (strcmp(runner, PCRDR_RUNNER_FTP) == 0) {
+    else if (strcmp(uri_st->runner, PCRDR_RUNNER_FTP) == 0) {
         strcpy(runner_name, "ftp");
     }
-    else if (strcmp(runner, PCRDR_RUNNER_FTPS) == 0) {
+    else if (strcmp(uri_st->runner, PCRDR_RUNNER_FTPS) == 0) {
         strcpy(runner_name, "ftps");
     }
     else {
@@ -370,7 +377,7 @@ void do_http_redirect(WebKitURISchemeRequest *request, const char *uri,
         return;
     }
 
-    const char *query = uri;
+    const char *query = uri_st->uri;
     while (*query && *query != QUERY_SEPERATOR) {
         query++;
     }
@@ -386,22 +393,24 @@ void do_http_redirect(WebKitURISchemeRequest *request, const char *uri,
     }
 
     size_t nr_url = PURC_LEN_HOST_NAME + PURC_LEN_APP_NAME
-        + PURC_LEN_RUNNER_NAME + strlen(port) + strlen(path_to_assets) +
-        strlen(query);
+        + PURC_LEN_RUNNER_NAME + (uri_st->port ? strlen(uri_st->port) : 0) + 
+        (uri_st->page ? strlen(uri_st->page) : 0) +
+        (query ? strlen(query) : 0);
     char *url = malloc(nr_url + 1);
-    if (port) {
+    if (uri_st->port) {
         snprintf(url, nr_url, "%s://%s:%s/%s/exported/%s", runner_name,
-                host_name, port, app_name, path_to_assets);
+                host_name, uri_st->port, app_name, uri_st->page);
     }
     else {
         snprintf(url, nr_url, "%s://%s/%s/exported/%s", runner_name,
-                host_name, app_name, path_to_assets);
+                host_name, app_name, uri_st->page);
     }
 
     if (query) {
         strcat(url, "?");
         strcat(url, query);
     }
+    fprintf(stderr, "###########################> url=%s\n", url);
 
     GInputStream *stream = NULL;
     WebKitURISchemeResponse *response = NULL;;
@@ -424,18 +433,50 @@ void do_http_redirect(WebKitURISchemeRequest *request, const char *uri,
     g_object_unref(stream);
 }
 
-void load_local_assets(WebKitURISchemeRequest *request, const char *uri,
-    const char *host, const char *port, const char *app, const char *runner,
-    const char *group, const char *path_to_assets)
+void load_local_assets(WebKitURISchemeRequest *request, int ct,
+        struct hvml_broken_down_uri *uri_st)
 {
     (void) request;
-    (void) uri;
-    (void) host;
-    (void) port;
-    (void) app;
-    (void) runner;
-    (void) group;
-    (void) path_to_assets;
+    (void) ct;
+    (void) uri_st;
+}
+
+void handle_origin_host_request(WebKitURISchemeRequest *request,
+        struct hvml_broken_down_uri *uri_st)
+{
+    int ct = ET_BUILTIN;
+    purcmc_session *sess = NULL;
+    purcmc_endpoint *endpoint = NULL;
+
+    char *port = strstr(uri_st->host, ":");
+    if (port) {
+        *port = 0;
+        port += 1;
+    }
+    uri_st->port = port;
+
+    WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
+    /* get the real app name and/or real runner name */
+    if (webview) {
+        sess = g_object_get_data(G_OBJECT(webview), "purcmc-session");
+        if (sess) {
+            endpoint = purcmc_get_endpoint_by_session(sess);
+            if (endpoint) {
+                ct = endpoint->type;
+                uri_st->real_app = endpoint->app_name;
+                uri_st->real_runner = endpoint->runner_name;
+            }
+        }
+    }
+    fprintf(stderr, "##########################> app=%s|real_app=%s|runner=%s|real_runner=%s\n",
+            uri_st->app, uri_st->real_app, uri_st->runner, uri_st->real_runner);
+
+    if (should_do_http_redirect(request, ct, uri_st)) {
+        do_http_redirect(request, ct, uri_st);
+    }
+    else {
+        load_local_assets(request, ct, uri_st);
+    }
 }
 
 void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
@@ -591,20 +632,18 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
         }
     }
     else if (strncmp(host, PCRDR_ORIGINHOST, strlen(PCRDR_ORIGINHOST)) == 0) {
-        char *port = strstr(host, ":");
-        const char *path_to_assets = page;
-        if (port) {
-            *port = 0;
-            port += 1;
-        }
-        if (should_do_http_redirect(request, host, port, app, runner, group)) {
-            do_http_redirect(request, uri, host, port, app, runner, group,
-                    path_to_assets);
-        }
-        else {
-            load_local_assets(request, uri, host, port, app, runner, group,
-                    path_to_assets);
-        }
+        struct hvml_broken_down_uri uri_st = {
+            .uri = uri,
+            .host = host,
+            .port = NULL,
+            .app = app,
+            .runner = runner,
+            .group = group,
+            .page = page,
+            .real_app = app,
+            .real_runner = runner,
+        };
+        handle_origin_host_request(request, &uri_st);
         goto done;
     }
 
