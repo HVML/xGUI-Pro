@@ -350,15 +350,59 @@ int check_dangling_endpoints(purcmc_server *srv)
     return n;
 }
 
+#define XGUIPRO_APP_NAME        "cn.fmsoft.hvml.xGUIPro"
+#define KEY_CHALLENGECODE       "challengeCode"
+
+char *gen_challenge_code()
+{
+    unsigned char ch_code_bin [PCUTILS_SHA256_DIGEST_SIZE];
+    char key [32];
+    char *ch_code = malloc(PCUTILS_SHA256_DIGEST_SIZE * 2 + 1);
+    if (!ch_code) {
+        goto out;
+    }
+
+    snprintf(key, sizeof (key), "xguipro-%ld", random ());
+
+    pcutils_hmac_sha256 (ch_code_bin,
+            (uint8_t*)XGUIPRO_APP_NAME, strlen(XGUIPRO_APP_NAME),
+            (uint8_t*)key, strlen (key));
+    pcutils_bin2hex (ch_code_bin, PCUTILS_SHA256_DIGEST_SIZE, ch_code, false);
+    ch_code [PCUTILS_SHA256_DIGEST_SIZE * 2] = 0;
+
+out:
+    return ch_code;
+}
+
 int send_initial_response(purcmc_server* srv, purcmc_endpoint* endpoint)
 {
     int retv = PCRDR_SC_OK;
     pcrdr_msg *msg = NULL;
 
-    msg = pcrdr_make_response_message(PCRDR_REQUESTID_INITIAL, NULL,
-            PCRDR_SC_OK, 0,
-            PCRDR_MSG_DATA_TYPE_PLAIN, srv->features,
-            strlen(srv->features));
+    if (endpoint->type == CT_UNIX_SOCKET) {
+        msg = pcrdr_make_response_message(PCRDR_REQUESTID_INITIAL, NULL,
+                PCRDR_SC_OK, 0,
+                PCRDR_MSG_DATA_TYPE_PLAIN, srv->features,
+                strlen(srv->features));
+    }
+    else {
+        char *challenge_code = gen_challenge_code();
+        if (!challenge_code) {
+            retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
+            goto failed;
+        }
+
+        size_t nr_buf = strlen(srv->features) + strlen(challenge_code)
+            + strlen(KEY_CHALLENGECODE) + 2; // : + \n
+        char *buf = malloc(nr_buf + 1);
+        sprintf(buf, "%s%s:%s\n", srv->features, KEY_CHALLENGECODE, challenge_code);
+        msg = pcrdr_make_response_message(PCRDR_REQUESTID_INITIAL, NULL,
+                PCRDR_SC_OK, 0,
+                PCRDR_MSG_DATA_TYPE_PLAIN, buf, nr_buf);
+        free(challenge_code);
+        free(buf);
+    }
+
     if (msg == NULL) {
         retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
         goto failed;
