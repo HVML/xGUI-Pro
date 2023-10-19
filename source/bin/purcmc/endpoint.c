@@ -2099,12 +2099,20 @@ failed:
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
 
+static int on_authenticate(purcmc_server* srv, purcmc_endpoint* endpoint,
+        const pcrdr_msg *msg)
+{
+    /* TODO */
+    return -1;
+}
+
 static struct request_handler {
     const char *operation;
     request_handler handler;
 } handlers[] = {
     { PCRDR_OPERATION_ADDPAGEGROUPS, on_add_page_groups },
     { PCRDR_OPERATION_APPEND, on_append },
+    { PCRDR_OPERATION_AUTHENTICATE, on_authenticate },
     { PCRDR_OPERATION_CALLMETHOD, on_call_method },
     { PCRDR_OPERATION_CLEAR, on_clear },
     { PCRDR_OPERATION_CREATEPLAINWINDOW, on_create_plain_window },
