@@ -2146,7 +2146,18 @@ failed:
 static int on_authenticate(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
-    /* TODO */
+    /* TODO parse host name */
+    pcrdr_msg response = { };
+    purcmc_session *info = NULL;
+
+    response.type = PCRDR_MSG_TYPE_RESPONSE;
+    response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
+    response.retCode = PCRDR_SC_OK;
+    response.resultValue = (uint64_t)info;
+    response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+
+    return purcmc_endpoint_send_response(srv, endpoint, &response);
     return -1;
 }
 
