@@ -43,12 +43,15 @@
 #include "utils/sorted-array.h"
 
 #include "purcmc.h"
+#include "xguipro-version.h"
 
 #define SERVER_APP_NAME     "cn.fmsoft.hvml.renderer"
 #define SERVER_RUNNER_NAME  "purcmc"
+#define XGUIPRO_APP_NAME    "cn.fmsoft.hvml.xGUIPro"
 
 #define SERVER_FEATURES_FORMAT \
     PCRDR_PURCMC_PROTOCOL_NAME ":" PCRDR_PURCMC_PROTOCOL_VERSION_STRING "\n" \
+    XGUIPRO_APP_NAME ":" XGUIPRO_VERSION_STRING "\n" \
     "%s\n" \
     "workspace:%d/tabbedWindow:%d/widgetInTabbedWindow:%d/plainWindow:%d\n" \
     "locale:%s\n" \
