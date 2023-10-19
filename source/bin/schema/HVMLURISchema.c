@@ -74,6 +74,14 @@ struct hvml_broken_down_uri {
     const char *real_runner;
 };
 
+static void print_hvml_broken_down_uri(struct hvml_broken_down_uri *st)
+{
+    LOG_WARN("HVML URI: uri=%s|host=%s|port=%s|app=%s|runner=%s|group=%s"
+            "|page=%s|real_app=%s|real_runner=%s\n",
+            st->uri, st->host, st->port, st->app, st->runner, st->group,
+            st->page, st->real_app, st->real_runner);
+}
+
 void initializeWebExtensionsCallback(WebKitWebContext *context,
         gpointer user_data)
 {
@@ -333,46 +341,59 @@ out:
     return blank_page_with_bg;
 }
 
-bool should_do_http_redirect(WebKitURISchemeRequest *request, int ct,
-        struct hvml_broken_down_uri *uri_st)
+bool should_do_redirect(WebKitURISchemeRequest *request,
+        purcmc_endpoint *endpoint, struct hvml_broken_down_uri *uri_st)
 {
     (void) request;
-    (void) ct;
-    (void) uri_st;
-    return true;
+
+    bool need_redirect = false;
+    if (endpoint == NULL) {
+        goto out;
+    }
+
+    if (endpoint->type == ET_UNIX_SOCKET) {
+        if (strcmp(uri_st->group, PCRDR_GROUP_DYNAMIC) == 0) {
+            need_redirect = true;
+        }
+    }
+    else if (endpoint->type == ET_WEB_SOCKET) {
+        /* TODO: compare real local host name */
+        char host_name[PURC_LEN_HOST_NAME + 1] = { 0 };
+        if ((strcmp(host_name, endpoint->host_name) == 0) &&
+                (strcmp(uri_st->group, PCRDR_GROUP_STATIC) == 0)) {
+            need_redirect = false;
+        }
+        else {
+            need_redirect = true;
+        }
+    }
+
+out:
+    return need_redirect;
 }
 
-void do_http_redirect(WebKitURISchemeRequest *request, int ct,
+void do_redirect(WebKitURISchemeRequest *request, purcmc_endpoint *endpoint,
         struct hvml_broken_down_uri *uri_st)
 {
     GError *error = NULL;
-    char host_name[PURC_LEN_HOST_NAME + 1];
-    char app_name[PURC_LEN_APP_NAME + 1];
-    char runner_name[PURC_LEN_RUNNER_NAME + 1];
+    char schema[PURC_LEN_RUNNER_NAME + 1];
 
-    /* TODO get real host name */
-    strcpy(host_name, "www.fmsoft.cn");
-
-    /* real app name */
-    strcpy(app_name, uri_st->real_app);
-
-    /* runner name is schema */
     if (strcmp(uri_st->runner, PCRDR_RUNNER_HTTP) == 0) {
-        strcpy(runner_name, "http");
+        strcpy(schema, "http");
     }
     else if (strcmp(uri_st->runner, PCRDR_RUNNER_HTTPS) == 0) {
-        strcpy(runner_name, "https");
+        strcpy(schema, "https");
     }
     else if (strcmp(uri_st->runner, PCRDR_RUNNER_FTP) == 0) {
-        strcpy(runner_name, "ftp");
+        strcpy(schema, "ftp");
     }
     else if (strcmp(uri_st->runner, PCRDR_RUNNER_FTPS) == 0) {
-        strcpy(runner_name, "ftps");
+        strcpy(schema, "ftps");
     }
     else {
         error = g_error_new(XGUI_PRO_ERROR,
                 XGUI_PRO_ERROR_INVALID_HVML_URI,
-                "Invalid runner name (%s)", runner_name);
+                "Invalid runner name (%s)", uri_st->runner);
         webkit_uri_scheme_request_finish_error(request, error);
         return;
     }
@@ -392,25 +413,45 @@ void do_http_redirect(WebKitURISchemeRequest *request, int ct,
         }
     }
 
-    size_t nr_url = PURC_LEN_HOST_NAME + PURC_LEN_APP_NAME
-        + PURC_LEN_RUNNER_NAME + (uri_st->port ? strlen(uri_st->port) : 0) + 
-        (uri_st->page ? strlen(uri_st->page) : 0) +
-        (query ? strlen(query) : 0);
-    char *url = malloc(nr_url + 1);
+    size_t nr_url = PURC_LEN_HOST_NAME + PURC_LEN_APP_NAME +
+        PURC_LEN_RUNNER_NAME;
+
     if (uri_st->port) {
-        snprintf(url, nr_url, "%s://%s:%s/%s/exported/%s", runner_name,
-                host_name, uri_st->port, app_name, uri_st->page);
+        nr_url += strlen(uri_st->port);
+    }
+
+    if (uri_st->page) {
+        nr_url += strlen(uri_st->page);
+    }
+
+    if (query) {
+        nr_url += strlen(query);
+    }
+
+    char *url = malloc(nr_url + 1);
+    if (!url) {
+        error = g_error_new(XGUI_PRO_ERROR,
+                XGUI_PRO_ERROR_INVALID_HVML_URI,
+                "Failed to allocate memory for uri (%s)", uri_st->uri);
+        webkit_uri_scheme_request_finish_error(request, error);
+        return;
+    }
+
+    if (uri_st->port) {
+        snprintf(url, nr_url, "%s://%s:%s/%s/exported/%s", schema,
+                endpoint->host_name, uri_st->port, uri_st->real_app, uri_st->page);
     }
     else {
-        snprintf(url, nr_url, "%s://%s/%s/exported/%s", runner_name,
-                host_name, app_name, uri_st->page);
+        snprintf(url, nr_url, "%s://%s/%s/exported/%s", schema,
+                endpoint->host_name, uri_st->real_app, uri_st->page);
     }
 
     if (query) {
         strcat(url, "?");
         strcat(url, query);
     }
-    fprintf(stderr, "###########################> url=%s\n", url);
+
+    LOG_DEBUG("origin uri (%s), redirect uri (%s)\n", uri_st->uri, url);
 
     GInputStream *stream = NULL;
     WebKitURISchemeResponse *response = NULL;;
@@ -429,22 +470,24 @@ void do_http_redirect(WebKitURISchemeRequest *request, int ct,
 
     webkit_uri_scheme_request_finish_with_response(request, response);
 
+    free(url);
+
     g_object_unref(response);
     g_object_unref(stream);
 }
 
-void load_local_assets(WebKitURISchemeRequest *request, int ct,
-        struct hvml_broken_down_uri *uri_st)
+void load_local_assets(WebKitURISchemeRequest *request,
+        purcmc_endpoint *endpoint, struct hvml_broken_down_uri *uri_st)
 {
+    fprintf(stderr, "######> load local assets endpoint=%p|endpoint->host_name=%s\n", endpoint, endpoint ? endpoint->host_name : NULL);
     (void) request;
-    (void) ct;
+    (void) endpoint;
     (void) uri_st;
 }
 
 void handle_origin_host_request(WebKitURISchemeRequest *request,
         struct hvml_broken_down_uri *uri_st)
 {
-    int ct = ET_BUILTIN;
     purcmc_session *sess = NULL;
     purcmc_endpoint *endpoint = NULL;
 
@@ -462,20 +505,19 @@ void handle_origin_host_request(WebKitURISchemeRequest *request,
         if (sess) {
             endpoint = purcmc_get_endpoint_by_session(sess);
             if (endpoint) {
-                ct = endpoint->type;
                 uri_st->real_app = endpoint->app_name;
                 uri_st->real_runner = endpoint->runner_name;
             }
         }
     }
-    fprintf(stderr, "##########################> app=%s|real_app=%s|runner=%s|real_runner=%s\n",
-            uri_st->app, uri_st->real_app, uri_st->runner, uri_st->real_runner);
 
-    if (should_do_http_redirect(request, ct, uri_st)) {
-        do_http_redirect(request, ct, uri_st);
+    print_hvml_broken_down_uri(uri_st);
+
+    if (should_do_redirect(request, endpoint, uri_st)) {
+        do_redirect(request, endpoint, uri_st);
     }
     else {
-        load_local_assets(request, ct, uri_st);
+        load_local_assets(request, endpoint, uri_st);
     }
 }
 
