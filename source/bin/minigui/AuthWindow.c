@@ -126,6 +126,33 @@ static CTRLDATA CtrlInitAuth [] =
     },
 };
 
+PLOGFONT lf = NULL;
+
+static int init_font(int size)
+{
+    if (lf) {
+        goto out;
+    }
+
+    lf = CreateLogFontEx("ttf", "helvetica", "UTF-8",
+                FONT_WEIGHT_REGULAR,
+                FONT_SLANT_ROMAN,
+                FONT_FLIP_NONE,
+                FONT_OTHER_NONE,
+                FONT_DECORATE_NONE, FONT_RENDER_SUBPIXEL,
+                size, 0);
+out:
+    return 0;
+}
+
+static void destroy_font()
+{
+    if (lf) {
+        DestroyLogFont(lf);
+        lf = NULL;
+    }
+}
+
 static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
@@ -133,6 +160,14 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
         {
             HWND accept = GetDlgItem(hDlg, IDC_BTN_ACCEPT);
             SetFocus(accept);
+
+            SetWindowFont(GetDlgItem(hDlg, IDC_TITLE), lf);
+            SetWindowFont(GetDlgItem(hDlg, IDC_APP_NAME), lf);
+            SetWindowFont(GetDlgItem(hDlg, IDC_APP_LABEL), lf);
+            SetWindowFont(GetDlgItem(hDlg, IDC_APP_DESC), lf);
+            SetWindowFont(GetDlgItem(hDlg, IDC_APP_HOST_NAME), lf);
+            SetWindowFont(GetDlgItem(hDlg, IDC_BTN_ACCEPT), lf);
+            SetWindowFont(GetDlgItem(hDlg, IDC_BTN_REJECT), lf);
         }
         return 0;
 
@@ -147,6 +182,7 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
 
     case MSG_CLOSE:
         EndDialog (hDlg, IDCANCEL);
+        destroy_font();
         break;
     }
 
@@ -170,11 +206,10 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     DlgInitAuth.x = dlg_x;
     DlgInitAuth.y = dlg_y;
 
-
-
     int x = dlg_w / 10;
     int y = dlg_h / 10;
     int h = dlg_h * 0.8 / 6;
+    int font_size = h * 0.5;
 
     PCTRLDATA pctrl;
     /* title */
@@ -241,6 +276,8 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
 
     DlgInitAuth.controlnr = CTRL_LAST;
     DlgInitAuth.controls = CtrlInitAuth;
+
+    init_font(font_size);
     return DialogBoxIndirectParam (&DlgInitAuth, hWnd, InitDialogBoxProc, 0L);
 }
 
