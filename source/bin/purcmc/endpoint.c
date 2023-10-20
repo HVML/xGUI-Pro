@@ -2153,13 +2153,32 @@ static int on_authenticate(purcmc_server* srv, purcmc_endpoint* endpoint,
     /* TODO parse host name */
     int retv = PCRDR_SC_OK;
 #if PLATFORM(MINIGUI)
-    int auth_ret = show_auth_window(HWND_DESKTOP, "cn.fmsoft.hvml.purc",
-            "未标记", "尚未标记的 HVML 应用", "localhost");
-    if (auth_ret == IDNO) {
-        retv= PCRDR_SC_UNAUTHORIZED;
+    if (msg->data && purc_variant_is_object(msg->data)) {
+        purc_variant_t name = purc_variant_object_get_by_ckey(msg->data, "appName");
+        purc_variant_t label = purc_variant_object_get_by_ckey(msg->data, "appLabel");
+        purc_variant_t desc = purc_variant_object_get_by_ckey(msg->data, "appDesc");
+        purc_variant_t host = purc_variant_object_get_by_ckey(msg->data, "hostName");
+        if (!name || !label || !desc || !host) {
+            retv= PCRDR_SC_UNAUTHORIZED;
+            goto out;
+        }
+
+        const char *s_name = purc_variant_get_string_const(name);
+        const char *s_label = purc_variant_get_string_const(label);
+        const char *s_desc = purc_variant_get_string_const(desc);
+        const char *s_host = purc_variant_get_string_const(host);
+        int auth_ret = show_auth_window(HWND_DESKTOP, s_name, s_label,
+                s_desc, s_host);
+        if (auth_ret == IDNO) {
+            retv= PCRDR_SC_UNAUTHORIZED;
+        }
+    }
+    else {
+        retv= PCRDR_SC_BAD_REQUEST;
     }
 #endif
 
+out:
     pcrdr_msg response = { };
     purcmc_session *info = NULL;
 
@@ -2171,7 +2190,6 @@ static int on_authenticate(purcmc_server* srv, purcmc_endpoint* endpoint,
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
-    return -1;
 }
 
 static struct request_handler {
