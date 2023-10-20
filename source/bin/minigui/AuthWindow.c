@@ -29,7 +29,7 @@
 #include <minigui/control.h>
 #include "AuthWindow.h"
 
-#define WINDOW_TITLE                      "Authenticate Connection"
+#define AUTH_WINDOW_TITLE                      "Authenticate Connection"
 #define MESSAGES                          "New PurC from 192.168.1.100"
 #define ACCEPT                            "Accept"
 #define REJECT                            "Reject"
@@ -38,49 +38,103 @@ static DLGTEMPLATE DlgInitAuth =
 {
     WS_BORDER,
     WS_EX_NONE,
-    120, 150, 400, 140,
-    WINDOW_TITLE,
+    0, 0, 10, 10,
+    AUTH_WINDOW_TITLE,
     0, 0,
-    3, NULL,
+    7, NULL,
     0
 };
 
-#define IDC_PROMPTINFO  100
-#define IDC_PROGRESS    110
+enum {
+    CTRL_TITLE,
+    CTRL_APP_NAME,
+    CTRL_APP_LABEL,
+    CTRL_APP_DESC,
+    CTRL_APP_HOST_NAME,
+    CTRL_BTN_ACCEPT,
+    CTRL_BTN_REJECT,
+    CTRL_LAST,
+};
+
+enum {
+    IDC_TITLE = 100,
+    IDC_APP_NAME,
+    IDC_APP_LABEL,
+    IDC_APP_DESC,
+    IDC_APP_HOST_NAME,
+    IDC_BTN_ACCEPT = IDYES,
+    IDC_BTN_REJECT = IDNO
+};
 
 static CTRLDATA CtrlInitAuth [] =
 {
     {
         "static",
         WS_VISIBLE | SS_SIMPLE,
-        10, 10, 380, 16,
-        IDC_PROMPTINFO,
-        MESSAGES,
+        0, 0, 10, 10,
+        IDC_TITLE,
+        NULL,
+        0
+    },
+    {
+        "static",
+        WS_VISIBLE | SS_SIMPLE,
+        0, 0, 10, 10,
+        IDC_APP_NAME,
+        NULL,
+        0
+    },
+    {
+        "static",
+        WS_VISIBLE | SS_SIMPLE,
+        0, 0, 10, 10,
+        IDC_APP_LABEL,
+        NULL,
+        0
+    },
+    {
+        "static",
+        WS_VISIBLE | SS_SIMPLE,
+        0, 0, 10, 10,
+        IDC_APP_DESC,
+        NULL,
+        0
+    },
+    {
+        "static",
+        WS_VISIBLE | SS_SIMPLE,
+        0, 0, 10, 10,
+        IDC_APP_HOST_NAME,
+        NULL,
         0
     },
     {
         "button",
-        WS_TABSTOP | WS_VISIBLE | BS_DEFPUSHBUTTON,
-        90, 70, 60, 25,
-        IDYES,
+        WS_VISIBLE | BS_PUSHBUTTON,
+        0, 0, 10, 10,
+        IDC_BTN_ACCEPT,
         ACCEPT,
         0
     },
     {
         "button",
-        WS_TABSTOP | WS_VISIBLE | BS_DEFPUSHBUTTON,
-        250, 70, 60, 25,
-        IDNO,
+        WS_VISIBLE | BS_PUSHBUTTON,
+        0, 0, 10, 10,
+        IDC_BTN_REJECT,
         REJECT,
         0
-    }
+    },
 };
 
 static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
     case MSG_INITDIALOG:
-        return 1;
+        {
+            HWND accept = GetDlgItem(hDlg, IDC_BTN_ACCEPT);
+            SetFocus(accept);
+        }
+        return 0;
 
     case MSG_COMMAND:
         switch (wParam) {
@@ -99,10 +153,94 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
     return DefaultDialogProc (hDlg, message, wParam, lParam);
 }
 
-int create_auth_window(HWND hWnd)
-{
-    DlgInitAuth.controls = CtrlInitAuth;
+RECT xphbd_get_default_window_rect(void);
 
+int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
+        const char *app_desc, const char *host_name)
+{
+    RECT rc = xphbd_get_default_window_rect();
+
+    int dlg_w = RECTW(rc) / 2;
+    int dlg_h = RECTH(rc) / 2;
+    int dlg_x = rc.left + (RECTW(rc) - dlg_w) / 2;
+    int dlg_y = rc.top + (RECTH(rc) - dlg_h) / 2;
+
+    DlgInitAuth.w = dlg_w;
+    DlgInitAuth.h = dlg_h;
+    DlgInitAuth.x = dlg_x;
+    DlgInitAuth.y = dlg_y;
+
+
+
+    int x = dlg_w / 10;
+    int y = dlg_h / 10;
+    int h = dlg_h * 0.8 / 6;
+
+    PCTRLDATA pctrl;
+    /* title */
+    pctrl = &CtrlInitAuth[CTRL_TITLE];
+    pctrl->caption = AUTH_WINDOW_TITLE;
+    pctrl->x = x;
+    pctrl->y = y;
+    pctrl->w = dlg_w - pctrl->x;
+    pctrl->h = h;
+
+    x = dlg_w * 0.15;
+    /* app name */
+    y = y + h;
+    pctrl = &CtrlInitAuth[CTRL_APP_NAME];
+    pctrl->caption = app_name;
+    pctrl->x = x;
+    pctrl->y = y;
+    pctrl->w = dlg_w - pctrl->x;
+    pctrl->h = h;
+
+    /* app label */
+    y = y + h;
+    pctrl = &CtrlInitAuth[CTRL_APP_LABEL];
+    pctrl->caption = app_label;
+    pctrl->x = x;
+    pctrl->y = y;
+    pctrl->w = dlg_w - pctrl->x;
+    pctrl->h = h;
+
+    /* app desc */
+    y = y + h;
+    pctrl = &CtrlInitAuth[CTRL_APP_DESC];
+    pctrl->caption = app_desc;
+    pctrl->x = x;
+    pctrl->y = y;
+    pctrl->w = dlg_w - pctrl->x;
+    pctrl->h = h;
+
+    /* host */
+    y = y + h;
+    pctrl = &CtrlInitAuth[CTRL_APP_HOST_NAME];
+    pctrl->caption = host_name;
+    pctrl->x = x;
+    pctrl->y = y;
+    pctrl->w = dlg_w - pctrl->x;
+    pctrl->h = h;
+
+    /* accept */
+    y = y + h;
+    int btn_w = dlg_w * 0.3;
+    x = (dlg_w - 2 * btn_w) / 3;
+    pctrl = &CtrlInitAuth[CTRL_BTN_ACCEPT];
+    pctrl->x = x;
+    pctrl->y = y;
+    pctrl->w = btn_w;
+    pctrl->h = h;
+
+    /* reject */
+    pctrl = &CtrlInitAuth[CTRL_BTN_REJECT];
+    pctrl->x = x + btn_w + x;
+    pctrl->y = y;
+    pctrl->w = btn_w;
+    pctrl->h = h;
+
+    DlgInitAuth.controlnr = CTRL_LAST;
+    DlgInitAuth.controls = CtrlInitAuth;
     return DialogBoxIndirectParam (&DlgInitAuth, hWnd, InitDialogBoxProc, 0L);
 }
 

@@ -34,7 +34,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-int create_auth_window(HWND hWnd);
+int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
+        const char *app_desc, const char *host_name);
 
 #ifdef __cplusplus
 }

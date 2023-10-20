@@ -2153,7 +2153,8 @@ static int on_authenticate(purcmc_server* srv, purcmc_endpoint* endpoint,
     /* TODO parse host name */
     int retv = PCRDR_SC_OK;
 #if PLATFORM(MINIGUI)
-    int auth_ret = create_auth_window(HWND_DESKTOP);
+    int auth_ret = show_auth_window(HWND_DESKTOP, "cn.fmsoft.hvml.purc",
+            "未标记", "尚未标记的 HVML 应用", "localhost");
     if (auth_ret == IDNO) {
         retv= PCRDR_SC_UNAUTHORIZED;
     }
