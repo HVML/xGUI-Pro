@@ -27,12 +27,16 @@
 #include <minigui/gdi.h>
 #include <minigui/window.h>
 #include <minigui/control.h>
-#include "AuthWindow.h"
+#include <glib.h>
 
-#define AUTH_WINDOW_TITLE                      "Authenticate Connection"
+#include "AuthWindow.h"
+#include "xguipro-features.h"
+
+#define AUTH_WINDOW_TITLE                 "Authenticate Connection"
 #define MESSAGES                          "New PurC from 192.168.1.100"
 #define ACCEPT                            "Accept"
 #define REJECT                            "Reject"
+#define DEF_APP_ICON                      "assets/hvml-v-fill-white.png"
 
 static DLGTEMPLATE DlgInitAuth =
 {
@@ -127,6 +131,12 @@ static CTRLDATA CtrlInitAuth [] =
 };
 
 PLOGFONT lf = NULL;
+BITMAP app_icon;
+PBITMAP g_app_icon = NULL;
+int app_icon_x;
+int app_icon_y;
+int app_icon_w;
+int app_icon_h;
 
 static int init_font(int size)
 {
@@ -150,6 +160,30 @@ static void destroy_font()
     if (lf) {
         DestroyLogFont(lf);
         lf = NULL;
+    }
+}
+
+static void load_app_icon()
+{
+    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
+    if (webext_dir == NULL) {
+        webext_dir = WEBKIT_WEBEXT_DIR;
+    }
+
+    gchar *path = g_strdup_printf("%s/%s", webext_dir ? webext_dir : ".", DEF_APP_ICON);
+
+    if (path) {
+        LoadBitmapFromFile(HDC_SCREEN, &app_icon, path);
+        g_app_icon = &app_icon;
+        g_free(path);
+    }
+}
+
+static void unload_app_icon()
+{
+    if (g_app_icon) {
+        UnloadBitmap(g_app_icon);
+        g_app_icon = NULL;
     }
 }
 
@@ -180,9 +214,20 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
         }
         break;
 
+    case MSG_PAINT:
+        if (g_app_icon) {
+            HDC hdc = BeginPaint(hDlg);
+            FillBoxWithBitmap(hdc, app_icon_x, app_icon_y, app_icon_w,
+                    app_icon_h, g_app_icon);
+            EndPaint(hDlg, hdc);
+            return 0;
+        }
+        break;
+
     case MSG_CLOSE:
         EndDialog (hDlg, IDCANCEL);
         destroy_font();
+        unload_app_icon();
         break;
     }
 
@@ -196,7 +241,7 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
 {
     RECT rc = xphbd_get_default_window_rect();
 
-    int dlg_w = RECTW(rc) / 2;
+    int dlg_w = RECTW(rc) * 3 / 4;
     int dlg_h = RECTH(rc) / 2;
     int dlg_x = rc.left + (RECTW(rc) - dlg_w) / 2;
     int dlg_y = rc.top + (RECTH(rc) - dlg_h) / 2;
@@ -206,10 +251,18 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     DlgInitAuth.x = dlg_x;
     DlgInitAuth.y = dlg_y;
 
+    int font_size = dlg_h * 0.8 / 8;
+
     int x = dlg_w / 10;
     int y = dlg_h / 10;
-    int h = dlg_h * 0.8 / 6;
-    int font_size = h * 0.5;
+    int h = dlg_h * 0.8 / 7;
+    int xh = dlg_h * 0.8 / 6;
+
+    app_icon_w = 2 * xh;
+    app_icon_x = dlg_w - app_icon_w - dlg_w / 10;
+    app_icon_y = dlg_h / 10 + xh;
+
+    int info_w = app_icon_x - x;
 
     PCTRLDATA pctrl;
     /* title */
@@ -217,17 +270,17 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     pctrl->caption = AUTH_WINDOW_TITLE;
     pctrl->x = x;
     pctrl->y = y;
-    pctrl->w = dlg_w - pctrl->x;
+    pctrl->w = info_w;
     pctrl->h = h;
 
     x = dlg_w * 0.15;
     /* app name */
-    y = y + h;
+    y = y + xh;
     pctrl = &CtrlInitAuth[CTRL_APP_NAME];
     pctrl->caption = app_name;
     pctrl->x = x;
     pctrl->y = y;
-    pctrl->w = dlg_w - pctrl->x;
+    pctrl->w = info_w - app_icon_w;
     pctrl->h = h;
 
     /* app label */
@@ -236,7 +289,7 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     pctrl->caption = app_label;
     pctrl->x = x;
     pctrl->y = y;
-    pctrl->w = dlg_w - pctrl->x;
+    pctrl->w = info_w - app_icon_w;
     pctrl->h = h;
 
     /* app desc */
@@ -245,7 +298,7 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     pctrl->caption = app_desc;
     pctrl->x = x;
     pctrl->y = y;
-    pctrl->w = dlg_w - pctrl->x;
+    pctrl->w = info_w - app_icon_w;
     pctrl->h = h;
 
     /* host */
@@ -254,30 +307,38 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     pctrl->caption = host_name;
     pctrl->x = x;
     pctrl->y = y;
-    pctrl->w = dlg_w - pctrl->x;
+    pctrl->w = info_w;
     pctrl->h = h;
 
     /* accept */
-    y = y + h;
     int btn_w = dlg_w * 0.3;
+    y = dlg_h - dlg_h / 10 - xh;
     x = (dlg_w - 2 * btn_w) / 3;
     pctrl = &CtrlInitAuth[CTRL_BTN_ACCEPT];
     pctrl->x = x;
     pctrl->y = y;
     pctrl->w = btn_w;
-    pctrl->h = h;
+    pctrl->h = xh;
 
     /* reject */
     pctrl = &CtrlInitAuth[CTRL_BTN_REJECT];
     pctrl->x = x + btn_w + x;
     pctrl->y = y;
     pctrl->w = btn_w;
-    pctrl->h = h;
+    pctrl->h = xh;
 
     DlgInitAuth.controlnr = CTRL_LAST;
     DlgInitAuth.controls = CtrlInitAuth;
 
     init_font(font_size);
+    load_app_icon();
+
+    if (g_app_icon) {
+        int bw = g_app_icon->bmWidth;
+        int bh = g_app_icon->bmHeight;
+        app_icon_h = bh * app_icon_w / bw;
+    }
+
     return DialogBoxIndirectParam (&DlgInitAuth, hWnd, InitDialogBoxProc, 0L);
 }
 
