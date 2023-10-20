@@ -28,14 +28,11 @@
 #include <minigui/window.h>
 #include <minigui/control.h>
 #include <glib.h>
+#include <locale.h>
 
 #include "AuthWindow.h"
 #include "xguipro-features.h"
 
-#define AUTH_WINDOW_TITLE                 "Authenticate Connection"
-#define MESSAGES                          "New PurC from 192.168.1.100"
-#define ACCEPT                            "Accept"
-#define REJECT                            "Reject"
 #define DEF_APP_ICON                      "assets/hvml-v-fill-white.png"
 
 static DLGTEMPLATE DlgInitAuth =
@@ -43,7 +40,7 @@ static DLGTEMPLATE DlgInitAuth =
     WS_BORDER,
     WS_EX_NONE,
     0, 0, 10, 10,
-    AUTH_WINDOW_TITLE,
+    "",
     0, 0,
     7, NULL,
     0
@@ -68,6 +65,36 @@ enum {
     IDC_APP_HOST_NAME,
     IDC_BTN_ACCEPT = IDYES,
     IDC_BTN_REJECT = IDNO
+};
+
+const char *cn[] = {
+    "收到新的连接请求：",
+    "名称：",
+    "标签：",
+    "描述：",
+    "地址：",
+    "接受",
+    "拒绝",
+};
+
+const char *zh[] = {
+    "收到新的連結請求：",
+    "名稱：",
+    "標籤：",
+    "描述：",
+    "地址：",
+    "接受",
+    "拒絕",
+};
+
+const char *en[] = {
+    "New Connection:",
+    "Name:",
+    "Label:",
+    "Desc:",
+    "Host:",
+    "Accept",
+    "Reject",
 };
 
 static CTRLDATA CtrlInitAuth [] =
@@ -117,7 +144,7 @@ static CTRLDATA CtrlInitAuth [] =
         WS_VISIBLE | BS_PUSHBUTTON,
         0, 0, 10, 10,
         IDC_BTN_ACCEPT,
-        ACCEPT,
+        NULL,
         0
     },
     {
@@ -125,7 +152,7 @@ static CTRLDATA CtrlInitAuth [] =
         WS_VISIBLE | BS_PUSHBUTTON,
         0, 0, 10, 10,
         IDC_BTN_REJECT,
-        REJECT,
+        NULL,
         0
     },
 };
@@ -236,10 +263,54 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
 
 RECT xphbd_get_default_window_rect(void);
 
+const char **get_string_res()
+{
+    char *str = setlocale(LC_ALL, "");
+    if (str) {
+        if (strstr(str, "CN")) {
+            return cn;
+        }
+        else if (strstr(str, "zh")) {
+            return zh;
+        }
+        else {
+            return en;
+        }
+    }
+    else {
+        return en;
+    }
+}
+
 int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
         const char *app_desc, const char *host_name)
 {
     RECT rc = xphbd_get_default_window_rect();
+
+    const char **s_res = get_string_res();
+
+    const char *title = s_res[CTRL_TITLE];
+
+    size_t nr = strlen(s_res[CTRL_APP_NAME]) + strlen(app_name) + 1;
+    char s_app_name[nr];
+    strcpy(s_app_name, s_res[CTRL_APP_NAME]);
+    strcat(s_app_name, app_name);
+
+    nr = strlen(s_res[CTRL_APP_LABEL]) + strlen(app_label) + 1;
+    char s_app_label[nr];
+    strcpy(s_app_label, s_res[CTRL_APP_LABEL]);
+    strcat(s_app_label, app_label);
+
+    nr = strlen(s_res[CTRL_APP_DESC]) + strlen(app_desc) + 1;
+    char s_app_desc[nr];
+    strcpy(s_app_desc, s_res[CTRL_APP_DESC]);
+    strcat(s_app_desc, app_desc);
+
+    nr = strlen(s_res[CTRL_APP_HOST_NAME]) + strlen(host_name) + 1;
+    char s_host_name[nr];
+    strcpy(s_host_name, s_res[CTRL_APP_HOST_NAME]);
+    strcat(s_host_name, host_name);
+
 
     int dlg_w = RECTW(rc) * 3 / 4;
     int dlg_h = RECTH(rc) / 2;
@@ -267,44 +338,43 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     PCTRLDATA pctrl;
     /* title */
     pctrl = &CtrlInitAuth[CTRL_TITLE];
-    pctrl->caption = AUTH_WINDOW_TITLE;
+    pctrl->caption = title;
+    pctrl->x = dlg_w / 15;
+    pctrl->y = y;
+    pctrl->w = info_w;
+    pctrl->h = h;
+
+    /* app name */
+    y = y + xh;
+    pctrl = &CtrlInitAuth[CTRL_APP_NAME];
+    pctrl->caption = s_app_name;
     pctrl->x = x;
     pctrl->y = y;
     pctrl->w = info_w;
     pctrl->h = h;
 
-    x = dlg_w * 0.15;
-    /* app name */
-    y = y + xh;
-    pctrl = &CtrlInitAuth[CTRL_APP_NAME];
-    pctrl->caption = app_name;
-    pctrl->x = x;
-    pctrl->y = y;
-    pctrl->w = info_w - app_icon_w;
-    pctrl->h = h;
-
     /* app label */
     y = y + h;
     pctrl = &CtrlInitAuth[CTRL_APP_LABEL];
-    pctrl->caption = app_label;
+    pctrl->caption = s_app_label;
     pctrl->x = x;
     pctrl->y = y;
-    pctrl->w = info_w - app_icon_w;
+    pctrl->w = info_w;
     pctrl->h = h;
 
     /* app desc */
     y = y + h;
     pctrl = &CtrlInitAuth[CTRL_APP_DESC];
-    pctrl->caption = app_desc;
+    pctrl->caption = s_app_desc;
     pctrl->x = x;
     pctrl->y = y;
-    pctrl->w = info_w - app_icon_w;
+    pctrl->w = dlg_w - x;
     pctrl->h = h;
 
     /* host */
     y = y + h;
     pctrl = &CtrlInitAuth[CTRL_APP_HOST_NAME];
-    pctrl->caption = host_name;
+    pctrl->caption = s_host_name;
     pctrl->x = x;
     pctrl->y = y;
     pctrl->w = info_w;
@@ -315,6 +385,7 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     y = dlg_h - dlg_h / 10 - xh;
     x = (dlg_w - 2 * btn_w) / 3;
     pctrl = &CtrlInitAuth[CTRL_BTN_ACCEPT];
+    pctrl->caption = s_res[CTRL_BTN_ACCEPT];
     pctrl->x = x;
     pctrl->y = y;
     pctrl->w = btn_w;
@@ -322,6 +393,7 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
 
     /* reject */
     pctrl = &CtrlInitAuth[CTRL_BTN_REJECT];
+    pctrl->caption = s_res[CTRL_BTN_REJECT];
     pctrl->x = x + btn_w + x;
     pctrl->y = y;
     pctrl->w = btn_w;

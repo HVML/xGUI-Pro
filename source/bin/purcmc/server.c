@@ -902,7 +902,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
     char dpi[MAX_DPI_LENGTH];
 
     char *str = setlocale(LC_ALL, "");
-    if (true) {
+    if (str) {
         char *p = strstr(str, ".");
         size_t nr = p - str;
         if (p) {
