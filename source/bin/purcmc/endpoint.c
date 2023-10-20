@@ -30,7 +30,9 @@
 #include "unixsocket.h"
 #include "websocket.h"
 
+#if PLATFORM(MINIGUI)
 #include "minigui/AuthWindow.h"
+#endif
 
 const char *purcmc_endpoint_host_name(purcmc_endpoint *endpoint)
 {
@@ -2149,11 +2151,13 @@ static int on_authenticate(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     /* TODO parse host name */
-    int auth_ret = create_auth_window(HWND_DESKTOP);
     int retv = PCRDR_SC_OK;
+#if PLATFORM(MINIGUI)
+    int auth_ret = create_auth_window(HWND_DESKTOP);
     if (auth_ret == IDNO) {
         retv= PCRDR_SC_UNAUTHORIZED;
     }
+#endif
 
     pcrdr_msg response = { };
     purcmc_session *info = NULL;

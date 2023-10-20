@@ -34,9 +34,9 @@
 #define ACCEPT                            "Accept"
 #define REJECT                            "Reject"
 
-static DLGTEMPLATE DlgInitProgress =
+static DLGTEMPLATE DlgInitAuth =
 {
-    WS_BORDER | WS_CAPTION,
+    WS_BORDER,
     WS_EX_NONE,
     120, 150, 400, 140,
     WINDOW_TITLE,
@@ -48,7 +48,7 @@ static DLGTEMPLATE DlgInitProgress =
 #define IDC_PROMPTINFO  100
 #define IDC_PROGRESS    110
 
-static CTRLDATA CtrlInitProgress [] =
+static CTRLDATA CtrlInitAuth [] =
 {
     {
         "static",
@@ -101,9 +101,9 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
 
 int create_auth_window(HWND hWnd)
 {
-    DlgInitProgress.controls = CtrlInitProgress;
+    DlgInitAuth.controls = CtrlInitAuth;
 
-    return DialogBoxIndirectParam (&DlgInitProgress, hWnd, InitDialogBoxProc, 0L);
+    return DialogBoxIndirectParam (&DlgInitAuth, hWnd, InitDialogBoxProc, 0L);
 }
 
 
