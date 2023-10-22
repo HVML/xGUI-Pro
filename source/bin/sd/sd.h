@@ -39,8 +39,16 @@ int sd_service_register(struct sd_service **srv,
 
 int sd_service_destroy(struct sd_service *);
 
+typedef void (*sd_service_browse_reply)(struct sd_service *srv, int flags,
+    uint32_t interface_index, int error_code, const char *service_name,
+    const char *reg_type, const char *reply_domain, void *ctx);
 
+int sd_service_browse(struct sd_service **srv, int flags,
+    uint32_t interface_index, const char *reg_type,
+    const char *domain, sd_service_browse_reply cb,
+    void *ctx);
 
+void sd_stop_browse(struct sd_service *srv);
 
 #ifdef __cplusplus
 }

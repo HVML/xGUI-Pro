@@ -117,3 +117,45 @@ int sd_service_destroy(struct sd_service *svs)
     DNSServiceRefDeallocate((DNSServiceRef)svs);
     return 0;
 }
+
+struct browser_cb_pair {
+    sd_service_browse_reply cb;
+    void *ctx;
+};
+
+static void browse_reply(DNSServiceRef sdref, const DNSServiceFlags flags,
+    uint32_t interface_index, int error_code, const char *service_name,
+    const char *reg_type, const char *reply_domain, void *ctx)
+{
+    struct browser_cb_pair *p = (struct browser_cb_pair *)ctx;
+    p->cb((struct sd_service *)sdref, flags, interface_index, error_code,
+            service_name, reg_type, reply_domain, p->ctx);
+}
+
+int sd_service_browse(struct sd_service **srv, int flags,
+    uint32_t interface_index, const char *reg_type,
+    const char *domain, sd_service_browse_reply cb,
+    void *ctx)
+{
+    DNSServiceRef sdref = NULL;
+    struct browser_cb_pair *p = malloc(sizeof(struct browser_cb_pair));
+    p->cb = cb;
+    p->ctx = ctx;
+    int ret = DNSServiceBrowse(&sdref, flags, opinterface, reg_type, domain,
+            browse_reply, p);
+
+    if (ret != kDNSServiceErr_NoError) {
+        *srv = (struct sd_service *)sdref;
+    }
+    else {
+        free(p);
+    }
+
+    return ret;
+}
+
+void sd_stop_browse(struct sd_service *srv)
+{
+    DNSServiceRefDeallocate((DNSServiceRef)srv);
+}
+

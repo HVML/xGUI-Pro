@@ -897,6 +897,15 @@ const char *xgui_pro_record[] = {
     "name=xGUI Pro"
 };
 
+void sd_browse_reply(struct sd_service *srv, int flags,
+    uint32_t interface_index, int error_code, const char *service_name,
+    const char *reg_type, const char *reply_domain, void *ctx)
+{
+    const char *op = (flags & 0x2) ? "Add" : "Rmv";
+    fprintf(stderr, "%s %8X %3d %-20s %-20s %s\n",
+            op, flags, interface_index, reply_domain, reg_type, service_name);
+}
+
 purcmc_server *
 purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
         void *user_data, const purcmc_server_callbacks *cbs,
@@ -970,6 +979,11 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
             purc_log_error("Error during regist Service Discovery\n");
             goto error;
         }
+
+        sd_service_browse(&the_server.sd_srv_browser, 0,
+                0, SD_XGUI_PRO_TYPE,
+                SD_XGUI_PRO_DOMAIN, sd_browse_reply,
+                NULL);
     }
     else {
         the_server.ws_srv = NULL;

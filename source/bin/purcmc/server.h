@@ -174,6 +174,7 @@ struct purcmc_server
     struct WSServer_ *ws_srv;
     struct USServer_ *us_srv;
     struct sd_service *sd_srv;
+    struct sd_service *sd_srv_browser;
 
     /* The KV list using endpoint name as the key, and purcmc_endpoint* as the value */
     struct kvlist endpoint_list;
