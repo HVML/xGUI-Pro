@@ -22,6 +22,51 @@
 
 #include "config.h"
 
+#include <stdlib.h>
+#include <dns_sd.h>
+
 #include "xguipro-features.h"
 #include "sd.h"
 
+#define MAX_TXT_RECORD_SIZE 8900
+
+typedef union { unsigned char b[2]; unsigned short NotAnInteger; } Opaque16;
+
+static uint32_t opinterface = kDNSServiceInterfaceIndexAny;
+
+struct sd_service *sd_service_register(const char *name, const char *type,
+        const char *dom, const char *host, const char *port,
+        const char *txt_record, size_t nr_txt_record)
+{
+    DNSServiceRef sdref = NULL;
+    DNSServiceFlags flags = 0;
+    uint16_t PortAsNumber = atoi(port);
+    Opaque16 registerPort = { { PortAsNumber >> 8, PortAsNumber & 0xFF } };
+
+    if (name[0] == '.' && name[1] == 0) {
+        name = "";
+    }
+
+    if (dom[0] == '.' && dom[1] == 0) {
+        dom = "";
+    }
+
+
+    //flags |= kDNSServiceFlagsAllowRemoteQuery;
+    //flags |= kDNSServiceFlagsNoAutoRenamee;
+
+    DNSServiceErrorType ret = DNSServiceRegister(&sdref, flags, opinterface,
+            name, type, dom, host, registerPort.NotAnInteger, nr_txt_record,
+            txt_record, NULL, NULL);
+    if (ret == kDNSServiceErr_NoError) {
+        return (struct sd_service *) sdref;
+    }
+    return NULL;
+}
+
+
+int sd_service_destroy(struct sd_service *svs)
+{
+    DNSServiceRefDeallocate((DNSServiceRef)svs);
+    return 0;
+}
