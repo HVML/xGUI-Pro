@@ -34,6 +34,7 @@ set(xguipro_PLATFORM_INDEPENDENT_DIRS
     "purcmc"
     "layouter"
     "schema"
+    "sd"
 )
 
 APPEND_ALL_SOURCE_FILES_IN_DIRLIST(xguipro_SOURCES
