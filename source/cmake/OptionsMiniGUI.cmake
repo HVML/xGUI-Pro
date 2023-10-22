@@ -22,6 +22,7 @@ find_package(PurC 0.9.16 REQUIRED)
 find_package(DOMRuler 0.9.16 REQUIRED)
 find_package(MiniGUI 5.2.0 REQUIRED COMPONENTS mGEff)
 find_package(CairoHBD REQUIRED)
+find_package(DNSSD REQUIRED)
 
 XGUIPRO_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC ON)
 
