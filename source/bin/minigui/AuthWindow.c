@@ -35,6 +35,9 @@
 
 #define DEF_APP_ICON                      "assets/hvml-v-fill-white.png"
 
+#define AUTH_TIMEOUT_ID                   10001
+#define TIMEOUT_STR_LEN                   32
+
 static DLGTEMPLATE DlgInitAuth =
 {
     WS_BORDER,
@@ -164,6 +167,9 @@ int app_icon_x;
 int app_icon_y;
 int app_icon_w;
 int app_icon_h;
+const char **s_res = NULL;
+uint64_t g_timeout_seconds = 10;
+
 
 static int init_font(int size)
 {
@@ -229,6 +235,8 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
             SetWindowFont(GetDlgItem(hDlg, IDC_APP_HOST_NAME), lf);
             SetWindowFont(GetDlgItem(hDlg, IDC_BTN_ACCEPT), lf);
             SetWindowFont(GetDlgItem(hDlg, IDC_BTN_REJECT), lf);
+
+            SetTimer(hDlg, AUTH_TIMEOUT_ID, 100);
         }
         return 0;
 
@@ -238,6 +246,22 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
         case IDNO:
             EndDialog (hDlg, wParam);
             break;
+        }
+        break;
+
+    case MSG_TIMER:
+        {
+            g_timeout_seconds--;
+            HWND ctrl = GetDlgItem(hDlg, IDC_BTN_ACCEPT);
+            size_t n = strlen(s_res[CTRL_BTN_ACCEPT]) + TIMEOUT_STR_LEN + 1;
+            char buf[n];
+            sprintf(buf, "%s(%ld)", s_res[CTRL_BTN_ACCEPT], g_timeout_seconds);
+            SetWindowText(ctrl, buf);
+
+            if (g_timeout_seconds <= 0) {
+                KillTimer(hDlg, AUTH_TIMEOUT_ID);
+                EndDialog(hDlg, IDNO);
+            }
         }
         break;
 
@@ -283,11 +307,12 @@ const char **get_string_res()
 }
 
 int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
-        const char *app_desc, const char *host_name)
+        const char *app_desc, const char *host_name, uint64_t timeout_seconds)
 {
     RECT rc = xphbd_get_default_window_rect();
 
-    const char **s_res = get_string_res();
+    s_res = get_string_res();
+    g_timeout_seconds = timeout_seconds;
 
     const char *title = s_res[CTRL_TITLE];
 
@@ -310,6 +335,10 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     char s_host_name[nr];
     strcpy(s_host_name, s_res[CTRL_APP_HOST_NAME]);
     strcat(s_host_name, host_name);
+
+    nr = strlen(s_res[CTRL_BTN_ACCEPT]) + TIMEOUT_STR_LEN + 1;
+    char s_accept[nr];
+    sprintf(s_accept, "%s(%ld)", s_res[CTRL_BTN_ACCEPT], g_timeout_seconds);
 
 
     int dlg_w = RECTW(rc) * 3 / 4;
@@ -385,7 +414,7 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     y = dlg_h - dlg_h / 10 - xh;
     x = (dlg_w - 2 * btn_w) / 3;
     pctrl = &CtrlInitAuth[CTRL_BTN_ACCEPT];
-    pctrl->caption = s_res[CTRL_BTN_ACCEPT];
+    pctrl->caption = s_accept;
     pctrl->x = x;
     pctrl->y = y;
     pctrl->w = btn_w;

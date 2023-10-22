@@ -2163,12 +2163,23 @@ static int on_authenticate(purcmc_server* srv, purcmc_endpoint* endpoint,
             goto out;
         }
 
+        uint64_t ut = 0;
+        purc_variant_t timeout = purc_variant_object_get_by_ckey(msg->data,
+                "timeoutSeconds");
+        if (timeout) {
+            purc_variant_cast_to_ulongint(timeout, &ut, false);
+        }
+
+        if (ut == 0) {
+            ut = 10;
+        }
+
         const char *s_name = purc_variant_get_string_const(name);
         const char *s_label = purc_variant_get_string_const(label);
         const char *s_desc = purc_variant_get_string_const(desc);
         const char *s_host = purc_variant_get_string_const(host);
         int auth_ret = show_auth_window(HWND_DESKTOP, s_name, s_label,
-                s_desc, s_host);
+                s_desc, s_host, ut);
         if (auth_ret == IDNO) {
             retv= PCRDR_SC_UNAUTHORIZED;
         }
