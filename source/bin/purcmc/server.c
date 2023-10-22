@@ -963,7 +963,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
             purc_log_error("Error during ws_init\n");
             goto error;
         }
-        the_server.sd_srv = sd_service_register(SD_XGUI_PRO_NAME,
+        sd_service_register(&the_server.sd_srv, SD_XGUI_PRO_NAME,
                 SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, NULL, the_srvcfg->port,
                 xgui_pro_record, 1);
         if (!the_server.sd_srv) {

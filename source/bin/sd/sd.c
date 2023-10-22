@@ -42,16 +42,20 @@ typedef union { unsigned char b[2]; unsigned short NotAnInteger; } Opaque16;
 
 static uint32_t opinterface = kDNSServiceInterfaceIndexAny;
 
-struct sd_service *sd_service_register(const char *name, const char *type,
+int sd_service_register(struct sd_service **srv,
+        const char *name, const char *type,
         const char *dom, const char *host, const char *port,
         const char **txt_record, size_t nr_txt_record)
 {
+    int ret = 0;
     DNSServiceRef sdref = NULL;
     DNSServiceFlags flags = 0;
     uint16_t PortAsNumber = atoi(port);
     Opaque16 registerPort = { { PortAsNumber >> 8, PortAsNumber & 0xFF } };
     unsigned char txt[MAX_TXT_RECORD_SIZE] = { 0 };
     unsigned char *ptr = txt;
+
+    *srv = NULL;
 
     if (name[0] == '.' && name[1] == 0) {
         name = "";
@@ -65,14 +69,14 @@ struct sd_service *sd_service_register(const char *name, const char *type,
         for (int i = 0; i < nr_txt_record; i++) {
             const char *p = txt_record[i];
             if (ptr >= txt + sizeof(txt)) {
-                //return kDNSServiceErr_BadParam;
+                ret = kDNSServiceErr_BadParam;
                 goto out;
             }
 
             *ptr = 0;
             while (*p && *ptr < 255) {
                 if (ptr + 1 + *ptr >= txt + sizeof(txt)) {
-                //    return kDNSServiceErr_BadParam;
+                    ret = kDNSServiceErr_BadParam;
                     goto out;
                 }
 
@@ -96,15 +100,15 @@ struct sd_service *sd_service_register(const char *name, const char *type,
     //flags |= kDNSServiceFlagsAllowRemoteQuery;
     //flags |= kDNSServiceFlagsNoAutoRenamee;
 
-    DNSServiceErrorType ret = DNSServiceRegister(&sdref, flags, opinterface,
+    ret = DNSServiceRegister(&sdref, flags, opinterface,
             name, type, dom, host, registerPort.NotAnInteger,
             (uint16_t) (ptr-txt), txt, NULL, NULL);
     if (ret == kDNSServiceErr_NoError) {
-        return (struct sd_service *) sdref;
+        *srv = (struct sd_service *) sdref;
     }
 
 out:
-    return NULL;
+    return ret;
 }
 
 
