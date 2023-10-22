@@ -33,7 +33,7 @@ struct sd_service;
 
 struct sd_service *sd_service_register(const char *name, const char *type,
         const char *dom, const char *host, const char *port,
-        const char *txt_record, size_t nr_txt_record);
+        const char **txt_record, size_t nr_txt_record);
 
 
 int sd_service_destroy(struct sd_service *);

@@ -22,7 +22,9 @@
 
 #include "config.h"
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <dns_sd.h>
 
 #include "xguipro-features.h"
@@ -30,18 +32,26 @@
 
 #define MAX_TXT_RECORD_SIZE 8900
 
+#define HexVal(X) ( ((X) >= '0' && (X) <= '9') ? ((X) - '0'     ) :  \
+                    ((X) >= 'A' && (X) <= 'F') ? ((X) - 'A' + 10) :  \
+                    ((X) >= 'a' && (X) <= 'f') ? ((X) - 'a' + 10) : 0)
+
+#define HexPair(P) ((HexVal((P)[0]) << 4) | HexVal((P)[1]))
+
 typedef union { unsigned char b[2]; unsigned short NotAnInteger; } Opaque16;
 
 static uint32_t opinterface = kDNSServiceInterfaceIndexAny;
 
 struct sd_service *sd_service_register(const char *name, const char *type,
         const char *dom, const char *host, const char *port,
-        const char *txt_record, size_t nr_txt_record)
+        const char **txt_record, size_t nr_txt_record)
 {
     DNSServiceRef sdref = NULL;
     DNSServiceFlags flags = 0;
     uint16_t PortAsNumber = atoi(port);
     Opaque16 registerPort = { { PortAsNumber >> 8, PortAsNumber & 0xFF } };
+    unsigned char txt[MAX_TXT_RECORD_SIZE] = { 0 };
+    unsigned char *ptr = txt;
 
     if (name[0] == '.' && name[1] == 0) {
         name = "";
@@ -51,16 +61,49 @@ struct sd_service *sd_service_register(const char *name, const char *type,
         dom = "";
     }
 
+    if (nr_txt_record) {
+        for (int i = 0; i < nr_txt_record; i++) {
+            const char *p = txt_record[i];
+            if (ptr >= txt + sizeof(txt)) {
+                //return kDNSServiceErr_BadParam;
+                goto out;
+            }
+
+            *ptr = 0;
+            while (*p && *ptr < 255) {
+                if (ptr + 1 + *ptr >= txt + sizeof(txt)) {
+                //    return kDNSServiceErr_BadParam;
+                    goto out;
+                }
+
+                if (p[0] != '\\' || p[1] == 0) {
+                    ptr[++*ptr] = *p;
+                    p+=1;
+                }
+                else if (p[1] == 'x' && isxdigit(p[2]) && isxdigit(p[3])) {
+                    ptr[++*ptr] = HexPair(p+2);
+                    p+=4;
+                }
+                else {
+                    ptr[++*ptr] = p[1];
+                    p+=2;
+                }
+            }
+            ptr += 1 + *ptr;
+        }
+    }
 
     //flags |= kDNSServiceFlagsAllowRemoteQuery;
     //flags |= kDNSServiceFlagsNoAutoRenamee;
 
     DNSServiceErrorType ret = DNSServiceRegister(&sdref, flags, opinterface,
-            name, type, dom, host, registerPort.NotAnInteger, nr_txt_record,
-            txt_record, NULL, NULL);
+            name, type, dom, host, registerPort.NotAnInteger,
+            (uint16_t) (ptr-txt), txt, NULL, NULL);
     if (ret == kDNSServiceErr_NoError) {
         return (struct sd_service *) sdref;
     }
+
+out:
     return NULL;
 }
 

@@ -37,6 +37,8 @@
 #include "unixsocket.h"
 #include "endpoint.h"
 
+#include "sd/sd.h"
+
 static purcmc_server the_server;
 static purcmc_server_config* the_srvcfg;
 
@@ -816,6 +818,7 @@ deinit_server(void)
                 endpoint->entity.client->entity = NULL;
                 ws_cleanup_client(the_server.ws_srv,
                         (WSClient *)endpoint->entity.client);
+                sd_service_destroy(the_server.sd_srv);
             }
 
             del_endpoint(&the_server, endpoint, CDE_EXITING);
@@ -885,6 +888,15 @@ deinit_server(void)
 
 }
 
+#define SD_XGUI_PRO_NAME             "cn.fmsoft.hybridos.xguipro"
+#define SD_XGUI_PRO_TYPE             "_purcmc._tcp"
+#define SD_XGUI_PRO_DOMAIN           "local"
+#define SD_XGUI_PRO_TXT_RECORD       "name=xGUI Pro"
+
+const char *xgui_pro_record[] = {
+    "name=xGUI Pro"
+};
+
 purcmc_server *
 purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
         void *user_data, const purcmc_server_callbacks *cbs,
@@ -949,6 +961,13 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
     if (!the_srvcfg->nowebsocket) {
         if ((the_server.ws_srv = ws_init((purcmc_server_config *)the_srvcfg)) == NULL) {
             purc_log_error("Error during ws_init\n");
+            goto error;
+        }
+        the_server.sd_srv = sd_service_register(SD_XGUI_PRO_NAME,
+                SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, NULL, the_srvcfg->port,
+                xgui_pro_record, 1);
+        if (!the_server.sd_srv) {
+            purc_log_error("Error during regist Service Discovery\n");
             goto error;
         }
     }
