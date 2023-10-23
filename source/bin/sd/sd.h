@@ -36,19 +36,30 @@ int sd_service_register(struct sd_service **srv,
         const char *dom, const char *host, const char *port,
         const char **txt_record, size_t nr_txt_record);
 
-
 int sd_service_destroy(struct sd_service *);
+
 
 typedef void (*sd_service_browse_reply)(struct sd_service *srv, int flags,
     uint32_t interface_index, int error_code, const char *service_name,
     const char *reg_type, const char *reply_domain, void *ctx);
 
-typedef void (*sd_stop_browse_cb)(struct sd_service *srv, void *ctx);
-
 int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
     const char *domain, sd_service_browse_reply cb, void *ctx);
 
+typedef void (*sd_stop_browse_cb)(struct sd_service *srv, void *ctx);
+
 void sd_stop_browsing_service(struct sd_service *srv);
+
+
+int sd_service_get_fd(struct sd_service *srv);
+
+/*
+ * This call will block until the daemon's response is received.
+ * Use sd_service_get_fd() in conjunction with a run loop or select()
+ * to determine the presence of a response from the server before calling
+ * this function to process the reply without blocking.
+ */
+int sd_service_process_result(struct sd_service *srv);
 
 #ifdef __cplusplus
 }

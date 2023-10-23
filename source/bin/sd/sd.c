@@ -162,3 +162,12 @@ void sd_stop_browsing_service(struct sd_service *srv)
     }
 }
 
+int sd_service_get_fd(struct sd_service *srv)
+{
+    return DNSServiceRefSockFD((DNSServiceRef)srv);
+}
+
+int sd_service_process_result(struct sd_service *srv)
+{
+    return DNSServiceProcessResult((DNSServiceRef)srv);
+}
