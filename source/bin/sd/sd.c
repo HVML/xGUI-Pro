@@ -140,12 +140,6 @@ int sd_service_destroy(struct sd_service *srv)
     return 0;
 }
 
-struct browser_cb_pair {
-    DNSServiceRef origin;
-    sd_service_browse_reply cb;
-    void *ctxt;
-};
-
 static int CopyLabels(char *dst, const char *lim, const char **srcp, int labels)
 {
     const char *src = *srcp;
@@ -194,7 +188,7 @@ static void resolve_cb(DNSServiceRef sdref,
     txt++;      // Skip over length byte
 
     struct sd_service *service = (struct sd_service *)context;
-    service->browse_cb((struct sd_service *)sdref, error_code, if_index,
+    service->browse_cb(service, error_code, if_index,
         fullname, t, hosttarget, u_port, (const char *)txt, end - txt,
         service->browse_cb_ctxt);
 
