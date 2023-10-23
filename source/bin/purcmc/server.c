@@ -39,6 +39,10 @@
 
 #include "sd/sd.h"
 
+#if PLATFORM(MINIGUI)
+#include "minigui/PopupTipWindow.h"
+#endif
+
 static purcmc_server the_server;
 static purcmc_server_config* the_srvcfg;
 
@@ -937,6 +941,11 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     }
 #endif
 
+    purc_log_info("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
+            "|port=%d|txt=%s\n",
+            if_index, full_name, reg_type, host, port, txt);
+
+#if PLATFORM(MINIGUI)
     struct sd_remote_service *rs = malloc(sizeof(struct sd_remote_service));
     rs->index = if_index;
     rs->ct = purc_get_monotoic_time();
@@ -946,10 +955,10 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     rs->port = port;
     rs->txt = strdup(txt);
     rs->nr_txt = nr_txt;
-
-    purc_log_warn("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
-            "|port=%d|txt=%s\n",
-            if_index, full_name, reg_type, host, port, txt);
+    create_popup_tip_window(HWND_DESKTOP, rs);
+#else
+    /* TODO: GTK */
+#endif
 }
 
 purcmc_server *

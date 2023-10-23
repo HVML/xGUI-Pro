@@ -34,10 +34,14 @@
 #include "xguipro-features.h"
 #include "PopupTipWindow.h"
 
+#include "sd/sd.h"
+
 HWND create_popup_tip_window(HWND hosting_wnd, struct sd_remote_service *srv)
 {
     (void) hosting_wnd;
     (void) srv;
+    /* TODO : popup window*/
+    free(srv);
     return HWND_INVALID;
 }
 
