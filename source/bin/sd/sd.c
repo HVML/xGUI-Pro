@@ -32,7 +32,7 @@
 #include "sd.h"
 
 #define MAX_TXT_RECORD_SIZE 8900
-#define kDNSServiceMaxDomainName 1009
+#define MAX_DOMAIN_NAME 1009
 
 #define HexVal(X) ( ((X) >= '0' && (X) <= '9') ? ((X) - '0'     ) :  \
                     ((X) >= 'A' && (X) <= 'F') ? ((X) - 'A' + 10) :  \
@@ -152,21 +152,21 @@ static void resolve_cb(DNSServiceRef sdref,
     uint16_t u_port = ((uint16_t)port.b[0]) << 8 | port.b[1];
     const char *p = fullname;
 
-    char n[kDNSServiceMaxDomainName];
-    char t[kDNSServiceMaxDomainName];
+    char n[MAX_DOMAIN_NAME];
+    char t[MAX_DOMAIN_NAME];
 
     // Fetch name+type
-    if (CopyLabels(n, n + kDNSServiceMaxDomainName, &p, 3)) {
+    if (CopyLabels(n, n + MAX_DOMAIN_NAME, &p, 3)) {
         goto out;
     }
 
     p = fullname;
     // Skip first label
-    if (CopyLabels(t, t + kDNSServiceMaxDomainName, &p, 1)) {
+    if (CopyLabels(t, t + MAX_DOMAIN_NAME, &p, 1)) {
         goto out;
     }
     // Fetch next two labels (service type)
-    if (CopyLabels(t, t + kDNSServiceMaxDomainName, &p, 2)) {
+    if (CopyLabels(t, t + MAX_DOMAIN_NAME, &p, 2)) {
         goto out;
     }
 
