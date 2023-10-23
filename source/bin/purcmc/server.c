@@ -927,7 +927,7 @@ const char *xgui_pro_record[] = {
 void sd_browse_reply(struct sd_service *srv, int error_code,
         uint32_t if_index, const char *full_name,
         const char *reg_type, const char *host, uint16_t port,
-        const char *txt, size_t nr_txt)
+        const char *txt, size_t nr_txt, void *ctxt)
 {
     fprintf(stderr, "##### found service:\n");
     fprintf(stderr, "index: %d\n", if_index);

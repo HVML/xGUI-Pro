@@ -44,10 +44,10 @@ int sd_service_destroy(struct sd_service *);
 typedef void (*sd_service_browse_reply)(struct sd_service *srv,
         int error_code, uint32_t if_index, const char *full_name,
         const char *reg_type, const char *host, uint16_t port,
-        const char *txt, size_t nr_txt);
+        const char *txt, size_t nr_txt, void *ctxt);
 
 int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
-    const char *domain, sd_service_browse_reply cb, void *ctx);
+    const char *domain, sd_service_browse_reply cb, void *ctxt);
 
 void sd_stop_browsing_service(struct sd_service *srv);
 
