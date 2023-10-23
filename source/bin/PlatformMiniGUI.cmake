@@ -35,6 +35,7 @@ list(APPEND xguipro_SOURCES
     minigui/LayouterWidgets.h
     minigui/main.c
     minigui/FloatingToolWindow.c
+    minigui/PopupTipWindow.c
     minigui/AuthWindow.c
 )
 
