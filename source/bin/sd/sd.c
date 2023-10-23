@@ -145,37 +145,51 @@ static void resolve_cb(DNSServiceRef sdref,
         const DNSServiceFlags flags, uint32_t if_index,
         DNSServiceErrorType error_code,
         const char *fullname, const char *hosttarget, uint16_t opaqueport,
-        uint16_t txtLen, const unsigned char *txt, void *context)
+        uint16_t txt_len, const unsigned char *txt, void *context)
 {
+    (void) txt_len;
     union { uint16_t s; u_char b[2]; } port = { opaqueport };
     uint16_t u_port = ((uint16_t)port.b[0]) << 8 | port.b[1];
     const char *p = fullname;
 
     char n[kDNSServiceMaxDomainName];
     char t[kDNSServiceMaxDomainName];
-//    const unsigned char *max = txt + txtLen;
 
-    if (CopyLabels(n, n + kDNSServiceMaxDomainName, &p, 3)) return;     // Fetch name+type
+    // Fetch name+type
+    if (CopyLabels(n, n + kDNSServiceMaxDomainName, &p, 3)) {
+        goto out;
+    }
+
     p = fullname;
-    if (CopyLabels(t, t + kDNSServiceMaxDomainName, &p, 1)) return;     // Skip first label
-    if (CopyLabels(t, t + kDNSServiceMaxDomainName, &p, 2)) return;     // Fetch next two labels (service type)
+    // Skip first label
+    if (CopyLabels(t, t + kDNSServiceMaxDomainName, &p, 1)) {
+        goto out;
+    }
+    // Fetch next two labels (service type)
+    if (CopyLabels(t, t + kDNSServiceMaxDomainName, &p, 2)) {
+        goto out;
+    }
+
+    const unsigned char *const end = txt + 1 + txt[0];
+    txt++;      // Skip over length byte
 
     struct browser_cb_pair *cb_pair = (struct browser_cb_pair *)context;
     cb_pair->cb((struct sd_service *)sdref, error_code, if_index,
-        fullname, txt, hosttarget, u_port, p, strlen(p));
+        fullname, t, hosttarget, u_port, (const char *)txt, end - txt);
+
+out:
     DNSServiceRefDeallocate(sdref);
 }
 
 static void browse_reply(DNSServiceRef sdref, const DNSServiceFlags flags,
-    uint32_t interface_index, int error_code, const char *service_name,
+    uint32_t if_index, int error_code, const char *service_name,
     const char *reg_type, const char *reply_domain, void *ctx)
 {
     struct browser_cb_pair *p = (struct browser_cb_pair *)ctx;
     DNSServiceRef newref = p->origin;
-    int ret = DNSServiceResolve(&newref, kDNSServiceFlagsShareConnection,
-            interface_index, service_name, reg_type, reply_domain,
+    DNSServiceResolve(&newref, kDNSServiceFlagsShareConnection,
+            if_index, service_name, reg_type, reply_domain,
             resolve_cb, ctx);
-    fprintf(stderr, "#########> call resolve ret=%d\n", ret);
 }
 
 int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
@@ -183,7 +197,7 @@ int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
 {
     DNSServiceRef sdref = NULL;
     int flags = kDNSServiceFlagsShareConnection;
-    uint32_t interface_index = opinterface;
+    uint32_t if_index = opinterface;
 
     struct browser_cb_pair *p = malloc(sizeof(struct browser_cb_pair));
     p->cb = cb;
@@ -193,7 +207,7 @@ int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
     DNSServiceCreateConnection(&origin);
     p->origin = origin;
     sdref = origin;
-    int ret = DNSServiceBrowse(&sdref, flags, interface_index, reg_type, domain,
+    int ret = DNSServiceBrowse(&sdref, flags, if_index, reg_type, domain,
             browse_reply, p);
 
     if (ret == kDNSServiceErr_NoError) {

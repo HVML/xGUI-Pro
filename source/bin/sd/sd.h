@@ -42,14 +42,12 @@ int sd_service_destroy(struct sd_service *);
 
 /* browsing service */
 typedef void (*sd_service_browse_reply)(struct sd_service *srv,
-        int error_code, uint32_t interface_index, const char *full_name,
+        int error_code, uint32_t if_index, const char *full_name,
         const char *reg_type, const char *host, uint16_t port,
         const char *txt, size_t nr_txt);
 
 int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
     const char *domain, sd_service_browse_reply cb, void *ctx);
-
-typedef void (*sd_stop_browse_cb)(struct sd_service *srv, void *ctx);
 
 void sd_stop_browsing_service(struct sd_service *srv);
 
