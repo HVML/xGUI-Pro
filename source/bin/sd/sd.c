@@ -25,12 +25,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 #include <dns_sd.h>
 
 #include "xguipro-features.h"
 #include "sd.h"
 
 #define MAX_TXT_RECORD_SIZE 8900
+#define kDNSServiceMaxDomainName 1009
 
 #define HexVal(X) ( ((X) >= '0' && (X) <= '9') ? ((X) - '0'     ) :  \
                     ((X) >= 'A' && (X) <= 'F') ? ((X) - 'A' + 10) :  \
@@ -124,15 +126,43 @@ struct browser_cb_pair {
     void *ctx;
 };
 
-static void DNSSD_API resolve_cb(DNSServiceRef sdref,
-        const DNSServiceFlags flags, uint32_t ifIndex, DNSServiceErrorType errorCode,
+static int CopyLabels(char *dst, const char *lim, const char **srcp, int labels)
+{
+    const char *src = *srcp;
+    while (*src != '.' || --labels > 0)
+    {
+        if (*src == '\\') *dst++ = *src++;  // Make sure "\." doesn't confuse us
+        if (!*src || dst >= lim) return -1;
+        *dst++ = *src++;
+        if (!*src || dst >= lim) return -1;
+    }
+    *dst++ = 0;
+    *srcp = src + 1;    // skip over final dot
+    return 0;
+}
+
+static void resolve_cb(DNSServiceRef sdref,
+        const DNSServiceFlags flags, uint32_t if_index,
+        DNSServiceErrorType error_code,
         const char *fullname, const char *hosttarget, uint16_t opaqueport,
         uint16_t txtLen, const unsigned char *txt, void *context)
 {
-    fprintf(stderr, "#########> fullname=%s\n", fullname);
-    fprintf(stderr, "#########> hosttarget=%s\n", hosttarget);
-    fprintf(stderr, "#########> txt=%s\n", txt);
+    union { uint16_t s; u_char b[2]; } port = { opaqueport };
+    uint16_t u_port = ((uint16_t)port.b[0]) << 8 | port.b[1];
+    const char *p = fullname;
 
+    char n[kDNSServiceMaxDomainName];
+    char t[kDNSServiceMaxDomainName];
+//    const unsigned char *max = txt + txtLen;
+
+    if (CopyLabels(n, n + kDNSServiceMaxDomainName, &p, 3)) return;     // Fetch name+type
+    p = fullname;
+    if (CopyLabels(t, t + kDNSServiceMaxDomainName, &p, 1)) return;     // Skip first label
+    if (CopyLabels(t, t + kDNSServiceMaxDomainName, &p, 2)) return;     // Fetch next two labels (service type)
+
+    struct browser_cb_pair *cb_pair = (struct browser_cb_pair *)context;
+    cb_pair->cb((struct sd_service *)sdref, error_code, if_index,
+        fullname, txt, hosttarget, u_port, p, strlen(p));
     DNSServiceRefDeallocate(sdref);
 }
 
@@ -141,9 +171,6 @@ static void browse_reply(DNSServiceRef sdref, const DNSServiceFlags flags,
     const char *reg_type, const char *reply_domain, void *ctx)
 {
     struct browser_cb_pair *p = (struct browser_cb_pair *)ctx;
-    p->cb((struct sd_service *)sdref, flags, interface_index, error_code,
-            service_name, reg_type, reply_domain, p->ctx);
-
     DNSServiceRef newref = p->origin;
     int ret = DNSServiceResolve(&newref, kDNSServiceFlagsShareConnection,
             interface_index, service_name, reg_type, reply_domain,
@@ -169,9 +196,6 @@ int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
     int ret = DNSServiceBrowse(&sdref, flags, interface_index, reg_type, domain,
             browse_reply, p);
 
-
-    int fd = sd_service_get_fd((struct sd_service *)origin);
-    int fdbro = sd_service_get_fd((struct sd_service *)sdref);
     if (ret == kDNSServiceErr_NoError) {
         *srv = (struct sd_service *)origin;
     }

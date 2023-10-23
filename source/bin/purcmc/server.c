@@ -924,13 +924,19 @@ const char *xgui_pro_record[] = {
     "name=xGUI Pro"
 };
 
-void sd_browse_reply(struct sd_service *srv, int flags,
-    uint32_t interface_index, int error_code, const char *service_name,
-    const char *reg_type, const char *reply_domain, void *ctx)
+void sd_browse_reply(struct sd_service *srv, int error_code,
+        uint32_t interface_index, const char *full_name,
+        const char *reg_type, const char *host, uint16_t port,
+        const char *txt, size_t nr_txt)
 {
-    const char *op = (flags & 0x2) ? "Add" : "Rmv";
-    fprintf(stderr, "%s %8X %3d %-20s %-20s %s\n",
-            op, flags, interface_index, reply_domain, reg_type, service_name);
+    fprintf(stderr, "##### found service:\n");
+    fprintf(stderr, "index: %d\n", interface_index);
+    fprintf(stderr, "full name: %s\n", full_name);
+    fprintf(stderr, "reg type: %s\n", reg_type);
+    fprintf(stderr, "host: %s\n", host);
+    fprintf(stderr, "port: %d\n", port);
+    fprintf(stderr, "txt: %s\n", txt);
+    fprintf(stderr, "#####\n");
 }
 
 purcmc_server *
