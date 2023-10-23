@@ -44,6 +44,7 @@ static purcmc_server_config* the_srvcfg;
 
 #define PTR_FOR_US_LISTENER ((void *)1)
 #define PTR_FOR_WS_LISTENER ((void *)2)
+#define PTR_FOR_SD_LISTENER ((void *)3)
 
 #define DEFAULT_LOCALE      "zh_CN"
 #define DEFAULT_DPI_NAME    "hdpi"
@@ -395,6 +396,15 @@ prepare_server(void)
                     the_server.ws_listener, strerror(errno));
             goto error;
         }
+
+        ev.events = EPOLLIN;
+        ev.data.ptr = PTR_FOR_SD_LISTENER;
+        int fd = sd_service_get_fd(the_server.sd_srv_browser);
+        if (epoll_ctl(the_server.epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
+            purc_log_error("Failed to call epoll_ctl with service discovery (%d): %s\n",
+                    fd, strerror(errno));
+            goto error;
+        }
     }
 #elif HAVE(SYS_SELECT_H)
     listen_new_client(the_server.us_listener, PTR_FOR_US_LISTENER, FALSE);
@@ -474,6 +484,9 @@ again:
                     goto error;
                 }
             }
+        }
+        else if (events[n].data.ptr == PTR_FOR_SD_LISTENER) {
+            sd_service_process_result(the_server.sd_srv_browser);
         }
         else {
             USClient *usc = (USClient *)events[n].data.ptr;
@@ -818,6 +831,7 @@ deinit_server(void)
                 endpoint->entity.client->entity = NULL;
                 ws_cleanup_client(the_server.ws_srv,
                         (WSClient *)endpoint->entity.client);
+                sd_stop_browsing_service(the_server.sd_srv_browser);
                 sd_service_destroy(the_server.sd_srv);
             }
 
@@ -980,9 +994,13 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
             goto error;
         }
 
-        sd_start_browsing_service(&the_server.sd_srv_browser,
+        int ret = sd_start_browsing_service(&the_server.sd_srv_browser,
                 SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
                 NULL);
+        if (ret) {
+            purc_log_error("Error during start browsing service\n");
+            goto error;
+        }
     }
     else {
         the_server.ws_srv = NULL;

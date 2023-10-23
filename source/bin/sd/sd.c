@@ -145,7 +145,7 @@ int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
     int ret = DNSServiceBrowse(&sdref, flags, interface_index, reg_type, domain,
             browse_reply, p);
 
-    if (ret != kDNSServiceErr_NoError) {
+    if (ret == kDNSServiceErr_NoError) {
         *srv = (struct sd_service *)sdref;
     }
     else {
