@@ -132,16 +132,17 @@ static void browse_reply(DNSServiceRef sdref, const DNSServiceFlags flags,
             service_name, reg_type, reply_domain, p->ctx);
 }
 
-int sd_service_browse(struct sd_service **srv, int flags,
-    uint32_t interface_index, const char *reg_type,
-    const char *domain, sd_service_browse_reply cb,
-    void *ctx)
+int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
+    const char *domain, sd_service_browse_reply cb, void *ctx)
 {
     DNSServiceRef sdref = NULL;
+    int flags = 0;
+    uint32_t interface_index = opinterface;
+
     struct browser_cb_pair *p = malloc(sizeof(struct browser_cb_pair));
     p->cb = cb;
     p->ctx = ctx;
-    int ret = DNSServiceBrowse(&sdref, flags, opinterface, reg_type, domain,
+    int ret = DNSServiceBrowse(&sdref, flags, interface_index, reg_type, domain,
             browse_reply, p);
 
     if (ret != kDNSServiceErr_NoError) {
@@ -154,8 +155,10 @@ int sd_service_browse(struct sd_service **srv, int flags,
     return ret;
 }
 
-void sd_stop_browse(struct sd_service *srv)
+void sd_stop_browsing_service(struct sd_service *srv)
 {
-    DNSServiceRefDeallocate((DNSServiceRef)srv);
+    if (srv) {
+        DNSServiceRefDeallocate((DNSServiceRef)srv);
+    }
 }
 

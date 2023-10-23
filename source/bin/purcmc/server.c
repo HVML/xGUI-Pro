@@ -980,9 +980,8 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
             goto error;
         }
 
-        sd_service_browse(&the_server.sd_srv_browser, 0,
-                0, SD_XGUI_PRO_TYPE,
-                SD_XGUI_PRO_DOMAIN, sd_browse_reply,
+        sd_start_browsing_service(&the_server.sd_srv_browser,
+                SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
                 NULL);
     }
     else {
