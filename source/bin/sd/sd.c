@@ -126,10 +126,17 @@ out:
 }
 
 
-int sd_service_destroy(struct sd_service *svs)
+int sd_service_destroy(struct sd_service *srv)
 {
-    DNSServiceRefDeallocate(svs->sdref);
-    free(svs);
+    if (srv) {
+        if (srv->browse_sdref) {
+            DNSServiceRefDeallocate(srv->browse_sdref);
+        }
+        if (srv->sdref) {
+            DNSServiceRefDeallocate(srv->sdref);
+        }
+        free(srv);
+    }
     return 0;
 }
 
@@ -233,10 +240,7 @@ int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
 
 void sd_stop_browsing_service(struct sd_service *srv)
 {
-    if (srv) {
-        DNSServiceRefDeallocate(srv->browse_sdref);
-        DNSServiceRefDeallocate(srv->sdref);
-    }
+    sd_service_destroy(srv);
 }
 
 int sd_service_get_fd(struct sd_service *srv)
