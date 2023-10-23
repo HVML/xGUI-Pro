@@ -75,7 +75,7 @@ const char *cn[] = {
     "名称：",
     "标签：",
     "描述：",
-    "地址：",
+    "来源：",
     "接受",
     "拒绝",
 };
@@ -85,7 +85,7 @@ const char *zh[] = {
     "名稱：",
     "標籤：",
     "描述：",
-    "地址：",
+    "来源：",
     "接受",
     "拒絕",
 };
@@ -95,7 +95,7 @@ const char *en[] = {
     "Name:",
     "Label:",
     "Desc:",
-    "Host:",
+    "Source:",
     "Accept",
     "Reject",
 };
@@ -236,6 +236,26 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
             SetWindowFont(GetDlgItem(hDlg, IDC_BTN_ACCEPT), lf);
             SetWindowFont(GetDlgItem(hDlg, IDC_BTN_REJECT), lf);
 
+            HWND label = GetDlgItem(hDlg, IDC_APP_LABEL);
+            int nr_txt = GetWindowTextLength(label);
+            char txt[nr_txt + 1];
+            GetWindowText(label, txt, nr_txt);
+            SIZE sz;
+            HDC hdc = GetDC(GetDlgItem(hDlg, IDC_APP_LABEL));
+            GetTabbedTextExtent(hdc, txt, nr_txt, &sz);
+
+            RECT rc;
+            GetWindowRect(label, &rc);
+
+            int x = app_icon_x;
+            if (sz.cx > app_icon_w) {
+                x = app_icon_x - (sz.cx - app_icon_w) / 2;
+            }
+            else if (sz.cx < app_icon_w) {
+                x = app_icon_x + (app_icon_w - sz.cx) / 2;
+            }
+            MoveWindow(label, x, rc.top, sz.cx, RECTH(rc), TRUE);
+
             SetTimer(hDlg, AUTH_TIMEOUT_ID, 100);
         }
         return 0;
@@ -252,10 +272,10 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
     case MSG_TIMER:
         {
             g_timeout_seconds--;
-            HWND ctrl = GetDlgItem(hDlg, IDC_BTN_ACCEPT);
-            size_t n = strlen(s_res[CTRL_BTN_ACCEPT]) + TIMEOUT_STR_LEN + 1;
+            HWND ctrl = GetDlgItem(hDlg, IDC_BTN_REJECT);
+            size_t n = strlen(s_res[CTRL_BTN_REJECT]) + TIMEOUT_STR_LEN + 1;
             char buf[n];
-            sprintf(buf, "%s(%ld)", s_res[CTRL_BTN_ACCEPT], g_timeout_seconds);
+            sprintf(buf, "%s(%ld)", s_res[CTRL_BTN_REJECT], g_timeout_seconds);
             SetWindowText(ctrl, buf);
 
             if (g_timeout_seconds <= 0) {
@@ -321,11 +341,6 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     strcpy(s_app_name, s_res[CTRL_APP_NAME]);
     strcat(s_app_name, app_name);
 
-    nr = strlen(s_res[CTRL_APP_LABEL]) + strlen(app_label) + 1;
-    char s_app_label[nr];
-    strcpy(s_app_label, s_res[CTRL_APP_LABEL]);
-    strcat(s_app_label, app_label);
-
     nr = strlen(s_res[CTRL_APP_DESC]) + strlen(app_desc) + 1;
     char s_app_desc[nr];
     strcpy(s_app_desc, s_res[CTRL_APP_DESC]);
@@ -336,9 +351,9 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     strcpy(s_host_name, s_res[CTRL_APP_HOST_NAME]);
     strcat(s_host_name, host_name);
 
-    nr = strlen(s_res[CTRL_BTN_ACCEPT]) + TIMEOUT_STR_LEN + 1;
-    char s_accept[nr];
-    sprintf(s_accept, "%s(%ld)", s_res[CTRL_BTN_ACCEPT], g_timeout_seconds);
+    nr = strlen(s_res[CTRL_BTN_REJECT]) + TIMEOUT_STR_LEN + 1;
+    char s_reject[nr];
+    sprintf(s_reject, "%s(%ld)", s_res[CTRL_BTN_REJECT], g_timeout_seconds);
 
 
     int dlg_w = RECTW(rc) * 3 / 4;
@@ -358,11 +373,21 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     int h = dlg_h * 0.8 / 7;
     int xh = dlg_h * 0.8 / 6;
 
-    app_icon_w = 2 * xh;
-    app_icon_x = dlg_w - app_icon_w - dlg_w / 10;
-    app_icon_y = dlg_h / 10 + xh;
+    init_font(font_size);
+    load_app_icon();
 
-    int info_w = app_icon_x - x;
+    app_icon_w = 2 * xh;
+    app_icon_x = x;
+    app_icon_y = dlg_h / 10 + 1.5 * xh;
+    app_icon_h = app_icon_w;
+
+    if (g_app_icon) {
+        int bw = g_app_icon->bmWidth;
+        int bh = g_app_icon->bmHeight;
+        app_icon_h = bh * app_icon_w / bw;
+    }
+
+    int info_w = dlg_w - x;
 
     PCTRLDATA pctrl;
     /* title */
@@ -373,8 +398,17 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     pctrl->w = info_w;
     pctrl->h = h;
 
+    /* app label */
+    pctrl = &CtrlInitAuth[CTRL_APP_LABEL];
+    pctrl->caption = app_label;
+    pctrl->x = app_icon_x;
+    pctrl->y = app_icon_y + app_icon_h;
+    pctrl->w = info_w;
+    pctrl->h = h;
+
     /* app name */
-    y = y + xh;
+    x = app_icon_x + app_icon_w + app_icon_w / 3;
+    y = app_icon_y;
     pctrl = &CtrlInitAuth[CTRL_APP_NAME];
     pctrl->caption = s_app_name;
     pctrl->x = x;
@@ -382,14 +416,6 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     pctrl->w = info_w;
     pctrl->h = h;
 
-    /* app label */
-    y = y + h;
-    pctrl = &CtrlInitAuth[CTRL_APP_LABEL];
-    pctrl->caption = s_app_label;
-    pctrl->x = x;
-    pctrl->y = y;
-    pctrl->w = info_w;
-    pctrl->h = h;
 
     /* app desc */
     y = y + h;
@@ -414,7 +440,7 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
     y = dlg_h - dlg_h / 10 - xh;
     x = (dlg_w - 2 * btn_w) / 3;
     pctrl = &CtrlInitAuth[CTRL_BTN_ACCEPT];
-    pctrl->caption = s_accept;
+    pctrl->caption = s_res[CTRL_BTN_ACCEPT];
     pctrl->x = x;
     pctrl->y = y;
     pctrl->w = btn_w;
@@ -422,7 +448,7 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
 
     /* reject */
     pctrl = &CtrlInitAuth[CTRL_BTN_REJECT];
-    pctrl->caption = s_res[CTRL_BTN_REJECT];
+    pctrl->caption = s_reject;
     pctrl->x = x + btn_w + x;
     pctrl->y = y;
     pctrl->w = btn_w;
@@ -430,15 +456,6 @@ int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
 
     DlgInitAuth.controlnr = CTRL_LAST;
     DlgInitAuth.controls = CtrlInitAuth;
-
-    init_font(font_size);
-    load_app_icon();
-
-    if (g_app_icon) {
-        int bw = g_app_icon->bmWidth;
-        int bh = g_app_icon->bmHeight;
-        app_icon_h = bh * app_icon_w / bw;
-    }
 
     return DialogBoxIndirectParam (&DlgInitAuth, hWnd, InitDialogBoxProc, 0L);
 }
