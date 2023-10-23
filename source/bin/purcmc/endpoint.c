@@ -488,7 +488,7 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
     else {
         /* TODO: handle hostname for web socket connections here */
-        host_name = PCRDR_LOCALHOST;
+        host_name = norm_host_name;
     }
 
     purc_assemble_endpoint_name (host_name,

@@ -798,7 +798,7 @@ init_server(void)
     the_server.running = true;
 
     /* TODO for host name */
-    the_server.server_name = strdup(PCRDR_LOCALHOST);
+    the_server.server_name = strdup(sd_get_local_hostname());
     kvlist_init(&the_server.endpoint_list, NULL);
     avl_init(&the_server.living_avl, comp_living_time, true, NULL);
 
@@ -929,6 +929,7 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
         const char *reg_type, const char *host, uint16_t port,
         const char *txt, size_t nr_txt, void *ctxt)
 {
+    purcmc_server *server = (purcmc_server*) ctxt;
     fprintf(stderr, "##### found service:\n");
     fprintf(stderr, "index: %d\n", if_index);
     fprintf(stderr, "full name: %s\n", full_name);
@@ -936,8 +937,8 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     fprintf(stderr, "host: %s\n", host);
     fprintf(stderr, "port: %d\n", port);
     fprintf(stderr, "txt: %s\n", txt);
-    fprintf(stderr, "localhost: %s\n", sd_get_local_hostname());
-    fprintf(stderr, "cmp=%d\n", strcmp(host, sd_get_local_hostname()));
+    fprintf(stderr, "localhost: %s\n", server->server_name);
+    fprintf(stderr, "cmp=%d\n", strcmp(host, server->server_name));
     fprintf(stderr, "#####\n");
 }
 
@@ -1017,7 +1018,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
 
         int ret = sd_start_browsing_service(&the_server.sd_srv_browser,
                 SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
-                NULL);
+                &the_server);
         if (ret) {
             purc_log_error("Error during start browsing service\n");
             goto error;
