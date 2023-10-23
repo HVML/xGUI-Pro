@@ -45,6 +45,7 @@ static purcmc_server_config* the_srvcfg;
 #define PTR_FOR_US_LISTENER ((void *)1)
 #define PTR_FOR_WS_LISTENER ((void *)2)
 #define PTR_FOR_SD_LISTENER ((void *)3)
+#define PTR_FOR_SD_BROWSE_LISTENER ((void *)4)
 
 #define DEFAULT_LOCALE      "zh_CN"
 #define DEFAULT_DPI_NAME    "hdpi"
@@ -399,9 +400,18 @@ prepare_server(void)
 
         ev.events = EPOLLIN;
         ev.data.ptr = PTR_FOR_SD_LISTENER;
-        int fd = sd_service_get_fd(the_server.sd_srv_browser);
+        int fd = sd_service_get_fd(the_server.sd_srv);
         if (epoll_ctl(the_server.epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
             purc_log_error("Failed to call epoll_ctl with service discovery (%d): %s\n",
+                    fd, strerror(errno));
+            goto error;
+        }
+
+        ev.events = EPOLLIN;
+        ev.data.ptr = PTR_FOR_SD_BROWSE_LISTENER;
+        fd = sd_service_get_fd(the_server.sd_srv_browser);
+        if (epoll_ctl(the_server.epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
+            purc_log_error("Failed to call epoll_ctl with sd browsing (%d): %s\n",
                     fd, strerror(errno));
             goto error;
         }
@@ -486,6 +496,9 @@ again:
             }
         }
         else if (events[n].data.ptr == PTR_FOR_SD_LISTENER) {
+            sd_service_process_result(the_server.sd_srv);
+        }
+        else if (events[n].data.ptr == PTR_FOR_SD_BROWSE_LISTENER) {
             sd_service_process_result(the_server.sd_srv_browser);
         }
         else {
