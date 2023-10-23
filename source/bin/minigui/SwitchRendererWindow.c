@@ -1,9 +1,9 @@
 /*
-** AuthWindow.h -- The declaration of AuthWindow.
+** SwitchRendererWindow.h -- The declaration of SwitchRendererWindow.
 **
 ** Copyright (C) 2023 FMSoft <http://www.fmsoft.cn>
 **
-** Author: XueShuming
+** Author: Vincent Wei <https://github.com/VincentWei>
 **
 ** This file is part of xGUI Pro, an advanced HVML renderer.
 **
@@ -20,26 +20,25 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#ifndef AuthWindow_h
-#define AuthWindow_h
+#include <stdio.h>
 
 #include <minigui/common.h>
 #include <minigui/minigui.h>
 #include <minigui/gdi.h>
 #include <minigui/window.h>
 #include <minigui/control.h>
+#include <glib.h>
+#include <locale.h>
 
+#include "SwitchRendererWindow.h"
+#include "xguipro-features.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+#include "sd/sd.h"
 
-int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
-        const char *app_desc, const char *host_name, uint64_t timeout_seconds);
-
-#ifdef __cplusplus
+int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
+{
+    (void) hWnd;
+    (void) rs;
+    return 0;
 }
-#endif /* __cplusplus */
-
-#endif  /* AuthWindow_h */
 

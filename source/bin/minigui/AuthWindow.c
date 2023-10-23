@@ -3,7 +3,7 @@
 **
 ** Copyright (C) 2023 FMSoft <http://www.fmsoft.cn>
 **
-** Author: Vincent Wei <https://github.com/VincentWei>
+** Author: XueShuming
 **
 ** This file is part of xGUI Pro, an advanced HVML renderer.
 **
