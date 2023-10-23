@@ -119,9 +119,22 @@ int sd_service_destroy(struct sd_service *svs)
 }
 
 struct browser_cb_pair {
+    DNSServiceRef origin;
     sd_service_browse_reply cb;
     void *ctx;
 };
+
+static void DNSSD_API resolve_cb(DNSServiceRef sdref,
+        const DNSServiceFlags flags, uint32_t ifIndex, DNSServiceErrorType errorCode,
+        const char *fullname, const char *hosttarget, uint16_t opaqueport,
+        uint16_t txtLen, const unsigned char *txt, void *context)
+{
+    fprintf(stderr, "#########> fullname=%s\n", fullname);
+    fprintf(stderr, "#########> hosttarget=%s\n", hosttarget);
+    fprintf(stderr, "#########> txt=%s\n", txt);
+
+    DNSServiceRefDeallocate(sdref);
+}
 
 static void browse_reply(DNSServiceRef sdref, const DNSServiceFlags flags,
     uint32_t interface_index, int error_code, const char *service_name,
@@ -130,23 +143,37 @@ static void browse_reply(DNSServiceRef sdref, const DNSServiceFlags flags,
     struct browser_cb_pair *p = (struct browser_cb_pair *)ctx;
     p->cb((struct sd_service *)sdref, flags, interface_index, error_code,
             service_name, reg_type, reply_domain, p->ctx);
+
+    DNSServiceRef newref = p->origin;
+    int ret = DNSServiceResolve(&newref, kDNSServiceFlagsShareConnection,
+            interface_index, service_name, reg_type, reply_domain,
+            resolve_cb, ctx);
+    fprintf(stderr, "#########> call resolve ret=%d\n", ret);
 }
 
 int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
     const char *domain, sd_service_browse_reply cb, void *ctx)
 {
     DNSServiceRef sdref = NULL;
-    int flags = 0;
+    int flags = kDNSServiceFlagsShareConnection;
     uint32_t interface_index = opinterface;
 
     struct browser_cb_pair *p = malloc(sizeof(struct browser_cb_pair));
     p->cb = cb;
     p->ctx = ctx;
+
+    DNSServiceRef origin = NULL;
+    DNSServiceCreateConnection(&origin);
+    p->origin = origin;
+    sdref = origin;
     int ret = DNSServiceBrowse(&sdref, flags, interface_index, reg_type, domain,
             browse_reply, p);
 
+
+    int fd = sd_service_get_fd((struct sd_service *)origin);
+    int fdbro = sd_service_get_fd((struct sd_service *)sdref);
     if (ret == kDNSServiceErr_NoError) {
-        *srv = (struct sd_service *)sdref;
+        *srv = (struct sd_service *)origin;
     }
     else {
         free(p);

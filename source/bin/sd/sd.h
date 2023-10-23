@@ -31,6 +31,7 @@ extern "C" {
 
 struct sd_service;
 
+/* regist service */
 int sd_service_register(struct sd_service **srv,
         const char *name, const char *type,
         const char *dom, const char *host, const char *port,
@@ -39,6 +40,7 @@ int sd_service_register(struct sd_service **srv,
 int sd_service_destroy(struct sd_service *);
 
 
+/* browsing service */
 typedef void (*sd_service_browse_reply)(struct sd_service *srv, int flags,
     uint32_t interface_index, int error_code, const char *service_name,
     const char *reg_type, const char *reply_domain, void *ctx);
@@ -51,6 +53,7 @@ typedef void (*sd_stop_browse_cb)(struct sd_service *srv, void *ctx);
 void sd_stop_browsing_service(struct sd_service *srv);
 
 
+/* handle event  */
 int sd_service_get_fd(struct sd_service *srv);
 
 /*
