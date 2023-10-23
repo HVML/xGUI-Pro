@@ -29,6 +29,20 @@
 extern "C" {
 #endif
 
+struct sd_remote_service {
+    uint32_t index;
+    time_t   ct;
+
+    char *full_name;
+    char *reg_type;
+
+    char *host;
+    uint16_t port;
+
+    char *txt;
+    size_t nr_txt;
+};
+
 struct sd_service;
 
 /* regist service */
@@ -64,6 +78,8 @@ int sd_service_get_fd(struct sd_service *srv);
 int sd_service_process_result(struct sd_service *srv);
 
 const char *sd_get_local_hostname(void);
+
+void sd_remote_service_destroy(struct sd_remote_service *srv);
 
 #ifdef __cplusplus
 }

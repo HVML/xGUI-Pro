@@ -929,17 +929,27 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
         const char *reg_type, const char *host, uint16_t port,
         const char *txt, size_t nr_txt, void *ctxt)
 {
+#if 0
     purcmc_server *server = (purcmc_server*) ctxt;
-    fprintf(stderr, "##### found service:\n");
-    fprintf(stderr, "index: %d\n", if_index);
-    fprintf(stderr, "full name: %s\n", full_name);
-    fprintf(stderr, "reg type: %s\n", reg_type);
-    fprintf(stderr, "host: %s\n", host);
-    fprintf(stderr, "port: %d\n", port);
-    fprintf(stderr, "txt: %s\n", txt);
-    fprintf(stderr, "localhost: %s\n", server->server_name);
-    fprintf(stderr, "cmp=%d\n", strcmp(host, server->server_name));
-    fprintf(stderr, "#####\n");
+    if (strcmp(host, server->server_name) == 0) {
+        purc_log_warn("Remote service same as local service: %s\n", host);
+        return;
+    }
+#endif
+
+    struct sd_remote_service *rs = malloc(sizeof(struct sd_remote_service));
+    rs->index = if_index;
+    rs->ct = purc_get_monotoic_time();
+    rs->full_name = strdup(full_name);
+    rs->reg_type = strdup(reg_type);
+    rs->host = strdup(host);
+    rs->port = port;
+    rs->txt = strdup(txt);
+    rs->nr_txt = nr_txt;
+
+    purc_log_warn("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
+            "|port=%d|txt=%s\n",
+            if_index, full_name, reg_type, host, port, txt);
 }
 
 purcmc_server *
