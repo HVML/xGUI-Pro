@@ -70,7 +70,7 @@ enum {
     IDC_BTN_REJECT = IDNO
 };
 
-const char *cn[] = {
+static const char *cn[] = {
     "收到新的连接请求：",
     "名称：",
     "标签：",
@@ -80,7 +80,7 @@ const char *cn[] = {
     "拒绝",
 };
 
-const char *zh[] = {
+static const char *zh[] = {
     "收到新的連結請求：",
     "名稱：",
     "標籤：",
@@ -90,7 +90,7 @@ const char *zh[] = {
     "拒絕",
 };
 
-const char *en[] = {
+static const char *en[] = {
     "New Connection:",
     "Name:",
     "Label:",
@@ -160,15 +160,15 @@ static CTRLDATA CtrlInitAuth [] =
     },
 };
 
-PLOGFONT lf = NULL;
-BITMAP app_icon;
-PBITMAP g_app_icon = NULL;
-int app_icon_x;
-int app_icon_y;
-int app_icon_w;
-int app_icon_h;
-const char **s_res = NULL;
-uint64_t g_timeout_seconds = 10;
+static PLOGFONT lf = NULL;
+static BITMAP app_icon;
+static PBITMAP g_app_icon = NULL;
+static int app_icon_x;
+static int app_icon_y;
+static int app_icon_w;
+static int app_icon_h;
+static const char **s_res = NULL;
+static uint64_t g_timeout_seconds = 10;
 
 
 static int init_font(int size)
@@ -307,7 +307,7 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
 
 RECT xphbd_get_default_window_rect(void);
 
-const char **get_string_res()
+static const char **get_string_res()
 {
     char *str = setlocale(LC_ALL, "");
     if (str) {
