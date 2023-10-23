@@ -28,11 +28,18 @@
 #include <string.h>
 #include <dns_sd.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <netdb.h>
+
+
 #include "xguipro-features.h"
 #include "sd.h"
 
 #define MAX_TXT_RECORD_SIZE 8900
-#define MAX_DOMAIN_NAME 1009
+#define MAX_DOMAIN_NAME     1009
+#define HOST_NAME_SUFFIX    ".local."
 
 #define HexVal(X) ( ((X) >= '0' && (X) <= '9') ? ((X) - '0'     ) :  \
                     ((X) >= 'A' && (X) <= 'F') ? ((X) - 'A' + 10) :  \
@@ -245,4 +252,36 @@ int sd_service_get_fd(struct sd_service *srv)
 int sd_service_process_result(struct sd_service *srv)
 {
     return DNSServiceProcessResult(srv->sdref);
+}
+
+const char *sd_get_local_hostname(void)
+{
+    static char hostname[1024] = {0};
+    struct addrinfo hints, *info, *p;
+    int ret;
+
+    if (hostname[0]) {
+        return hostname;
+    }
+
+    gethostname(hostname, 1023);
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_CANONNAME;
+
+    if ((ret = getaddrinfo(hostname, "http", &hints, &info)) != 0) {
+        hostname[0] = 0;
+        return NULL;
+    }
+
+    hostname[0] = 0;
+    for(p = info; p != NULL; p = p->ai_next) {
+        strcpy(hostname, p->ai_canonname);
+        strcat(hostname, HOST_NAME_SUFFIX);
+    }
+
+    freeaddrinfo(info);
+    return hostname;
 }

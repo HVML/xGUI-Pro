@@ -936,6 +936,8 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     fprintf(stderr, "host: %s\n", host);
     fprintf(stderr, "port: %d\n", port);
     fprintf(stderr, "txt: %s\n", txt);
+    fprintf(stderr, "localhost: %s\n", sd_get_local_hostname());
+    fprintf(stderr, "cmp=%d\n", strcmp(host, sd_get_local_hostname()));
     fprintf(stderr, "#####\n");
 }
 

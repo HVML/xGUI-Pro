@@ -63,6 +63,8 @@ int sd_service_get_fd(struct sd_service *srv);
  */
 int sd_service_process_result(struct sd_service *srv);
 
+const char *sd_get_local_hostname(void);
+
 #ifdef __cplusplus
 }
 #endif
