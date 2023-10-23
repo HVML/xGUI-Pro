@@ -1,9 +1,9 @@
 /*
-** hvmlURISchema.h -- header for hvml URI schema.
+** AuthWindow.h -- The declaration of AuthWindow.
 **
-** Copyright (C) 2022 FMSoft (http://www.fmsoft.cn)
+** Copyright (C) 2023 FMSoft <http://www.fmsoft.cn>
 **
-** Author: Vincent Wei (https://github.com/VincentWei)
+** Author: Vincent Wei <https://github.com/VincentWei>
 **
 ** This file is part of xGUI Pro, an advanced HVML renderer.
 **
@@ -20,24 +20,26 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#ifndef hvmlURISchema_h
-#define hvmlURISchema_h
+#ifndef AuthWindow_h
+#define AuthWindow_h
 
-#include <webkit2/webkit2.h>
+#include <minigui/common.h>
+#include <minigui/minigui.h>
+#include <minigui/gdi.h>
+#include <minigui/window.h>
+#include <minigui/control.h>
+
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
 
-void initializeWebExtensionsCallback(WebKitWebContext *context,
-        gpointer user_data);
-
-void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
-        WebKitWebContext *webContext);
+int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
+        const char *app_desc, const char *host_name, uint64_t timeout_seconds);
 
 #ifdef __cplusplus
 }
-#endif
+#endif /* __cplusplus */
 
-#endif  /* hvmlURISchema_h */
+#endif  /* AuthWindow_h */
 

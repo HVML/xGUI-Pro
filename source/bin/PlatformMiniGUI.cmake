@@ -31,12 +31,11 @@ list(APPEND xguipro_SOURCES
     minigui/BrowserTabContainer.c
     minigui/PurcmcCallbacks.c
     minigui/PurcmcCallbacks.h
-    minigui/HVMLURISchema.c
-    minigui/HVMLURISchema.h
     minigui/LayouterWidgets.c
     minigui/LayouterWidgets.h
     minigui/main.c
     minigui/FloatingToolWindow.c
+    minigui/AuthWindow.c
 )
 
 list(APPEND xguipro_LIBRARIES

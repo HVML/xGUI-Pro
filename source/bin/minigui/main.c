@@ -31,7 +31,7 @@
 #include "main.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
-#include "HVMLURISchema.h"
+#include "schema/HVMLURISchema.h"
 #include "Common.h"
 #include "BrowserPlainWindow.h"
 

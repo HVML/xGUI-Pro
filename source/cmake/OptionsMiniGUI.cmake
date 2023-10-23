@@ -12,6 +12,7 @@ set(LIBEXEC_INSTALL_DIR "${CMAKE_INSTALL_FULL_LIBEXECDIR}/xguipro" CACHE PATH "A
 set(HEADER_INSTALL_DIR "${CMAKE_INSTALL_FULL_INCLUDEDIR}" CACHE PATH "Absolute path to header installation directory")
 set(XGUIPRO_HEADER_INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}/xguipro" CACHE PATH "Absolute path to xGUIPro header installation directory")
 
+add_definitions(-DBUILDING_MINIGUI__=1)
 add_definitions(-DBUILDING_LINUX__=1)
 add_definitions(-DXGUIPRO_API_VERSION_STRING="${XGUIPRO_API_VERSION}")
 
@@ -21,6 +22,7 @@ find_package(PurC 0.9.16 REQUIRED)
 find_package(DOMRuler 0.9.16 REQUIRED)
 find_package(MiniGUI 5.2.0 REQUIRED COMPONENTS mGEff)
 find_package(CairoHBD REQUIRED)
+find_package(DNSSD REQUIRED)
 
 XGUIPRO_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC ON)
 

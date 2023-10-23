@@ -30,6 +30,10 @@
 #include "unixsocket.h"
 #include "websocket.h"
 
+#if PLATFORM(MINIGUI)
+#include "minigui/AuthWindow.h"
+#endif
+
 const char *purcmc_endpoint_host_name(purcmc_endpoint *endpoint)
 {
     return endpoint->host_name;
@@ -350,15 +354,59 @@ int check_dangling_endpoints(purcmc_server *srv)
     return n;
 }
 
+#define XGUIPRO_APP_NAME        "cn.fmsoft.hvml.xGUIPro"
+#define KEY_CHALLENGECODE       "challengeCode"
+
+char *gen_challenge_code()
+{
+    unsigned char ch_code_bin [PCUTILS_SHA256_DIGEST_SIZE];
+    char key [32];
+    char *ch_code = malloc(PCUTILS_SHA256_DIGEST_SIZE * 2 + 1);
+    if (!ch_code) {
+        goto out;
+    }
+
+    snprintf(key, sizeof (key), "xguipro-%ld", random ());
+
+    pcutils_hmac_sha256 (ch_code_bin,
+            (uint8_t*)XGUIPRO_APP_NAME, strlen(XGUIPRO_APP_NAME),
+            (uint8_t*)key, strlen (key));
+    pcutils_bin2hex (ch_code_bin, PCUTILS_SHA256_DIGEST_SIZE, ch_code, false);
+    ch_code [PCUTILS_SHA256_DIGEST_SIZE * 2] = 0;
+
+out:
+    return ch_code;
+}
+
 int send_initial_response(purcmc_server* srv, purcmc_endpoint* endpoint)
 {
     int retv = PCRDR_SC_OK;
     pcrdr_msg *msg = NULL;
 
-    msg = pcrdr_make_response_message(PCRDR_REQUESTID_INITIAL, NULL,
-            PCRDR_SC_OK, 0,
-            PCRDR_MSG_DATA_TYPE_PLAIN, srv->features,
-            strlen(srv->features));
+    if (endpoint->type == CT_UNIX_SOCKET) {
+        msg = pcrdr_make_response_message(PCRDR_REQUESTID_INITIAL, NULL,
+                PCRDR_SC_OK, 0,
+                PCRDR_MSG_DATA_TYPE_PLAIN, srv->features,
+                strlen(srv->features));
+    }
+    else {
+        char *challenge_code = gen_challenge_code();
+        if (!challenge_code) {
+            retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
+            goto failed;
+        }
+
+        size_t nr_buf = strlen(srv->features) + strlen(challenge_code)
+            + strlen(KEY_CHALLENGECODE) + 2; // : + \n
+        char *buf = malloc(nr_buf + 1);
+        sprintf(buf, "%s%s:%s\n", srv->features, KEY_CHALLENGECODE, challenge_code);
+        msg = pcrdr_make_response_message(PCRDR_REQUESTID_INITIAL, NULL,
+                PCRDR_SC_OK, 0,
+                PCRDR_MSG_DATA_TYPE_PLAIN, buf, nr_buf);
+        free(challenge_code);
+        free(buf);
+    }
+
     if (msg == NULL) {
         retv = PCRDR_SC_INTERNAL_SERVER_ERROR;
         goto failed;
@@ -440,7 +488,7 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
     else {
         /* TODO: handle hostname for web socket connections here */
-        host_name = PCRDR_LOCALHOST;
+        host_name = norm_host_name;
     }
 
     purc_assemble_endpoint_name (host_name,
@@ -2099,12 +2147,69 @@ failed:
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
 
+static int on_authenticate(purcmc_server* srv, purcmc_endpoint* endpoint,
+        const pcrdr_msg *msg)
+{
+    /* TODO parse host name */
+    int retv = PCRDR_SC_OK;
+#if PLATFORM(MINIGUI)
+    if (msg->data && purc_variant_is_object(msg->data)) {
+        purc_variant_t name = purc_variant_object_get_by_ckey(msg->data, "appName");
+        purc_variant_t label = purc_variant_object_get_by_ckey(msg->data, "appLabel");
+        purc_variant_t desc = purc_variant_object_get_by_ckey(msg->data, "appDesc");
+        purc_variant_t host = purc_variant_object_get_by_ckey(msg->data, "hostName");
+        if (!name || !label || !desc || !host) {
+            retv= PCRDR_SC_UNAUTHORIZED;
+            goto out;
+        }
+
+        uint64_t ut = 0;
+        purc_variant_t timeout = purc_variant_object_get_by_ckey(msg->data,
+                "timeoutSeconds");
+        if (timeout) {
+            purc_variant_cast_to_ulongint(timeout, &ut, false);
+        }
+
+        if (ut == 0) {
+            ut = 10;
+        }
+
+        const char *s_name = purc_variant_get_string_const(name);
+        const char *s_label = purc_variant_get_string_const(label);
+        const char *s_desc = purc_variant_get_string_const(desc);
+        const char *s_host = purc_variant_get_string_const(host);
+        int auth_ret = show_auth_window(HWND_DESKTOP, s_name, s_label,
+                s_desc, s_host, ut);
+        if (auth_ret == IDNO) {
+            retv= PCRDR_SC_UNAUTHORIZED;
+        }
+    }
+    else {
+        retv= PCRDR_SC_BAD_REQUEST;
+    }
+#endif
+
+out:
+    pcrdr_msg response = { };
+    purcmc_session *info = NULL;
+
+    response.type = PCRDR_MSG_TYPE_RESPONSE;
+    response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
+    response.retCode = retv;
+    response.resultValue = (uint64_t)info;
+    response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+
+    return purcmc_endpoint_send_response(srv, endpoint, &response);
+}
+
 static struct request_handler {
     const char *operation;
     request_handler handler;
 } handlers[] = {
     { PCRDR_OPERATION_ADDPAGEGROUPS, on_add_page_groups },
     { PCRDR_OPERATION_APPEND, on_append },
+    { PCRDR_OPERATION_AUTHENTICATE, on_authenticate },
     { PCRDR_OPERATION_CALLMETHOD, on_call_method },
     { PCRDR_OPERATION_CLEAR, on_clear },
     { PCRDR_OPERATION_CREATEPLAINWINDOW, on_create_plain_window },

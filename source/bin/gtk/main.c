@@ -32,7 +32,7 @@
 #include "BrowserWindow.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
-#include "HVMLURISchema.h"
+#include "schema/HVMLURISchema.h"
 
 #include "purcmc/purcmc.h"
 

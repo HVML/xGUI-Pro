@@ -37,11 +37,21 @@
 #include "unixsocket.h"
 #include "endpoint.h"
 
+#include "sd/sd.h"
+
 static purcmc_server the_server;
 static purcmc_server_config* the_srvcfg;
 
 #define PTR_FOR_US_LISTENER ((void *)1)
 #define PTR_FOR_WS_LISTENER ((void *)2)
+#define PTR_FOR_SD_LISTENER ((void *)3)
+#define PTR_FOR_SD_BROWSE_LISTENER ((void *)4)
+
+#define DEFAULT_LOCALE      "zh_CN"
+#define DEFAULT_DPI_NAME    "hdpi"
+
+#define MAX_LOCALE_LENGTH   128
+#define MAX_DPI_LENGTH      64
 
 /* callbacks for socket servers */
 // Allocate a purcmc_endpoint structure for a new client and send `auth` packet.
@@ -387,6 +397,24 @@ prepare_server(void)
                     the_server.ws_listener, strerror(errno));
             goto error;
         }
+
+        ev.events = EPOLLIN;
+        ev.data.ptr = PTR_FOR_SD_LISTENER;
+        int fd = sd_service_get_fd(the_server.sd_srv);
+        if (epoll_ctl(the_server.epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
+            purc_log_error("Failed to call epoll_ctl with service discovery (%d): %s\n",
+                    fd, strerror(errno));
+            goto error;
+        }
+
+        ev.events = EPOLLIN;
+        ev.data.ptr = PTR_FOR_SD_BROWSE_LISTENER;
+        fd = sd_service_get_fd(the_server.sd_srv_browser);
+        if (epoll_ctl(the_server.epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
+            purc_log_error("Failed to call epoll_ctl with sd browsing (%d): %s\n",
+                    fd, strerror(errno));
+            goto error;
+        }
     }
 #elif HAVE(SYS_SELECT_H)
     listen_new_client(the_server.us_listener, PTR_FOR_US_LISTENER, FALSE);
@@ -466,6 +494,12 @@ again:
                     goto error;
                 }
             }
+        }
+        else if (events[n].data.ptr == PTR_FOR_SD_LISTENER) {
+            sd_service_process_result(the_server.sd_srv);
+        }
+        else if (events[n].data.ptr == PTR_FOR_SD_BROWSE_LISTENER) {
+            sd_service_process_result(the_server.sd_srv_browser);
         }
         else {
             USClient *usc = (USClient *)events[n].data.ptr;
@@ -764,7 +798,7 @@ init_server(void)
     the_server.running = true;
 
     /* TODO for host name */
-    the_server.server_name = strdup(PCRDR_LOCALHOST);
+    the_server.server_name = strdup(sd_get_local_hostname());
     kvlist_init(&the_server.endpoint_list, NULL);
     avl_init(&the_server.living_avl, comp_living_time, true, NULL);
 
@@ -810,6 +844,8 @@ deinit_server(void)
                 endpoint->entity.client->entity = NULL;
                 ws_cleanup_client(the_server.ws_srv,
                         (WSClient *)endpoint->entity.client);
+                sd_stop_browsing_service(the_server.sd_srv_browser);
+                sd_service_destroy(the_server.sd_srv);
             }
 
             del_endpoint(&the_server, endpoint, CDE_EXITING);
@@ -879,6 +915,33 @@ deinit_server(void)
 
 }
 
+#define SD_XGUI_PRO_NAME             "cn.fmsoft.hybridos.xguipro"
+#define SD_XGUI_PRO_TYPE             "_purcmc._tcp"
+#define SD_XGUI_PRO_DOMAIN           "local"
+#define SD_XGUI_PRO_TXT_RECORD       "name=xGUI Pro"
+
+const char *xgui_pro_record[] = {
+    "name=xGUI Pro"
+};
+
+void sd_browse_reply(struct sd_service *srv, int error_code,
+        uint32_t if_index, const char *full_name,
+        const char *reg_type, const char *host, uint16_t port,
+        const char *txt, size_t nr_txt, void *ctxt)
+{
+    purcmc_server *server = (purcmc_server*) ctxt;
+    fprintf(stderr, "##### found service:\n");
+    fprintf(stderr, "index: %d\n", if_index);
+    fprintf(stderr, "full name: %s\n", full_name);
+    fprintf(stderr, "reg type: %s\n", reg_type);
+    fprintf(stderr, "host: %s\n", host);
+    fprintf(stderr, "port: %d\n", port);
+    fprintf(stderr, "txt: %s\n", txt);
+    fprintf(stderr, "localhost: %s\n", server->server_name);
+    fprintf(stderr, "cmp=%d\n", strcmp(host, server->server_name));
+    fprintf(stderr, "#####\n");
+}
+
 purcmc_server *
 purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
         void *user_data, const purcmc_server_callbacks *cbs,
@@ -892,10 +955,33 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
 
     assert(srvcfg != NULL);
 
+    char locale[MAX_LOCALE_LENGTH];
+    char dpi[MAX_DPI_LENGTH];
+
+    char *str = setlocale(LC_ALL, "");
+    if (str) {
+        char *p = strstr(str, ".");
+        size_t nr = p - str;
+        if (p) {
+            strncpy(locale, str, nr);
+            locale[nr] = 0;
+        }
+        else {
+            strcpy(locale, str);
+        }
+    }
+    else {
+        strcpy(locale, DEFAULT_LOCALE);
+    }
+
+    /* TODO : get real dpi name */
+    strcpy(dpi, DEFAULT_DPI_NAME);
+
     the_srvcfg = srvcfg;
     if (asprintf(&the_server.features, SERVER_FEATURES_FORMAT,
                 markup_langs, nr_workspaces,
-                nr_tabbedwindows, nr_tabbedpages, nr_plainwindows) < 0) {
+                nr_tabbedwindows, nr_tabbedpages, nr_plainwindows,
+                locale, dpi) < 0) {
         purc_log_error("Error during asprintf: %s\n",
                 strerror(errno));
         goto error;
@@ -920,6 +1006,21 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
     if (!the_srvcfg->nowebsocket) {
         if ((the_server.ws_srv = ws_init((purcmc_server_config *)the_srvcfg)) == NULL) {
             purc_log_error("Error during ws_init\n");
+            goto error;
+        }
+        sd_service_register(&the_server.sd_srv, SD_XGUI_PRO_NAME,
+                SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, NULL, the_srvcfg->port,
+                xgui_pro_record, 1);
+        if (!the_server.sd_srv) {
+            purc_log_error("Error during regist Service Discovery\n");
+            goto error;
+        }
+
+        int ret = sd_start_browsing_service(&the_server.sd_srv_browser,
+                SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
+                &the_server);
+        if (ret) {
+            purc_log_error("Error during start browsing service\n");
             goto error;
         }
     }

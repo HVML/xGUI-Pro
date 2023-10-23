@@ -33,6 +33,8 @@ XGUIPRO_EXECUTABLE(xguipro)
 set(xguipro_PLATFORM_INDEPENDENT_DIRS
     "purcmc"
     "layouter"
+    "schema"
+    "sd"
 )
 
 APPEND_ALL_SOURCE_FILES_IN_DIRLIST(xguipro_SOURCES
@@ -48,6 +50,7 @@ set(xguipro_LIBRARIES
     DOMRuler::DOMRuler
     PurC::PurC
     pthread
+    dns_sd
 )
 
 XGUIPRO_INCLUDE_CONFIG_FILES_IF_EXISTS()

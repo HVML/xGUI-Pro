@@ -43,14 +43,19 @@
 #include "utils/sorted-array.h"
 
 #include "purcmc.h"
+#include "xguipro-version.h"
 
 #define SERVER_APP_NAME     "cn.fmsoft.hvml.renderer"
 #define SERVER_RUNNER_NAME  "purcmc"
+#define XGUIPRO_APP_NAME    "cn.fmsoft.hvml.xGUIPro"
 
 #define SERVER_FEATURES_FORMAT \
     PCRDR_PURCMC_PROTOCOL_NAME ":" PCRDR_PURCMC_PROTOCOL_VERSION_STRING "\n" \
+    XGUIPRO_APP_NAME ":" XGUIPRO_VERSION_STRING "\n" \
     "%s\n" \
     "workspace:%d/tabbedWindow:%d/widgetInTabbedWindow:%d/plainWindow:%d\n" \
+    "locale:%s\n" \
+    "displayDensity:%s\n" \
 
 /* max clients for each web socket and unix socket */
 #define MAX_CLIENTS_EACH    512
@@ -141,6 +146,7 @@ struct purcmc_endpoint
 
 struct WSServer_;
 struct USServer_;
+struct sd_service;
 
 /* The PurcMC purcmc_server */
 struct purcmc_server
@@ -167,6 +173,8 @@ struct purcmc_server
 
     struct WSServer_ *ws_srv;
     struct USServer_ *us_srv;
+    struct sd_service *sd_srv;
+    struct sd_service *sd_srv_browser;
 
     /* The KV list using endpoint name as the key, and purcmc_endpoint* as the value */
     struct kvlist endpoint_list;

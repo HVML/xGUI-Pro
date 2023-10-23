@@ -22,13 +22,15 @@
 
 #include "config.h"
 
-#include "main.h"
+#include "xguipro-features.h"
 #include "HVMLURISchema.h"
 #include "BuildRevision.h"
-#include "LayouterWidgets.h"
+//#include "LayouterWidgets.h"
 
 #include "utils/hvml-uri.h"
 #include "utils/load-asset.h"
+#include "purcmc/server.h"
+#include "purcmc/purcmc.h"
 
 #include <webkit2/webkit2.h>
 #include <purc/purc-pcrdr.h>
@@ -36,6 +38,16 @@
 #include <gio/gunixinputstream.h>
 
 #include <assert.h>
+
+#if PLATFORM(MINIGUI)
+#include "minigui/PurcmcCallbacks.h"
+#include "minigui/LayouterWidgets.h"
+#include "minigui/main.h"
+#else
+#include "gtk/PurcmcCallbacks.h"
+#include "gtk/LayouterWidgets.h"
+#include "gtk/main.h"
+#endif
 
 #ifndef WEBKIT_VERSION_STRING
 #   define STR(x)                  #x
@@ -47,6 +59,28 @@
 #define DEFAULT_SPLASH_FILE        "assets/splash.jpg"
 #define SPLASH_FILE_NAME           "splash"
 #define SPLASH_FILE_SUFFIX         "jpg"
+#define QUERY_SEPERATOR            '?'
+
+
+struct hvml_broken_down_uri {
+    const char *uri;
+    const char *host;
+    const char *port;
+    const char *app;
+    const char *runner;
+    const char *group;
+    const char *page;
+    const char *real_app;
+    const char *real_runner;
+};
+
+static void print_hvml_broken_down_uri(struct hvml_broken_down_uri *st)
+{
+    LOG_WARN("HVML URI: uri=%s|host=%s|port=%s|app=%s|runner=%s|group=%s"
+            "|page=%s|real_app=%s|real_runner=%s\n",
+            st->uri, st->host, st->port, st->app, st->runner, st->group,
+            st->page, st->real_app, st->real_runner);
+}
 
 void initializeWebExtensionsCallback(WebKitWebContext *context,
         gpointer user_data)
@@ -169,7 +203,11 @@ static const char *footer_on_ok = ""
     "        <p>"
     "           <small>Status: <strong hvml-handle='731128'>Checking...</strong>.<br/>"
     "           The contents in this page will be replaced by the HVML runner <span hvml-handle='790715'></span>.<br/>"
-    "           WebKit2GTK API Version " WEBKITHBD_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#if PLATFORM(MINIGUI)
+    "           WebKit2HBD API Version " WEBKITHBD_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#else
+    "           WebKit2GTK API Version " WEBKITGTK_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#endif
     "        </p>"
     "      </footer>"
     ""
@@ -189,7 +227,11 @@ static const char *footer_on_error = ""
     "        <p>"
     "           <small>Status: <strong hvml-handle='731128'>ERROR</strong>.<br/>"
     "           %s <span hvml-handle='790715'></span>.<br/>"
-    "           WebKit2GTK API Version " WEBKITHBD_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#if PLATFORM(MINIGUI)
+    "           WebKit2HBD API Version " WEBKITHBD_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#else
+    "           WebKit2GTK API Version " WEBKITGTK_API_VERSION_STRING ", WebKit Version " WEBKIT_VERSION_STRING ", Build " BUILD_REVISION "</small>"
+#endif
     "        </p>"
     "      </footer>"
     ""
@@ -297,6 +339,278 @@ out_clear_data:
 
 out:
     return blank_page_with_bg;
+}
+
+bool should_do_redirect(WebKitURISchemeRequest *request,
+        purcmc_endpoint *endpoint, struct hvml_broken_down_uri *uri_st)
+{
+    (void) request;
+
+    bool need_redirect = false;
+    if (endpoint == NULL) {
+        goto out;
+    }
+
+    if (endpoint->type == ET_UNIX_SOCKET) {
+        if (strcmp(uri_st->group, PCRDR_GROUP_DYNAMIC) == 0) {
+            need_redirect = true;
+        }
+    }
+    else if (endpoint->type == ET_WEB_SOCKET) {
+        char host_name[PURC_LEN_HOST_NAME + 1] = { 0 };
+        /* TODO: get real local host name */
+        strcpy(host_name, PCRDR_LOCALHOST);
+
+        if ((strcmp(host_name, endpoint->host_name) == 0) &&
+                (strcmp(uri_st->group, PCRDR_GROUP_STATIC) == 0)) {
+            need_redirect = false;
+        }
+        else {
+            need_redirect = true;
+        }
+    }
+
+out:
+    return need_redirect;
+}
+
+void do_redirect(WebKitURISchemeRequest *request, purcmc_endpoint *endpoint,
+        struct hvml_broken_down_uri *uri_st)
+{
+    GError *error = NULL;
+    char schema[PURC_LEN_RUNNER_NAME + 1];
+
+    if (strcmp(uri_st->runner, PCRDR_RUNNER_HTTP) == 0) {
+        strcpy(schema, "http");
+    }
+    else if (strcmp(uri_st->runner, PCRDR_RUNNER_HTTPS) == 0) {
+        strcpy(schema, "https");
+    }
+    else if (strcmp(uri_st->runner, PCRDR_RUNNER_FTP) == 0) {
+        strcpy(schema, "ftp");
+    }
+    else if (strcmp(uri_st->runner, PCRDR_RUNNER_FTPS) == 0) {
+        strcpy(schema, "ftps");
+    }
+    else {
+        error = g_error_new(XGUI_PRO_ERROR,
+                XGUI_PRO_ERROR_INVALID_HVML_URI,
+                "Invalid runner name (%s)", uri_st->runner);
+        webkit_uri_scheme_request_finish_error(request, error);
+        return;
+    }
+
+    const char *query = uri_st->uri;
+    while (*query && *query != QUERY_SEPERATOR) {
+        query++;
+    }
+
+    if (query[0] == 0) {
+        query = NULL;
+    }
+    else {
+        query += 1;
+        if (query[0] == 0) {
+            query = NULL;
+        }
+    }
+
+    size_t nr_url = PURC_LEN_HOST_NAME + PURC_LEN_APP_NAME +
+        PURC_LEN_RUNNER_NAME;
+
+    if (uri_st->port) {
+        nr_url += strlen(uri_st->port);
+    }
+
+    if (uri_st->page) {
+        nr_url += strlen(uri_st->page);
+    }
+
+    if (query) {
+        nr_url += strlen(query);
+    }
+
+    char *url = malloc(nr_url + 1);
+    if (!url) {
+        error = g_error_new(XGUI_PRO_ERROR,
+                XGUI_PRO_ERROR_INVALID_HVML_URI,
+                "Failed to allocate memory for uri (%s)", uri_st->uri);
+        webkit_uri_scheme_request_finish_error(request, error);
+        return;
+    }
+
+    if (uri_st->port) {
+        snprintf(url, nr_url, "%s://%s:%s/%s/exported/%s", schema,
+                endpoint->host_name, uri_st->port, uri_st->real_app, uri_st->page);
+    }
+    else {
+        snprintf(url, nr_url, "%s://%s/%s/exported/%s", schema,
+                endpoint->host_name, uri_st->real_app, uri_st->page);
+    }
+
+    if (query) {
+        strcat(url, "?");
+        strcat(url, query);
+    }
+
+    LOG_DEBUG("origin uri (%s), redirect uri (%s)\n", uri_st->uri, url);
+
+    GInputStream *stream = NULL;
+    WebKitURISchemeResponse *response = NULL;;
+
+    gchar *contents = (gchar *)blank_page;
+    gsize content_length = strlen(contents);
+
+    stream = g_memory_input_stream_new_from_data(contents, content_length, NULL);
+    response = webkit_uri_scheme_response_new(stream, content_length);
+
+    SoupMessageHeaders *header = soup_message_headers_new(SOUP_MESSAGE_HEADERS_RESPONSE);
+    soup_message_headers_append(header, "Location", url);
+    webkit_uri_scheme_response_set_status(response, 302, NULL);
+    webkit_uri_scheme_response_set_http_headers(response, header);
+    webkit_uri_scheme_response_set_content_type(response, "text/html");
+
+    webkit_uri_scheme_request_finish_with_response(request, response);
+
+    free(url);
+
+    g_object_unref(response);
+    g_object_unref(stream);
+}
+
+void load_local_assets(WebKitURISchemeRequest *request,
+        purcmc_endpoint *endpoint, struct hvml_broken_down_uri *uri_st)
+{
+    (void) endpoint;
+    GError *error = NULL;
+    int fd = -1;
+    ssize_t max_to_load = 1024 * 4;
+    gchar *contents = NULL;
+    gchar *content_type = NULL;
+    gsize content_length = 0;
+
+    char prefix[PURC_LEN_APP_NAME + PURC_LEN_RUNNER_NAME + 32];
+
+    if (strcmp(uri_st->app, PCRDR_APP_SYSTEM) == 0) {
+        if (strcmp(uri_st->runner, PCRDR_RUNNER_FILESYSTEM) == 0) {
+            /* try to load asset from the system filesystem */
+            strcpy(prefix, "/");
+        }
+        else {
+            /* TODO */
+            strcpy(prefix, "/");
+        }
+    }
+    else {
+        snprintf(prefix, sizeof(prefix), "/app/%s/exported", uri_st->real_app);
+    }
+
+    LOG_WARN("local res: uri=%s|prefix=%s|page=%s\n", uri_st->uri, prefix, uri_st->page);
+
+    unsigned asset_flags = 0;
+    char *once_val = NULL;
+    if (purc_hvml_uri_get_query_value_alloc(uri_st->uri,
+                "once", &once_val) && strcmp(once_val, "yes") == 0) {
+        asset_flags |= ASSET_FLAG_ONCE;
+    }
+    if (once_val)
+        free(once_val);
+
+    if (asset_flags & ASSET_FLAG_ONCE) {
+        /* If having ASSET_FLAG_ONCE load whole contents, and remove
+           the asset file. */
+        contents = load_asset_content(NULL, prefix, uri_st->page, &content_length,
+                asset_flags);
+        max_to_load = content_length;
+    }
+    else {
+        contents = open_and_load_asset(NULL, prefix, uri_st->page, &max_to_load,
+                &fd, &content_length);
+    }
+
+    if (contents == NULL) {
+        error = g_error_new(XGUI_PRO_ERROR,
+                XGUI_PRO_ERROR_INVALID_HVML_URI,
+                "Can not load contents from file system (%s/%s)",
+                prefix, uri_st->page);
+        webkit_uri_scheme_request_finish_error(request, error);
+        goto done;
+    }
+
+    gboolean result_uncertain;
+    content_type = g_content_type_guess(uri_st->page,
+            (const guchar *)contents, max_to_load, &result_uncertain);
+
+    LOG_DEBUG("content type of URI (%s): %s (%s)\n",
+            uri_st->uri, content_type,
+            result_uncertain ? "uncertain" : "certain");
+
+    if (result_uncertain) {
+        if (content_type)
+            free(content_type);
+        content_type = NULL;
+    }
+
+    GInputStream *stream = NULL;
+    if (content_length > max_to_load && fd >= 0) {
+        free(contents);
+        stream = g_unix_input_stream_new(fd, TRUE);
+        LOG_DEBUG("make a unix input stream for URI: %s (%s)\n",
+                uri_st->uri, content_type);
+    }
+    else {
+        if (fd >= 0)
+            close(fd);
+
+        stream = g_memory_input_stream_new_from_data(contents, content_length,
+                (contents != cover_page && contents != blank_page) ? g_free : NULL);
+        LOG_DEBUG("make a memory input stream for URI: %s (%s)\n",
+                uri_st->uri, content_type);
+    }
+
+    webkit_uri_scheme_request_finish(request, stream, content_length,
+            content_type ? content_type : "application/octet-stream");
+    g_object_unref(stream);
+
+done:
+    if (content_type)
+        g_free(content_type);
+}
+
+void handle_origin_host_request(WebKitURISchemeRequest *request,
+        struct hvml_broken_down_uri *uri_st)
+{
+    purcmc_session *sess = NULL;
+    purcmc_endpoint *endpoint = NULL;
+
+    char *port = strstr(uri_st->host, ":");
+    if (port) {
+        *port = 0;
+        port += 1;
+    }
+    uri_st->port = port;
+
+    WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
+    /* get the real app name and/or real runner name */
+    if (webview) {
+        sess = g_object_get_data(G_OBJECT(webview), "purcmc-session");
+        if (sess) {
+            endpoint = purcmc_get_endpoint_by_session(sess);
+            if (endpoint) {
+                uri_st->real_app = endpoint->app_name;
+                uri_st->real_runner = endpoint->runner_name;
+            }
+        }
+    }
+
+    print_hvml_broken_down_uri(uri_st);
+
+    if (should_do_redirect(request, endpoint, uri_st)) {
+        do_redirect(request, endpoint, uri_st);
+    }
+    else {
+        load_local_assets(request, endpoint, uri_st);
+    }
 }
 
 void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
@@ -451,6 +765,21 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
             goto done;
         }
     }
+    else if (strncmp(host, PCRDR_ORIGINHOST, strlen(PCRDR_ORIGINHOST)) == 0) {
+        struct hvml_broken_down_uri uri_st = {
+            .uri = uri,
+            .host = host,
+            .port = NULL,
+            .app = app,
+            .runner = runner,
+            .group = group,
+            .page = page,
+            .real_app = app,
+            .real_runner = runner,
+        };
+        handle_origin_host_request(request, &uri_st);
+        goto done;
+    }
 
 error:
     if (contents == cover_page) {
@@ -464,7 +793,9 @@ error:
             contents = data;
         }
         WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
+#if PLATFORM(MINIGUI)
         webkit_web_view_set_display_suppressed(webview, true);
+#endif
         content_length = strlen(contents);
         content_type = g_strdup("text/html");
         max_to_load = content_length;
