@@ -207,6 +207,10 @@ static void browse_reply(DNSServiceRef sdref, const DNSServiceFlags flags,
     uint32_t if_index, int error_code, const char *service_name,
     const char *reg_type, const char *reply_domain, void *ctxt)
 {
+    if (!(flags & kDNSServiceFlagsAdd)) {
+        return;
+    }
+
     struct sd_service *p = (struct sd_service *)ctxt;
     DNSServiceRef newref = p->sdref;
     DNSServiceResolve(&newref, kDNSServiceFlagsShareConnection,
@@ -284,4 +288,23 @@ const char *sd_get_local_hostname(void)
 
     freeaddrinfo(info);
     return hostname;
+}
+
+void sd_remote_service_destroy(struct sd_remote_service *srv)
+{
+    if (!srv) {
+        return;
+    }
+    if (srv->full_name) {
+        free(srv->full_name);
+    }
+    if (srv->reg_type) {
+        free(srv->reg_type);
+    }
+    if (srv->host) {
+        free(srv->host);
+    }
+    if (srv->txt) {
+        free(srv->txt);
+    }
 }
