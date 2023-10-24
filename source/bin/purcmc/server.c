@@ -949,6 +949,9 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     if (!endpoint) {
         purc_log_info("Found remote service %s:%d , curr endpoint is null.\n",
                 host, port);
+        sd_start_browsing_service(&server->sd_srv_browser,
+                SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
+                server);
         return;
     }
 
@@ -1044,6 +1047,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
             goto error;
         }
 
+        the_server.sd_srv_browser = NULL;
         int ret = sd_start_browsing_service(&the_server.sd_srv_browser,
                 SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
                 &the_server);

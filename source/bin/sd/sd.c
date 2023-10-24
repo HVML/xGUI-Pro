@@ -232,11 +232,18 @@ int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
     int flags = kDNSServiceFlagsShareConnection;
     uint32_t if_index = opinterface;
 
-    struct sd_service *service = malloc(sizeof(struct sd_service));
-    service->browse_cb= cb;
-    service->browse_cb_ctxt = ctxt;
+    struct sd_service *service = *srv;
+    if (service == NULL) {
+        service = malloc(sizeof(struct sd_service));
+        service->browse_cb= cb;
+        service->browse_cb_ctxt = ctxt;
+        DNSServiceCreateConnection(&service->sdref);
+    }
+    else {
+        DNSServiceRefDeallocate(service->browse_sdref);
+        service->browse_sdref = NULL;
+    }
 
-    DNSServiceCreateConnection(&service->sdref);
     service->browse_sdref = service->sdref;
     int ret = DNSServiceBrowse(&service->browse_sdref, flags, if_index,
             reg_type, domain, browse_reply, service);
