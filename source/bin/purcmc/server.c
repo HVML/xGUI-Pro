@@ -924,7 +924,7 @@ deinit_server(void)
 #define SD_XGUI_PRO_DOMAIN           "local"
 #define SD_XGUI_PRO_TXT_RECORD       "name=xGUI Pro"
 
-#define REDO_BROWSING_INTERVAL   10 * 1000
+#define REDO_BROWSING_INTERVAL        10 * 1000
 
 const char *xgui_pro_record[] = {
     "name=xGUI Pro"
@@ -973,6 +973,7 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
 #else
     /* TODO: GTK */
 #endif
+    g_timeout_add(REDO_BROWSING_INTERVAL, redo_browsing_service, server);
 }
 
 gboolean redo_browsing_service(gpointer user_data)
