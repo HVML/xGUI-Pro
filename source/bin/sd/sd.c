@@ -50,7 +50,7 @@
 #define HexPair(P) ((HexVal((P)[0]) << 4) | HexVal((P)[1]))
 
 #define WS_SCHEMA       "ws://"
-#define KEY_NEW_RENDERER_COMMON       "common"
+#define KEY_NEW_RENDERER_COMM         "comm"
 #define KEY_NEW_RENDERER_URI          "uri"
 
 #define V_NEW_RENDERER_SOCKET         "socket"
@@ -350,7 +350,7 @@ void post_new_rendereer_event(struct sd_remote_service *srv)
     purc_variant_t v_common = purc_variant_make_string_static(V_NEW_RENDERER_SOCKET,
             false);
 
-    purc_variant_object_set_by_ckey(event.data, KEY_NEW_RENDERER_COMMON, v_common);
+    purc_variant_object_set_by_ckey(event.data, KEY_NEW_RENDERER_COMM, v_common);
     purc_variant_object_set_by_ckey(event.data, KEY_NEW_RENDERER_URI, v_uri);
 
     purcmc_endpoint_post_event(srv->server, srv->endpoint, &event);
