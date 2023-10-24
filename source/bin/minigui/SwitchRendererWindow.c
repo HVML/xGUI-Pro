@@ -344,6 +344,7 @@ int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
     if (r == IDYES) {
         post_new_rendereer_event(rs);
     }
+    sd_remote_service_destroy(rs);
     return r;
 }
 

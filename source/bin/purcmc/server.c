@@ -941,11 +941,11 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     }
 #endif
 
-    purc_log_info("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
-            "|port=%d|txt=%s\n",
-            if_index, full_name, reg_type, host, port, txt);
-
     purcmc_endpoint* endpoint = get_curr_endpoint(server);
+    purc_log_warn("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
+            "|port=%d|txt=%s|endpoint=%p\n",
+            if_index, full_name, reg_type, host, port, txt, endpoint);
+
     if (!endpoint) {
         purc_log_info("Found remote service %s:%d , curr endpoint is null.\n",
                 host, port);
