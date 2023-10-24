@@ -53,7 +53,7 @@
 #define KEY_NEW_RENDERER_COMM         "comm"
 #define KEY_NEW_RENDERER_URI          "uri"
 
-#define V_NEW_RENDERER_SOCKET         "socket"
+#define V_WEBSOCKET                   "websocket"
 
 typedef union { unsigned char b[2]; unsigned short NotAnInteger; } Opaque16;
 
@@ -347,7 +347,7 @@ void post_new_rendereer_event(struct sd_remote_service *srv)
     char uri[nr];
     sprintf(uri, "%s%s:%d", WS_SCHEMA, srv->host, srv->port);
     purc_variant_t v_uri = purc_variant_make_string_static(uri, false);
-    purc_variant_t v_common = purc_variant_make_string_static(V_NEW_RENDERER_SOCKET,
+    purc_variant_t v_common = purc_variant_make_string_static(V_WEBSOCKET,
             false);
 
     purc_variant_object_set_by_ckey(event.data, KEY_NEW_RENDERER_COMM, v_common);
