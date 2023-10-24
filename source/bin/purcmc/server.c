@@ -924,9 +924,13 @@ deinit_server(void)
 #define SD_XGUI_PRO_DOMAIN           "local"
 #define SD_XGUI_PRO_TXT_RECORD       "name=xGUI Pro"
 
+#define REDO_BROWSING_INTERVAL   10 * 1000
+
 const char *xgui_pro_record[] = {
     "name=xGUI Pro"
 };
+
+gboolean redo_browsing_service(gpointer user_data);
 
 void sd_browse_reply(struct sd_service *srv, int error_code,
         uint32_t if_index, const char *full_name,
@@ -949,9 +953,7 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     if (!endpoint) {
         purc_log_info("Found remote service %s:%d , curr endpoint is null.\n",
                 host, port);
-        sd_start_browsing_service(&server->sd_srv_browser,
-                SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
-                server);
+        g_timeout_add(REDO_BROWSING_INTERVAL, redo_browsing_service, server);
         return;
     }
 
@@ -971,6 +973,15 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
 #else
     /* TODO: GTK */
 #endif
+}
+
+gboolean redo_browsing_service(gpointer user_data)
+{
+    purcmc_server *server = (purcmc_server*) user_data;
+    sd_start_browsing_service(&server->sd_srv_browser,
+            SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
+            server);
+    return G_SOURCE_REMOVE;
 }
 
 purcmc_server *
