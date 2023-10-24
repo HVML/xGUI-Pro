@@ -33,6 +33,8 @@
 #include <unistd.h>
 #include <netdb.h>
 
+#include <purc/purc.h>
+
 
 #include "xguipro-features.h"
 #include "sd.h"
@@ -46,6 +48,12 @@
                     ((X) >= 'a' && (X) <= 'f') ? ((X) - 'a' + 10) : 0)
 
 #define HexPair(P) ((HexVal((P)[0]) << 4) | HexVal((P)[1]))
+
+#define WS_SCHEMA       "ws://"
+#define KEY_NEW_RENDERER_COMMON       "common"
+#define KEY_NEW_RENDERER_URI          "uri"
+
+#define V_NEW_RENDERER_SOCKET         "socket"
 
 typedef union { unsigned char b[2]; unsigned short NotAnInteger; } Opaque16;
 
@@ -307,4 +315,36 @@ void sd_remote_service_destroy(struct sd_remote_service *srv)
     if (srv->txt) {
         free(srv->txt);
     }
+}
+
+void post_new_rendereer_event(struct sd_remote_service *srv)
+{
+    //struct purcmc_server *server;
+    //purcmc_endpoint *endpoint;
+    pcrdr_msg event = { };
+    event.type = PCRDR_MSG_TYPE_EVENT;
+    event.target = PCRDR_MSG_TARGET_SESSION;
+    event.targetValue = 0;
+    event.eventName =
+        purc_variant_make_string_static("newRenderer", false);
+    /* TODO: use real URI for the sourceURI */
+    event.sourceURI = purc_variant_make_string_static(PCRDR_APP_RENDERER,
+            false);
+    event.elementType = PCRDR_MSG_ELEMENT_TYPE_VOID;
+    event.property = PURC_VARIANT_INVALID;
+    event.dataType = PCRDR_MSG_DATA_TYPE_JSON;
+    event.data = purc_variant_make_object(0, PURC_VARIANT_INVALID,
+            PURC_VARIANT_INVALID);
+
+    size_t nr = strlen(WS_SCHEMA) + strlen(srv->host) + 10;
+    char uri[nr];
+    sprintf(uri, "%s%s:%d", WS_SCHEMA, srv->host, srv->port);
+    purc_variant_t v_uri = purc_variant_make_string_static(uri, false);
+    purc_variant_t v_common = purc_variant_make_string_static(V_NEW_RENDERER_SOCKET,
+            false);
+
+    purc_variant_object_set_by_ckey(event.data, KEY_NEW_RENDERER_COMMON, v_common);
+    purc_variant_object_set_by_ckey(event.data, KEY_NEW_RENDERER_URI, v_uri);
+
+    purcmc_endpoint_post_event(srv->server, srv->endpoint, &event);
 }

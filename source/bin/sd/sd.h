@@ -85,6 +85,8 @@ const char *sd_get_local_hostname(void);
 
 void sd_remote_service_destroy(struct sd_remote_service *srv);
 
+void post_new_rendereer_event(struct sd_remote_service *srv);
+
 #ifdef __cplusplus
 }
 #endif

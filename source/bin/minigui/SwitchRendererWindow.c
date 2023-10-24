@@ -342,8 +342,7 @@ int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
     int r = DialogBoxIndirectParam (&DlgInitSwitch, hWnd, InitDialogBoxProc, 0L);
 
     if (r == IDYES) {
-        /* TODO */
-        fprintf(stderr, "#################> post new renderer event\n");
+        post_new_rendereer_event(rs);
     }
     return r;
 }
