@@ -933,8 +933,8 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
         const char *reg_type, const char *host, uint16_t port,
         const char *txt, size_t nr_txt, void *ctxt)
 {
-#if 0
     purcmc_server *server = (purcmc_server*) ctxt;
+#if 0
     if (strcmp(host, server->server_name) == 0) {
         purc_log_warn("Remote service same as local service: %s\n", host);
         return;
@@ -955,6 +955,7 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     rs->port = port;
     rs->txt = strdup(txt);
     rs->nr_txt = nr_txt;
+    rs->server = server;
     create_popup_tip_window(HWND_DESKTOP, rs);
 #else
     /* TODO: GTK */

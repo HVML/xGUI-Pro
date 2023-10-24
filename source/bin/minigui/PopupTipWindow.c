@@ -37,6 +37,7 @@
 #include "PopupTipWindow.h"
 
 #include "sd/sd.h"
+#include "SwitchRendererWindow.h"
 
 #define POPUP_TIP_LIVE_TIMER_ID     101
 #define POPUP_TIP_LIVE_TIME         5       // second
@@ -138,6 +139,15 @@ popup_tip_wndproc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 MainWindowCleanup(hWnd);
             }
             return 0;
+
+        case MSG_LBUTTONUP:
+            {
+                DWORD dw = GetWindowAdditionalData(hWnd);
+                struct sd_remote_service *srv = (struct sd_remote_service *)dw;
+                SendNotifyMessage(hWnd, MSG_CLOSE, 0, 0);
+                show_switch_renderer_window(HWND_DESKTOP, srv);
+            }
+            break;
 
         case MSG_DESTROY:
             break;

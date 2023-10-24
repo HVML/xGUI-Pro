@@ -41,6 +41,8 @@ struct sd_remote_service {
 
     char *txt;
     size_t nr_txt;
+
+    struct purcmc_server *server;
 };
 
 struct sd_service;

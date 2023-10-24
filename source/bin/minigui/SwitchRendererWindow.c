@@ -3,7 +3,7 @@
 **
 ** Copyright (C) 2023 FMSoft <http://www.fmsoft.cn>
 **
-** Author: Vincent Wei <https://github.com/VincentWei>
+** Switchor: Vincent Wei <https://github.com/VincentWei>
 **
 ** This file is part of xGUI Pro, an advanced HVML renderer.
 **
@@ -35,12 +35,7 @@
 
 #include "sd/sd.h"
 
-#define DEF_APP_ICON                      "assets/hvml-v-fill-white.png"
-
-#define AUTH_TIMEOUT_ID                   10001
-#define TIMEOUT_STR_LEN                   32
-
-static DLGTEMPLATE DlgInitAuth =
+static DLGTEMPLATE DlgInitSwitch =
 {
     WS_BORDER,
     WS_EX_NONE,
@@ -73,31 +68,31 @@ enum {
 static const char *cn[] = {
     "发现新的渲染器：",
     "描述：",
-    "来源：",
     "端口：",
-    "接受",
-    "拒绝",
+    "来源：",
+    "切换渲染器",
+    "关闭窗口",
 };
 
 static const char *zh[] = {
     "發現新的渲染器：",
     "描述：",
-    "来源：",
     "端口：",
-    "接受",
-    "拒絕",
+    "来源：",
+    "切換渲染器",
+    "關閉視窗",
 };
 
 static const char *en[] = {
     "New Renderer:",
     "Desc:",
-    "Source:",
     "Port:",
-    "Accept",
-    "Reject",
+    "Source:",
+    "Switch Renderer",
+    "Close Window",
 };
 
-static CTRLDATA CtrlInitAuth [] =
+static CTRLDATA CtrlInitSwitch [] =
 {
     {
         "static",
@@ -150,12 +145,6 @@ static CTRLDATA CtrlInitAuth [] =
 };
 
 static PLOGFONT lf = NULL;
-static BITMAP app_icon;
-static PBITMAP g_app_icon = NULL;
-static int app_icon_x;
-static int app_icon_y;
-static int app_icon_w;
-static int app_icon_h;
 static const char **s_res = NULL;
 
 
@@ -198,8 +187,6 @@ static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM
             SetWindowFont(GetDlgItem(hDlg, IDC_RDR_PORT), lf);
             SetWindowFont(GetDlgItem(hDlg, IDC_BTN_ACCEPT), lf);
             SetWindowFont(GetDlgItem(hDlg, IDC_BTN_REJECT), lf);
-
-            SetTimer(hDlg, AUTH_TIMEOUT_ID, 100);
         }
         return 0;
 
@@ -250,10 +237,17 @@ int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
 
     const char *title = s_res[CTRL_TITLE];
 
-    size_t nr = strlen(s_res[CTRL_RDR_TXT]) + strlen(rs->txt) + 1;
+    const char *p = strstr(rs->txt, "=");
+    if (p) {
+        p++;
+    }
+    else {
+        p = rs->txt;
+    }
+    size_t nr = strlen(s_res[CTRL_RDR_TXT]) + strlen(p) + 1;
     char s_rdr_txt[nr];
     strcpy(s_rdr_txt, s_res[CTRL_RDR_TXT]);
-    strcat(s_rdr_txt, rs->txt);
+    strcat(s_rdr_txt, p);
 
     nr = strlen(s_res[CTRL_RDR_PORT]) + 10 + 1;
     char s_rdr_port[nr];
@@ -269,10 +263,10 @@ int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
     int dlg_x = rc.left + (RECTW(rc) - dlg_w) / 2;
     int dlg_y = rc.top + (RECTH(rc) - dlg_h) / 2;
 
-    DlgInitAuth.w = dlg_w;
-    DlgInitAuth.h = dlg_h;
-    DlgInitAuth.x = dlg_x;
-    DlgInitAuth.y = dlg_y;
+    DlgInitSwitch.w = dlg_w;
+    DlgInitSwitch.h = dlg_h;
+    DlgInitSwitch.x = dlg_x;
+    DlgInitSwitch.y = dlg_y;
 
     int font_size = dlg_h * 0.8 / 8;
 
@@ -283,22 +277,11 @@ int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
 
     init_font(font_size);
 
-    app_icon_w = 2 * xh;
-    app_icon_x = x;
-    app_icon_y = dlg_h / 10 + 1.5 * xh;
-    app_icon_h = app_icon_w;
-
-    if (g_app_icon) {
-        int bw = g_app_icon->bmWidth;
-        int bh = g_app_icon->bmHeight;
-        app_icon_h = bh * app_icon_w / bw;
-    }
-
     int info_w = dlg_w - x;
 
     PCTRLDATA pctrl;
     /* title */
-    pctrl = &CtrlInitAuth[CTRL_TITLE];
+    pctrl = &CtrlInitSwitch[CTRL_TITLE];
     pctrl->caption = title;
     pctrl->x = dlg_w / 15;
     pctrl->y = y;
@@ -306,9 +289,8 @@ int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
     pctrl->h = h;
 
     /* rdr txt */
-    x = app_icon_x + app_icon_w + app_icon_w / 3;
-    y = app_icon_y;
-    pctrl = &CtrlInitAuth[CTRL_RDR_TXT];
+    y = dlg_h / 10 + 1.5 * xh;
+    pctrl = &CtrlInitSwitch[CTRL_RDR_TXT];
     pctrl->caption = s_rdr_txt;
     pctrl->x = x;
     pctrl->y = y;
@@ -318,7 +300,7 @@ int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
 
     /* host */
     y = y + h;
-    pctrl = &CtrlInitAuth[CTRL_RDR_HOST];
+    pctrl = &CtrlInitSwitch[CTRL_RDR_HOST];
     pctrl->caption = s_rdr_host;
     pctrl->x = x;
     pctrl->y = y;
@@ -327,7 +309,7 @@ int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
 
     /* port */
     y = y + h;
-    pctrl = &CtrlInitAuth[CTRL_RDR_PORT];
+    pctrl = &CtrlInitSwitch[CTRL_RDR_PORT];
     pctrl->caption = s_rdr_port;
     pctrl->x = x;
     pctrl->y = y;
@@ -339,7 +321,7 @@ int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
     int btn_w = dlg_w * 0.3;
     y = dlg_h - dlg_h / 10 - xh;
     x = (dlg_w - 2 * btn_w) / 3;
-    pctrl = &CtrlInitAuth[CTRL_BTN_ACCEPT];
+    pctrl = &CtrlInitSwitch[CTRL_BTN_ACCEPT];
     pctrl->caption = s_res[CTRL_BTN_ACCEPT];
     pctrl->x = x;
     pctrl->y = y;
@@ -347,17 +329,17 @@ int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
     pctrl->h = xh;
 
     /* reject */
-    pctrl = &CtrlInitAuth[CTRL_BTN_REJECT];
+    pctrl = &CtrlInitSwitch[CTRL_BTN_REJECT];
     pctrl->caption = s_res[CTRL_BTN_REJECT];;
     pctrl->x = x + btn_w + x;
     pctrl->y = y;
     pctrl->w = btn_w;
     pctrl->h = xh;
 
-    DlgInitAuth.controlnr = CTRL_LAST;
-    DlgInitAuth.controls = CtrlInitAuth;
+    DlgInitSwitch.controlnr = CTRL_LAST;
+    DlgInitSwitch.controls = CtrlInitSwitch;
 
-    return DialogBoxIndirectParam (&DlgInitAuth, hWnd, InitDialogBoxProc, 0L);
+    return DialogBoxIndirectParam (&DlgInitSwitch, hWnd, InitDialogBoxProc, 0L);
 }
 
 
