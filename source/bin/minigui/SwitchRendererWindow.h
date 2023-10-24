@@ -1,5 +1,5 @@
 /*
-** AuthWindow.h -- The declaration of AuthWindow.
+** SwitchRendererWindow.h -- The declaration of SwitchRendererWindow.
 **
 ** Copyright (C) 2023 FMSoft <http://www.fmsoft.cn>
 **
@@ -20,8 +20,8 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#ifndef AuthWindow_h
-#define AuthWindow_h
+#ifndef SwitchRendererWindow_h
+#define SwitchRendererWindow_h
 
 #include <minigui/common.h>
 #include <minigui/minigui.h>
@@ -34,12 +34,12 @@
 extern "C" {
 #endif /* __cplusplus */
 
-int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
-        const char *app_desc, const char *host_name, uint64_t timeout_seconds);
+struct sd_remote_service;
+int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif  /* AuthWindow_h */
+#endif  /* SwitchRendererWindow_h */
 
