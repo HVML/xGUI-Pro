@@ -85,6 +85,8 @@ bool kvlist_delete(struct kvlist *kv, const char *name);
 
 int kvlist_strlen(struct kvlist *kv, const void *data);
 
+bool kvlist_is_empty(struct kvlist *kv);
+
 #ifdef __cplusplus
 }
 #endif

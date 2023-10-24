@@ -33,6 +33,7 @@
 #include "server.h"
 
 purcmc_endpoint* new_endpoint (purcmc_server* srv, int type, void* client);
+purcmc_endpoint* get_curr_endpoint (purcmc_server* srv);
 
 /* causes to delete endpoint */
 enum {

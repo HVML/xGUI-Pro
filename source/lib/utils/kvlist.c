@@ -96,3 +96,7 @@ void kvlist_free(struct kvlist *kv)
         free(node);
 }
 
+bool kvlist_is_empty(struct kvlist *kv)
+{
+    return avl_is_empty(&kv->avl);
+}

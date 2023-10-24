@@ -24,6 +24,7 @@
 #define Service_Discovery_h
 
 #include <stddef.h>
+#include "purcmc/purcmc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,6 +42,9 @@ struct sd_remote_service {
 
     char *txt;
     size_t nr_txt;
+
+    struct purcmc_server *server;
+    purcmc_endpoint *endpoint;
 };
 
 struct sd_service;
@@ -80,6 +84,8 @@ int sd_service_process_result(struct sd_service *srv);
 const char *sd_get_local_hostname(void);
 
 void sd_remote_service_destroy(struct sd_remote_service *srv);
+
+void post_new_rendereer_event(struct sd_remote_service *srv);
 
 #ifdef __cplusplus
 }

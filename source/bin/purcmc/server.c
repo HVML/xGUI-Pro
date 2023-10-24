@@ -924,26 +924,38 @@ deinit_server(void)
 #define SD_XGUI_PRO_DOMAIN           "local"
 #define SD_XGUI_PRO_TXT_RECORD       "name=xGUI Pro"
 
+#define REDO_BROWSING_INTERVAL   10 * 1000
+
 const char *xgui_pro_record[] = {
     "name=xGUI Pro"
 };
+
+gboolean redo_browsing_service(gpointer user_data);
 
 void sd_browse_reply(struct sd_service *srv, int error_code,
         uint32_t if_index, const char *full_name,
         const char *reg_type, const char *host, uint16_t port,
         const char *txt, size_t nr_txt, void *ctxt)
 {
-#if 0
     purcmc_server *server = (purcmc_server*) ctxt;
+#if 0
     if (strcmp(host, server->server_name) == 0) {
-        purc_log_warn("Remote service same as local service: %s\n", host);
+        purc_log_info("Remote service same as local service: %s\n", host);
         return;
     }
 #endif
 
-    purc_log_info("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
-            "|port=%d|txt=%s\n",
-            if_index, full_name, reg_type, host, port, txt);
+    purcmc_endpoint* endpoint = get_curr_endpoint(server);
+    purc_log_warn("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
+            "|port=%d|txt=%s|endpoint=%p\n",
+            if_index, full_name, reg_type, host, port, txt, endpoint);
+
+    if (!endpoint) {
+        purc_log_info("Found remote service %s:%d , curr endpoint is null.\n",
+                host, port);
+        g_timeout_add(REDO_BROWSING_INTERVAL, redo_browsing_service, server);
+        return;
+    }
 
 #if PLATFORM(MINIGUI)
     struct sd_remote_service *rs = malloc(sizeof(struct sd_remote_service));
@@ -955,10 +967,21 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     rs->port = port;
     rs->txt = strdup(txt);
     rs->nr_txt = nr_txt;
+    rs->server = server;
+    rs->endpoint = endpoint;
     create_popup_tip_window(HWND_DESKTOP, rs);
 #else
     /* TODO: GTK */
 #endif
+}
+
+gboolean redo_browsing_service(gpointer user_data)
+{
+    purcmc_server *server = (purcmc_server*) user_data;
+    sd_start_browsing_service(&server->sd_srv_browser,
+            SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
+            server);
+    return G_SOURCE_REMOVE;
 }
 
 purcmc_server *
@@ -1035,6 +1058,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
             goto error;
         }
 
+        the_server.sd_srv_browser = NULL;
         int ret = sd_start_browsing_service(&the_server.sd_srv_browser,
                 SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
                 &the_server);
