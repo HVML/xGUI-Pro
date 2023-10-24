@@ -187,6 +187,35 @@ purcmc_endpoint* new_endpoint(purcmc_server* srv, int type, void* client)
     return endpoint;
 }
 
+purcmc_endpoint* get_curr_endpoint (purcmc_server* srv)
+{
+    const char* name;
+    void *next, *data;
+    purcmc_endpoint *endpoint = NULL;
+    purcmc_endpoint *p;
+    if (kvlist_is_empty(&srv->endpoint_list)) {
+        goto out;
+    }
+
+    kvlist_for_each_safe(&srv->endpoint_list, name, next, data) {
+        p = *(purcmc_endpoint **)data;
+
+        if (p->type == ET_BUILTIN) {
+            continue;
+        }
+
+        if (endpoint == NULL) {
+            endpoint = p;
+        }
+        else if (p->t_created > endpoint->t_created) {
+            endpoint = p;
+        }
+    }
+
+out:
+    return endpoint;
+}
+
 int del_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint, int cause)
 {
     char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];

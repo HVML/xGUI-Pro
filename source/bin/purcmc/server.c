@@ -936,7 +936,7 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     purcmc_server *server = (purcmc_server*) ctxt;
 #if 0
     if (strcmp(host, server->server_name) == 0) {
-        purc_log_warn("Remote service same as local service: %s\n", host);
+        purc_log_info("Remote service same as local service: %s\n", host);
         return;
     }
 #endif
@@ -944,6 +944,13 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     purc_log_info("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
             "|port=%d|txt=%s\n",
             if_index, full_name, reg_type, host, port, txt);
+
+    purcmc_endpoint* endpoint = get_curr_endpoint(server);
+    if (!endpoint) {
+        purc_log_info("Found remote service %s:%d , curr endpoint is null.\n",
+                host, port);
+        return;
+    }
 
 #if PLATFORM(MINIGUI)
     struct sd_remote_service *rs = malloc(sizeof(struct sd_remote_service));
@@ -956,6 +963,7 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     rs->txt = strdup(txt);
     rs->nr_txt = nr_txt;
     rs->server = server;
+    rs->endpoint = endpoint;
     create_popup_tip_window(HWND_DESKTOP, rs);
 #else
     /* TODO: GTK */

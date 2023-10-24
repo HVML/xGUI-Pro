@@ -339,7 +339,13 @@ int show_switch_renderer_window(HWND hWnd, struct sd_remote_service *rs)
     DlgInitSwitch.controlnr = CTRL_LAST;
     DlgInitSwitch.controls = CtrlInitSwitch;
 
-    return DialogBoxIndirectParam (&DlgInitSwitch, hWnd, InitDialogBoxProc, 0L);
+    int r = DialogBoxIndirectParam (&DlgInitSwitch, hWnd, InitDialogBoxProc, 0L);
+
+    if (r == IDYES) {
+        /* TODO */
+        fprintf(stderr, "#################> post new renderer event\n");
+    }
+    return r;
 }
 
 
