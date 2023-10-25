@@ -932,6 +932,7 @@ const char *xgui_pro_record[] = {
 
 gboolean redo_browsing_service(gpointer user_data);
 
+extern HWND g_xgui_main_window;
 void sd_browse_reply(struct sd_service *srv, int error_code,
         uint32_t if_index, const char *full_name,
         const char *reg_type, const char *host, uint16_t port,
@@ -968,7 +969,7 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     rs->nr_txt = nr_txt;
     rs->server = server;
     rs->endpoint = endpoint;
-    create_popup_tip_window(HWND_DESKTOP, rs);
+    create_popup_tip_window(g_xgui_main_window, rs);
 #else
     /* TODO: GTK */
 #endif
