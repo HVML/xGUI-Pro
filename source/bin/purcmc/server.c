@@ -938,10 +938,10 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
         const char *txt, size_t nr_txt, void *ctxt)
 {
     purcmc_server *server = (purcmc_server*) ctxt;
-#if 0
+#if 1
     if (strcmp(host, server->server_name) == 0) {
-        purc_log_info("Remote service same as local service: %s\n", host);
-        return;
+        purc_log_warn("Remote service same as local service: %s\n", host);
+        goto out;
     }
 #endif
 
@@ -953,8 +953,7 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     if (!endpoint) {
         purc_log_info("Found remote service %s:%d , curr endpoint is null.\n",
                 host, port);
-        g_timeout_add(REDO_BROWSING_INTERVAL, redo_browsing_service, server);
-        return;
+        goto out;
     }
 
 #if PLATFORM(MINIGUI)
@@ -973,6 +972,8 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
 #else
     /* TODO: GTK */
 #endif
+
+out:
     g_timeout_add(REDO_BROWSING_INTERVAL, redo_browsing_service, server);
 }
 
