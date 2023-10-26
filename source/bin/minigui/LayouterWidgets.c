@@ -466,3 +466,11 @@ mg_imp_update_widget(void *workspace, void *session, void *widget,
 {
 }
 
+bool mg_find_handle(void *session, uint64_t handle, void **data)
+{
+    if (!session || !handle) {
+        return false;
+    }
+    return sorted_array_find(((purcmc_session *)session)->all_handles,
+            handle, data);
+}

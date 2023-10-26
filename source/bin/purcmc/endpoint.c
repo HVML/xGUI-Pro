@@ -32,6 +32,7 @@
 
 #if PLATFORM(MINIGUI)
 #include "minigui/AuthWindow.h"
+bool mg_find_handle(void *session, uint64_t handle, void **data);
 #endif
 
 const char *purcmc_endpoint_host_name(purcmc_endpoint *endpoint)
@@ -193,6 +194,10 @@ purcmc_endpoint* get_curr_endpoint (purcmc_server* srv)
     void *next, *data;
     purcmc_endpoint *endpoint = NULL;
     purcmc_endpoint *p;
+#if PLATFORM(MINIGUI)
+    HWND hWnd = GetActiveWindow();
+#endif
+
     if (kvlist_is_empty(&srv->endpoint_list)) {
         goto out;
     }
@@ -204,6 +209,17 @@ purcmc_endpoint* get_curr_endpoint (purcmc_server* srv)
             continue;
         }
 
+#if PLATFORM(MINIGUI)
+        if (hWnd) {
+            DWORD data = GetWindowAdditionalData(hWnd);
+            if (data) {
+                if (mg_find_handle(p->session, PTR2U64(data), NULL)) {
+                    endpoint = p;
+                    goto out;
+                }
+            }
+        }
+#endif
         if (endpoint == NULL) {
             endpoint = p;
         }
