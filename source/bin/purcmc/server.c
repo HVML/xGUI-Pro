@@ -984,7 +984,9 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     rs->nr_txt = nr_txt;
     rs->server = server;
     rs->endpoint = endpoint;
-    create_popup_tip_window(g_xgui_main_window, rs);
+    HWND hWnd = GetActiveWindow();
+    rs->hostingWindow = hWnd ? hWnd : g_xgui_main_window;
+    create_popup_tip_window((HWND)rs->hostingWindow, rs);
 #else
     /* TODO: GTK */
 #endif

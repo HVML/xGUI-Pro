@@ -2208,8 +2208,9 @@ static int on_authenticate(purcmc_server* srv, purcmc_endpoint* endpoint,
         const char *s_label = purc_variant_get_string_const(label);
         const char *s_desc = purc_variant_get_string_const(desc);
         const char *s_host = purc_variant_get_string_const(host);
-        int auth_ret = show_auth_window(g_xgui_main_window, s_name, s_label,
-                s_desc, s_host, ut);
+        HWND hWnd = GetActiveWindow();
+        int auth_ret = show_auth_window(hWnd ? hWnd : g_xgui_main_window,
+                s_name, s_label, s_desc, s_host, ut);
         if (auth_ret == IDNO) {
             retv= PCRDR_SC_UNAUTHORIZED;
         }

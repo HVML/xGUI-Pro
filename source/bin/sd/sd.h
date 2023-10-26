@@ -47,6 +47,7 @@ struct sd_remote_service {
 
     struct purcmc_server *server;
     purcmc_endpoint *endpoint;
+    void *hostingWindow;
 };
 
 struct sd_service;
