@@ -42,8 +42,8 @@
 #define POPUP_TIP_LIVE_TIMER_ID     101
 #define POPUP_TIP_LIVE_TIME         5       // second
 
-static const char *cn = "发现来自 %s : %d 的新渲染器";
-static const char *zh = "發現來自 %s : %d 的新渲染器";
+static const char *cn = "发现来自 %s : %d 的可展现设备";
+static const char *zh = "發現來自 %s : %d 的可展現設備";
 static const char *en = "Found a new renderer from %s : %d";
 
 static const char *get_string_res()

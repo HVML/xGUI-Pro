@@ -71,7 +71,7 @@ enum {
 };
 
 static const char *cn[] = {
-    "收到新的连接请求：",
+    "收到应用展现请求，是否允许展现远程应用？",
     "名称：",
     "标签：",
     "描述：",
@@ -81,7 +81,7 @@ static const char *cn[] = {
 };
 
 static const char *zh[] = {
-    "收到新的連結請求：",
+    "收到應用程式展現請求，是否允許展現遠端應用？",
     "名稱：",
     "標籤：",
     "描述：",
@@ -91,7 +91,7 @@ static const char *zh[] = {
 };
 
 static const char *en[] = {
-    "New Connection:",
+    "Receive application display request:",
     "Name:",
     "Label:",
     "Desc:",

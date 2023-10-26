@@ -66,25 +66,25 @@ enum {
 };
 
 static const char *cn[] = {
-    "发现新的渲染器：",
+    "发现新的可展现设备，是否切换？",
     "描述：",
     "端口：",
     "来源：",
-    "切换渲染器",
+    "切换展现设备",
     "关闭窗口",
 };
 
 static const char *zh[] = {
-    "發現新的渲染器：",
+    "發現新的可展現設備，是否切換？",
     "描述：",
     "端口：",
     "来源：",
-    "切換渲染器",
+    "切換展现设备",
     "關閉視窗",
 };
 
 static const char *en[] = {
-    "New Renderer:",
+    "Found a new displayable device, whether to switch?",
     "Desc:",
     "Port:",
     "Source:",
