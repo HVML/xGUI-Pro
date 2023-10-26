@@ -944,6 +944,21 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
         purc_log_warn("Remote service same as local service: %s\n", host);
         goto out;
     }
+    else {
+        char l_v4[SD_IP_V4_LEN];
+        char h_v4[SD_IP_V4_LEN];
+        l_v4[0] = 0;
+        h_v4[0] = 0;
+
+        int r = sd_get_local_ip(l_v4, sizeof(l_v4), NULL, 0);
+        int rh = sd_get_host_addr(host, h_v4, sizeof(h_v4), NULL, 0);
+        if (r == 0 && rh == 0 && strcmp(l_v4, h_v4) == 0) {
+            purc_log_warn("Remote service ip same as local ip: host(%s) ip(%s)\n",
+                    host, h_v4);
+            goto out;
+        }
+    }
+
 #endif
 
     purcmc_endpoint* endpoint = get_curr_endpoint(server);

@@ -32,6 +32,12 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <arpa/inet.h>
+
+#include <net/if.h>
+#include <sys/types.h>
+#include <ifaddrs.h>
+
 
 #include <purc/purc.h>
 
@@ -305,6 +311,85 @@ const char *sd_get_local_hostname(void)
     return hostname;
 }
 
+int sd_get_host_addr(const char *hostname, char *ipv4, size_t ipv4_sz,
+        char *ipv6, size_t ipv6_sz)
+{
+    struct addrinfo hints, *info, *p;
+    int ret;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_CANONNAME;
+
+    if ((ret = getaddrinfo(hostname, "http", &hints, &info)) != 0) {
+        return -1;
+    }
+
+    for(p = info; p != NULL; p = p->ai_next) {
+        void *addr = NULL;
+        if (p->ai_family == AF_INET) {
+            struct sockaddr_in *si = (struct sockaddr_in *)p->ai_addr;
+            addr = &(si->sin_addr);
+            if (ipv4 && ipv4_sz) {
+                inet_ntop(p->ai_family, addr, ipv4, ipv4_sz);
+            }
+        } else {
+            struct sockaddr_in6 *si = (struct sockaddr_in6 *)p->ai_addr;
+            addr = &(si->sin6_addr);
+            if (ipv6 && ipv6_sz) {
+                inet_ntop(p->ai_family, addr, ipv6, ipv6_sz);
+            }
+        }
+    }
+
+    freeaddrinfo(info);
+    return 0;
+}
+
+
+int sd_get_local_ip(char *ipv4, size_t ipv4_sz, char *ipv6, size_t ipv6_sz)
+{
+    struct ifaddrs *addrs, *ifa;
+    void *in_addr;
+
+    if (getifaddrs(&addrs) != 0) {
+        return -1;
+    }
+
+    for (ifa = addrs; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL) {
+            continue;
+        }
+
+        if (!(ifa->ifa_flags & IFF_UP)) {
+            continue;
+        }
+
+        if ((strcmp("lo", ifa->ifa_name) == 0) ||
+                !(ifa->ifa_flags & (IFF_RUNNING))) {
+            continue;
+        }
+
+        if (ifa->ifa_addr->sa_family == AF_INET) {
+            struct sockaddr_in *si = (struct sockaddr_in *)ifa->ifa_addr;
+            in_addr = &(si->sin_addr);
+            if (ipv4 && ipv4_sz) {
+                inet_ntop(ifa->ifa_addr->sa_family, in_addr, ipv4, ipv4_sz);
+            }
+        } else {
+            struct sockaddr_in6 *si = (struct sockaddr_in6 *)ifa->ifa_addr;
+            in_addr = &(si->sin6_addr);
+            if (ipv6 && ipv6_sz) {
+                inet_ntop(ifa->ifa_addr->sa_family, in_addr, ipv6, ipv6_sz);
+            }
+        }
+    }
+    freeifaddrs(addrs);
+
+    return 0;
+}
+
 void sd_remote_service_destroy(struct sd_remote_service *srv)
 {
     if (!srv) {
@@ -355,3 +440,4 @@ void post_new_rendereer_event(struct sd_remote_service *srv)
 
     purcmc_endpoint_post_event(srv->server, srv->endpoint, &event);
 }
+

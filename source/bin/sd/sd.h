@@ -26,6 +26,8 @@
 #include <stddef.h>
 #include "purcmc/purcmc.h"
 
+#define SD_IP_V4_LEN        16
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -82,6 +84,9 @@ int sd_service_get_fd(struct sd_service *srv);
 int sd_service_process_result(struct sd_service *srv);
 
 const char *sd_get_local_hostname(void);
+int sd_get_host_addr(const char *hostname, char *ipv4, size_t ipv4_sz,
+        char *ipv6, size_t ipv6_sz);
+int sd_get_local_ip(char *ipv4, size_t ipv4_sz, char *ipv6, size_t ipv6_sz);
 
 void sd_remote_service_destroy(struct sd_remote_service *srv);
 
