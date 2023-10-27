@@ -2192,6 +2192,7 @@ failed:
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
 
+#if 0
 extern HWND g_xgui_main_window;
 static int on_authenticate(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
@@ -2249,6 +2250,7 @@ out:
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
+#endif
 
 static struct request_handler {
     const char *operation;
@@ -2256,7 +2258,6 @@ static struct request_handler {
 } handlers[] = {
     { PCRDR_OPERATION_ADDPAGEGROUPS, on_add_page_groups },
     { PCRDR_OPERATION_APPEND, on_append },
-    { PCRDR_OPERATION_AUTHENTICATE, on_authenticate },
     { PCRDR_OPERATION_CALLMETHOD, on_call_method },
     { PCRDR_OPERATION_CLEAR, on_clear },
     { PCRDR_OPERATION_CREATEPLAINWINDOW, on_create_plain_window },
