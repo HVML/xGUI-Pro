@@ -903,10 +903,8 @@ deinit_server(void)
         }
 
         if (the_server.registed_handle) {
-#if 0 // TODO
             purc_dnssd_revoke_service(the_server.dnssd,
                     the_server.registed_handle);
-#endif
             the_server.registed_handle = NULL;
         }
 
