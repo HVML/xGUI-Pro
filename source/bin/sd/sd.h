@@ -47,41 +47,8 @@ struct sd_remote_service {
 
     struct purcmc_server *server;
     purcmc_endpoint *endpoint;
+    void *hostingWindow;
 };
-
-struct sd_service;
-
-/* regist service */
-int sd_service_register(struct sd_service **srv,
-        const char *name, const char *type,
-        const char *dom, const char *host, const char *port,
-        const char **txt_record, size_t nr_txt_record);
-
-int sd_service_destroy(struct sd_service *);
-
-
-/* browsing service */
-typedef void (*sd_service_browse_reply)(struct sd_service *srv,
-        int error_code, uint32_t if_index, const char *full_name,
-        const char *reg_type, const char *host, uint16_t port,
-        const char *txt, size_t nr_txt, void *ctxt);
-
-int sd_start_browsing_service(struct sd_service **srv, const char *reg_type,
-    const char *domain, sd_service_browse_reply cb, void *ctxt);
-
-void sd_stop_browsing_service(struct sd_service *srv);
-
-
-/* handle event  */
-int sd_service_get_fd(struct sd_service *srv);
-
-/*
- * This call will block until the daemon's response is received.
- * Use sd_service_get_fd() in conjunction with a run loop or select()
- * to determine the presence of a response from the server before calling
- * this function to process the reply without blocking.
- */
-int sd_service_process_result(struct sd_service *srv);
 
 const char *sd_get_local_hostname(void);
 int sd_get_host_addr(const char *hostname, char *ipv4, size_t ipv4_sz,

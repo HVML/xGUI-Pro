@@ -108,7 +108,6 @@ static void on_paint(HWND hWnd, HDC hdc)
 }
 
 
-extern HWND g_xgui_main_window;
 static LRESULT
 popup_tip_wndproc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -147,7 +146,7 @@ popup_tip_wndproc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 DWORD dw = GetWindowAdditionalData(hWnd);
                 struct sd_remote_service *srv = (struct sd_remote_service *)dw;
                 SendNotifyMessage(hWnd, MSG_CLOSE, 0, 0);
-                show_switch_renderer_window(g_xgui_main_window, srv);
+                show_switch_renderer_window((HWND)srv->hostingWindow, srv);
             }
             break;
 

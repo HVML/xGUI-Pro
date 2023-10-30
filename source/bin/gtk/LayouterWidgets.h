@@ -65,6 +65,8 @@ struct purcmc_session {
 
     /* the URI prefix: hvml://<hostName>/<appName>/<runnerName>/ */
     char *uri_prefix;
+
+    bool allow_switching_rdr;
 };
 
 #ifdef __cplusplus

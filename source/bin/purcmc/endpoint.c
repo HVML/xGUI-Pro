@@ -32,6 +32,7 @@
 
 #if PLATFORM(MINIGUI)
 #include "minigui/AuthWindow.h"
+bool mg_find_handle(void *session, uint64_t handle, void **data);
 #endif
 
 const char *purcmc_endpoint_host_name(purcmc_endpoint *endpoint)
@@ -58,6 +59,11 @@ purcmc_endpoint *purcmc_endpoint_from_name(purcmc_server *srv,
         return NULL;
 
     return *(purcmc_endpoint **)data;
+}
+
+bool purcmc_endpoint_allow_switching_rdr(purcmc_endpoint *endpoint)
+{
+    return endpoint->allow_switching_rdr;
 }
 
 static int do_send_message(purcmc_server *srv,
@@ -151,6 +157,7 @@ purcmc_endpoint* new_endpoint(purcmc_server* srv, int type, void* client)
     endpoint->t_created = ts.tv_sec;
     endpoint->t_living = ts.tv_sec;
     endpoint->avl.key = NULL;
+    endpoint->allow_switching_rdr = true;
 
     switch (type) {
         case ET_UNIX_SOCKET:
@@ -193,6 +200,10 @@ purcmc_endpoint* get_curr_endpoint (purcmc_server* srv)
     void *next, *data;
     purcmc_endpoint *endpoint = NULL;
     purcmc_endpoint *p;
+#if PLATFORM(MINIGUI)
+    HWND hWnd = GetActiveWindow();
+#endif
+
     if (kvlist_is_empty(&srv->endpoint_list)) {
         goto out;
     }
@@ -204,6 +215,17 @@ purcmc_endpoint* get_curr_endpoint (purcmc_server* srv)
             continue;
         }
 
+#if PLATFORM(MINIGUI)
+        if (hWnd) {
+            DWORD data = GetWindowAdditionalData(hWnd);
+            if (data) {
+                if (mg_find_handle(p->session, PTR2U64(data), NULL)) {
+                    endpoint = p;
+                    goto out;
+                }
+            }
+        }
+#endif
         if (endpoint == NULL) {
             endpoint = p;
         }
@@ -452,6 +474,9 @@ failed:
 typedef int (*request_handler)(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg);
 
+#if PLATFORM(MINIGUI)
+extern HWND g_xgui_main_window;
+#endif
 static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
         purc_variant_t data)
 {
@@ -502,6 +527,42 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
                 host_name, app_name, runner_name);
         return PCRDR_SC_NOT_ACCEPTABLE;
     }
+
+#if PLATFORM(MINIGUI)
+    /* popup auth window  */
+    if ((tmp = purc_variant_object_get_by_ckey(data, "signature"))) {
+        purc_variant_t label = purc_variant_object_get_by_ckey(data, "appLabel");
+        purc_variant_t desc = purc_variant_object_get_by_ckey(data, "appDesc");
+        if (!label || !desc) {
+            return PCRDR_SC_UNAUTHORIZED;
+        }
+
+        uint64_t ut = 0;
+        purc_variant_t timeout = purc_variant_object_get_by_ckey(data,
+                "timeoutSeconds");
+        if (timeout) {
+            purc_variant_cast_to_ulongint(timeout, &ut, false);
+        }
+
+        if (ut == 0) {
+            ut = 10;
+        }
+
+        const char *s_label = purc_variant_get_string_const(label);
+        const char *s_desc = purc_variant_get_string_const(desc);
+        HWND hWnd = GetActiveWindow();
+        int auth_ret = show_auth_window(hWnd ? hWnd : g_xgui_main_window,
+                app_name, s_label, s_desc, host_name, ut);
+        if (auth_ret == IDNO) {
+            return PCRDR_SC_UNAUTHORIZED;
+        }
+
+        tmp = purc_variant_object_get_by_ckey(data, "alllowSwitchingRdr");
+        if (tmp) {
+            endpoint->allow_switching_rdr = purc_variant_booleanize(tmp);
+        }
+    }
+#endif
 
     purc_name_tolower_copy (host_name, norm_host_name, PURC_LEN_HOST_NAME);
     purc_name_tolower_copy (app_name, norm_app_name, PURC_LEN_APP_NAME);
@@ -2176,70 +2237,12 @@ failed:
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
 
-extern HWND g_xgui_main_window;
-static int on_authenticate(purcmc_server* srv, purcmc_endpoint* endpoint,
-        const pcrdr_msg *msg)
-{
-    /* TODO parse host name */
-    int retv = PCRDR_SC_OK;
-#if PLATFORM(MINIGUI)
-    if (msg->data && purc_variant_is_object(msg->data)) {
-        purc_variant_t name = purc_variant_object_get_by_ckey(msg->data, "appName");
-        purc_variant_t label = purc_variant_object_get_by_ckey(msg->data, "appLabel");
-        purc_variant_t desc = purc_variant_object_get_by_ckey(msg->data, "appDesc");
-        purc_variant_t host = purc_variant_object_get_by_ckey(msg->data, "hostName");
-        if (!name || !label || !desc || !host) {
-            retv= PCRDR_SC_UNAUTHORIZED;
-            goto out;
-        }
-
-        uint64_t ut = 0;
-        purc_variant_t timeout = purc_variant_object_get_by_ckey(msg->data,
-                "timeoutSeconds");
-        if (timeout) {
-            purc_variant_cast_to_ulongint(timeout, &ut, false);
-        }
-
-        if (ut == 0) {
-            ut = 10;
-        }
-
-        const char *s_name = purc_variant_get_string_const(name);
-        const char *s_label = purc_variant_get_string_const(label);
-        const char *s_desc = purc_variant_get_string_const(desc);
-        const char *s_host = purc_variant_get_string_const(host);
-        int auth_ret = show_auth_window(g_xgui_main_window, s_name, s_label,
-                s_desc, s_host, ut);
-        if (auth_ret == IDNO) {
-            retv= PCRDR_SC_UNAUTHORIZED;
-        }
-    }
-    else {
-        retv= PCRDR_SC_BAD_REQUEST;
-    }
-#endif
-
-out:
-    pcrdr_msg response = { };
-    purcmc_session *info = NULL;
-
-    response.type = PCRDR_MSG_TYPE_RESPONSE;
-    response.requestId = purc_variant_ref(msg->requestId);
-    response.sourceURI = PURC_VARIANT_INVALID;
-    response.retCode = retv;
-    response.resultValue = (uint64_t)info;
-    response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
-
-    return purcmc_endpoint_send_response(srv, endpoint, &response);
-}
-
 static struct request_handler {
     const char *operation;
     request_handler handler;
 } handlers[] = {
     { PCRDR_OPERATION_ADDPAGEGROUPS, on_add_page_groups },
     { PCRDR_OPERATION_APPEND, on_append },
-    { PCRDR_OPERATION_AUTHENTICATE, on_authenticate },
     { PCRDR_OPERATION_CALLMETHOD, on_call_method },
     { PCRDR_OPERATION_CLEAR, on_clear },
     { PCRDR_OPERATION_CREATEPLAINWINDOW, on_create_plain_window },

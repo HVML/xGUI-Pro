@@ -142,11 +142,12 @@ struct purcmc_endpoint
 
     /* AVL node for the AVL tree sorted by living time */
     struct avl_node avl;
+
+    bool allow_switching_rdr;
 };
 
 struct WSServer_;
 struct USServer_;
-struct sd_service;
 
 /* The PurcMC purcmc_server */
 struct purcmc_server
@@ -173,8 +174,13 @@ struct purcmc_server
 
     struct WSServer_ *ws_srv;
     struct USServer_ *us_srv;
-    struct sd_service *sd_srv;
-    struct sd_service *sd_srv_browser;
+
+#if PCA_ENABLE_DNSSD
+    struct purc_dnssd_conn *dnssd;
+    void                   *registed_handle;
+    void                   *browsing_handle;
+    unsigned int            browsing_timer_id;
+#endif /* PCA_ENABLE_DNSSD */
 
     /* The KV list using endpoint name as the key, and purcmc_endpoint* as the value */
     struct kvlist endpoint_list;

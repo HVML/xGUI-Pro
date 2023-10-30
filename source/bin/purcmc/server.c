@@ -48,8 +48,7 @@ static purcmc_server_config* the_srvcfg;
 
 #define PTR_FOR_US_LISTENER ((void *)1)
 #define PTR_FOR_WS_LISTENER ((void *)2)
-#define PTR_FOR_SD_LISTENER ((void *)3)
-#define PTR_FOR_SD_BROWSE_LISTENER ((void *)4)
+#define PTR_FOR_DNSSD_LISTENER ((void *)3)
 
 #define DEFAULT_LOCALE      "zh_CN"
 #define DEFAULT_DPI_NAME    "hdpi"
@@ -294,7 +293,8 @@ sig_handler_ignore(int sig_number)
         the_server.running = false;
     }
     else if (sig_number == SIGPIPE) {
-        if (old_pipe_sa.sa_handler) {
+        if (old_pipe_sa.sa_handler != SIG_IGN
+                && old_pipe_sa.sa_handler != SIG_DFL) {
             old_pipe_sa.sa_handler(sig_number);
         }
     }
@@ -309,7 +309,7 @@ setup_signal_pipe(void)
     sa.sa_handler = sig_handler_ignore;
     sigemptyset(&sa.sa_mask);
 
-#if 0
+#if 1
     if (sigaction(SIGPIPE, &sa, &old_pipe_sa) != 0) {
         perror("sigaction()");
         return -1;
@@ -402,28 +402,28 @@ prepare_server(void)
             goto error;
         }
 
+#if PCA_ENABLE_DNSSD
         ev.events = EPOLLIN;
-        ev.data.ptr = PTR_FOR_SD_LISTENER;
-        int fd = sd_service_get_fd(the_server.sd_srv);
+        ev.data.ptr = PTR_FOR_DNSSD_LISTENER;
+        int fd = purc_dnssd_fd(the_server.dnssd);
         if (epoll_ctl(the_server.epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
             purc_log_error("Failed to call epoll_ctl with service discovery (%d): %s\n",
                     fd, strerror(errno));
             goto error;
         }
+#endif /* PCA_ENABLE_DNSSD */
 
-        ev.events = EPOLLIN;
-        ev.data.ptr = PTR_FOR_SD_BROWSE_LISTENER;
-        fd = sd_service_get_fd(the_server.sd_srv_browser);
-        if (epoll_ctl(the_server.epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
-            purc_log_error("Failed to call epoll_ctl with sd browsing (%d): %s\n",
-                    fd, strerror(errno));
-            goto error;
-        }
     }
 #elif HAVE(SYS_SELECT_H)
     listen_new_client(the_server.us_listener, PTR_FOR_US_LISTENER, FALSE);
     if (the_server.ws_listener >= 0) {
         listen_new_client(the_server.ws_listener, PTR_FOR_WS_LISTENER, FALSE);
+#if PCA_ENABLE_DNSSD
+        if (the_server.dnssd) {
+            int fd = purc_dnssd_fd(the_server.dnssd);
+            listen_new_client(fd, PTR_FOR_DNSSD_LISTENER, FALSE);
+        }
+#endif /* PCA_ENABLE_DNSSD */
     }
 #endif
 
@@ -499,12 +499,11 @@ again:
                 }
             }
         }
-        else if (events[n].data.ptr == PTR_FOR_SD_LISTENER) {
-            sd_service_process_result(the_server.sd_srv);
+#if PCA_ENABLE_DNSSD
+        else if (events[n].data.ptr == PTR_FOR_DNSSD_LISTENER) {
+            purc_dnssd_process_result(the_server.dnssd);
         }
-        else if (events[n].data.ptr == PTR_FOR_SD_BROWSE_LISTENER) {
-            sd_service_process_result(the_server.sd_srv_browser);
-        }
+#endif /* PCA_ENABLE_DNSSD */
         else {
             USClient *usc = (USClient *)events[n].data.ptr;
             if (usc->ct == CT_UNIX_SOCKET) {
@@ -655,6 +654,11 @@ again:
                         goto error;
                     }
                 }
+#if PCA_ENABLE_DNSSD
+                else if (cli_node == PTR_FOR_DNSSD_LISTENER) {
+                    purc_dnssd_process_result(the_server.dnssd);
+                }
+#endif /* PCA_ENABLE_DNSSD */
                 else {
                     USClient *usc = (USClient *)cli_node;
                     if (usc->ct == CT_UNIX_SOCKET) {
@@ -848,8 +852,6 @@ deinit_server(void)
                 endpoint->entity.client->entity = NULL;
                 ws_cleanup_client(the_server.ws_srv,
                         (WSClient *)endpoint->entity.client);
-                sd_stop_browsing_service(the_server.sd_srv_browser);
-                sd_service_destroy(the_server.sd_srv);
             }
 
             del_endpoint(&the_server, endpoint, CDE_EXITING);
@@ -892,6 +894,26 @@ deinit_server(void)
     if (the_server.ws_srv)
         ws_stop(the_server.ws_srv);
 
+#if PCA_ENABLE_DNSSD
+    if (the_server.dnssd) {
+        g_source_remove(the_server.browsing_timer_id);
+        if (the_server.browsing_handle) {
+            purc_dnssd_stop_browsing(the_server.dnssd,
+                    the_server.browsing_handle);
+            the_server.browsing_handle = NULL;
+        }
+
+        if (the_server.registed_handle) {
+            purc_dnssd_revoke_service(the_server.dnssd,
+                    the_server.registed_handle);
+            the_server.registed_handle = NULL;
+        }
+
+        purc_dnssd_disconnect(the_server.dnssd);
+        the_server.dnssd = NULL;
+    }
+#endif /* PCA_ENABLE_DNSSD */
+
     free(the_server.server_name);
 
     if (the_server.features) {
@@ -919,29 +941,66 @@ deinit_server(void)
 
 }
 
-#define SD_XGUI_PRO_NAME             "cn.fmsoft.hybridos.xguipro"
-#define SD_XGUI_PRO_TYPE             "_purcmc._tcp"
-#define SD_XGUI_PRO_DOMAIN           "local"
-#define SD_XGUI_PRO_TXT_RECORD       "name=xGUI Pro"
+#if PCA_ENABLE_DNSSD
 
-#define REDO_BROWSING_INTERVAL        10 * 1000
+#define XGUIPRO_DNSSD_NAME           "cn.fmsoft.hybridos.xguipro"
+#define XGUIPRO_DNSSD_DOMAIN         "local"
+#define XGUIPRO_BROWSING_INTERVAL    10 * 1000
 
-const char *xgui_pro_record[] = {
+const char *xguipro_txt_records[] = {
     "name=xGUI Pro"
 };
 
-gboolean redo_browsing_service(gpointer user_data);
+static size_t nr_xguipro_txt_records = 1;
 
 extern HWND g_xgui_main_window;
-void sd_browse_reply(struct sd_service *srv, int error_code,
-        uint32_t if_index, const char *full_name,
-        const char *reg_type, const char *host, uint16_t port,
-        const char *txt, size_t nr_txt, void *ctxt)
+
+gboolean start_dnssd_browsing_cb(gpointer user_data)
 {
+    purcmc_server *server = (purcmc_server*) user_data;
+    purc_dnssd_stop_browsing(server->dnssd, server->browsing_handle);
+    the_server.browsing_handle = purc_dnssd_start_browsing(server->dnssd,
+            PCRDR_PURCMC_DNSSD_TYPE_WS, XGUIPRO_DNSSD_DOMAIN);
+    return G_SOURCE_CONTINUE;
+}
+
+void xguipro_dnssd_on_register_reply(struct purc_dnssd_conn *dnssd,
+        void *reg_handle, unsigned int flags, int err_code,
+        const char *name, const char *reg_type, const char *domain,
+        void *ctxt)
+{
+    (void) dnssd;
+    (void) reg_handle;
+    (void) flags;
+    (void) err_code;
+    (void) name;
+    (void) reg_type;
+    (void) domain;
+    (void) ctxt;
+}
+
+void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
+        void *service_handle,
+        unsigned int flags, uint32_t if_index, int error_code,
+        const char *service_name, const char *reg_type, const char *hostname,
+        uint16_t port, uint16_t len_txt_record, const char *txt_record,
+        void *ctxt)
+{
+    (void) dnssd;
+    (void) service_handle;
+    (void) flags;
+
+    if (error_code != 0) {
+        purc_log_warn("Error occurred when browsing service: %d.\n", error_code);
+        goto out;
+    }
+
     purcmc_server *server = (purcmc_server*) ctxt;
+
 #if 1
-    if (strcmp(host, server->server_name) == 0) {
-        purc_log_warn("Remote service same as local service: %s\n", host);
+    /* TODO: change to appropriate method to filter self */
+    if (strcmp(hostname, server->server_name) == 0) {
+        purc_log_warn("Remote service same as local service: %s\n", hostname);
         goto out;
     }
     else {
@@ -951,24 +1010,23 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
         h_v4[0] = 0;
 
         int r = sd_get_local_ip(l_v4, sizeof(l_v4), NULL, 0);
-        int rh = sd_get_host_addr(host, h_v4, sizeof(h_v4), NULL, 0);
+        int rh = sd_get_host_addr(hostname, h_v4, sizeof(h_v4), NULL, 0);
         if (r == 0 && rh == 0 && strcmp(l_v4, h_v4) == 0) {
             purc_log_warn("Remote service ip same as local ip: host(%s) ip(%s)\n",
-                    host, h_v4);
+                    hostname, h_v4);
             goto out;
         }
     }
-
 #endif
 
     purcmc_endpoint* endpoint = get_curr_endpoint(server);
     purc_log_warn("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
             "|port=%d|txt=%s|endpoint=%p\n",
-            if_index, full_name, reg_type, host, port, txt, endpoint);
+            if_index, service_name, reg_type, hostname, port, txt_record, endpoint);
 
     if (!endpoint) {
         purc_log_info("Found remote service %s:%d , curr endpoint is null.\n",
-                host, port);
+                hostname, port);
         goto out;
     }
 
@@ -976,31 +1034,26 @@ void sd_browse_reply(struct sd_service *srv, int error_code,
     struct sd_remote_service *rs = malloc(sizeof(struct sd_remote_service));
     rs->index = if_index;
     rs->ct = purc_get_monotoic_time();
-    rs->full_name = strdup(full_name);
+    rs->full_name = strdup(service_name);
     rs->reg_type = strdup(reg_type);
-    rs->host = strdup(host);
+    rs->host = strdup(hostname);
     rs->port = port;
-    rs->txt = strdup(txt);
-    rs->nr_txt = nr_txt;
+    rs->txt = strdup(txt_record);
+    rs->nr_txt = len_txt_record;
     rs->server = server;
     rs->endpoint = endpoint;
-    create_popup_tip_window(g_xgui_main_window, rs);
+    HWND hWnd = GetActiveWindow();
+    rs->hostingWindow = hWnd ? hWnd : g_xgui_main_window;
+    create_popup_tip_window((HWND)rs->hostingWindow, rs);
 #else
     /* TODO: GTK */
 #endif
 
 out:
-    g_timeout_add(REDO_BROWSING_INTERVAL, redo_browsing_service, server);
+    return;
 }
 
-gboolean redo_browsing_service(gpointer user_data)
-{
-    purcmc_server *server = (purcmc_server*) user_data;
-    sd_start_browsing_service(&server->sd_srv_browser,
-            SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
-            server);
-    return G_SOURCE_REMOVE;
-}
+#endif /* PCA_ENABLE_DNSSD */
 
 purcmc_server *
 purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
@@ -1068,22 +1121,32 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
             purc_log_error("Error during ws_init\n");
             goto error;
         }
-        sd_service_register(&the_server.sd_srv, SD_XGUI_PRO_NAME,
-                SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, NULL, the_srvcfg->port,
-                xgui_pro_record, 1);
-        if (!the_server.sd_srv) {
-            purc_log_error("Error during regist Service Discovery\n");
+#if PCA_ENABLE_DNSSD
+        the_server.dnssd = purc_dnssd_connect(xguipro_dnssd_on_register_reply,
+                xguipro_dnssd_on_service_discovered, &the_server);
+        if (!the_server.dnssd) {
+            purc_log_error("Error during connect dnssd\n");
             goto error;
         }
 
-        the_server.sd_srv_browser = NULL;
-        int ret = sd_start_browsing_service(&the_server.sd_srv_browser,
-                SD_XGUI_PRO_TYPE, SD_XGUI_PRO_DOMAIN, sd_browse_reply,
-                &the_server);
-        if (ret) {
-            purc_log_error("Error during start browsing service\n");
+        the_server.registed_handle = purc_dnssd_register_service(
+                the_server.dnssd, XGUIPRO_DNSSD_NAME, PCRDR_PURCMC_DNSSD_TYPE_WS,
+                XGUIPRO_DNSSD_DOMAIN, NULL, atoi(the_srvcfg->port),
+                xguipro_txt_records, nr_xguipro_txt_records);
+        if (!the_server.registed_handle) {
+            purc_log_error("Error during regist dnssd\n");
             goto error;
         }
+
+        the_server.browsing_handle = purc_dnssd_start_browsing(the_server.dnssd,
+                PCRDR_PURCMC_DNSSD_TYPE_WS, XGUIPRO_DNSSD_DOMAIN);
+        if (!the_server.browsing_handle) {
+            purc_log_error("Error during start dnssd browsing\n");
+            goto error;
+        }
+        the_server.browsing_timer_id = g_timeout_add(XGUIPRO_BROWSING_INTERVAL,
+                start_dnssd_browsing_cb, &the_server);
+#endif /* PCA_ENABLE_DNSSD */
     }
     else {
         the_server.ws_srv = NULL;
