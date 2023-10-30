@@ -293,7 +293,8 @@ sig_handler_ignore(int sig_number)
         the_server.running = false;
     }
     else if (sig_number == SIGPIPE) {
-        if (old_pipe_sa.sa_handler) {
+        if (old_pipe_sa.sa_handler != SIG_IGN
+                && old_pipe_sa.sa_handler != SIG_DFL) {
             old_pipe_sa.sa_handler(sig_number);
         }
     }
@@ -308,7 +309,7 @@ setup_signal_pipe(void)
     sa.sa_handler = sig_handler_ignore;
     sigemptyset(&sa.sa_mask);
 
-#if 0
+#if 1
     if (sigaction(SIGPIPE, &sa, &old_pipe_sa) != 0) {
         perror("sigaction()");
         return -1;
