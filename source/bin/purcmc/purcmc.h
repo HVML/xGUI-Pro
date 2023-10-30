@@ -233,6 +233,9 @@ const char *purcmc_endpoint_app_name(purcmc_endpoint *endpoint);
 /* Return the runner name of the specified endpoint */
 const char *purcmc_endpoint_runner_name(purcmc_endpoint *endpoint);
 
+/* Return the allowSwitchingRdr of the specified endpoint */
+bool purcmc_endpoint_allow_switching_rdr(purcmc_endpoint *endpoint);
+
 #ifdef __cplusplus
 }
 #endif

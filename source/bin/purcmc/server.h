@@ -142,6 +142,8 @@ struct purcmc_endpoint
 
     /* AVL node for the AVL tree sorted by living time */
     struct avl_node avl;
+
+    bool allow_switching_rdr;
 };
 
 struct WSServer_;

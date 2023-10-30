@@ -423,6 +423,7 @@ purcmc_session *mg_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
 
     sess->webkit_settings = webkit_settings;
     sess->web_context = web_context;
+    sess->allow_switching_rdr = purcmc_endpoint_allow_switching_rdr(endpt);
 
     kvlist_init(&sess->pending_responses, NULL);
     return sess;
