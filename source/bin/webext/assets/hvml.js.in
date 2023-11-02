@@ -66,7 +66,12 @@ if (checkHVML()) {
 
         msg = JSON.parse(json);
 
-        if (msg.operation === 'load') {
+        if (msg.operation === 'loadFromURL') {
+            var url = msg.data + "?irId=" + msg.requestId;
+            window.location = url;
+            return { requestId: msg.requestId, state: "Ok" };
+        }
+        else if (msg.operation === 'load') {
             let data = {
                 "src": "load",
             };

@@ -139,6 +139,10 @@ typedef struct purcmc_server_callbacks {
             int op, const char *op_name, const char *request_id,
             const char *content, size_t length,
             uint64_t crtn, char *suppressed, int *retv);
+    purcmc_udom *(*load_from_url)(purcmc_session *, purcmc_page *,
+            int op, const char *op_name, const char *request_id,
+            const char *content, size_t length,
+            uint64_t crtn, char *suppressed, int *retv);
     purcmc_udom *(*write)(purcmc_session *, purcmc_page *,
             int op, const char *op_name, const char *request_id,
             const char *content, size_t length,

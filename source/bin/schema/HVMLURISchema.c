@@ -687,6 +687,16 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
                 strcpy(prefix, "/");
             }
         }
+        else if (strcmp(app, PCRDR_RUNNER_FILESYSTEM) == 0) {
+            if (strcmp(runner, "_file") == 0) {
+                /* try to load asset from the system filesystem */
+                strcpy(prefix, "/");
+            }
+            else {
+                /* TODO */
+                strcpy(prefix, "/");
+            }
+        }
         else if (strcmp(app, PCRDR_APP_SELF) == 0) {
             char my_app[PURC_LEN_APP_NAME + 1];
             char my_runner[PURC_LEN_RUNNER_NAME + 1];

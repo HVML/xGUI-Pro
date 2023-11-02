@@ -690,6 +690,7 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
         .destroy_widget = mg_destroy_widget,
 
         .load = mg_load_or_write,
+        .load_from_url = mg_load_or_write,
         .write = mg_load_or_write,
         .register_crtn = mg_register_crtn,
         .revoke_crtn = mg_revoke_crtn,

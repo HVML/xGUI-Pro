@@ -26,7 +26,6 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include <dns_sd.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
