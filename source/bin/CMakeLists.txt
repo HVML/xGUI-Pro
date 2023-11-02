@@ -50,7 +50,6 @@ set(xguipro_LIBRARIES
     DOMRuler::DOMRuler
     PurC::PurC
     pthread
-    dns_sd
 )
 
 XGUIPRO_INCLUDE_CONFIG_FILES_IF_EXISTS()
