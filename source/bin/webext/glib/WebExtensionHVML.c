@@ -272,11 +272,6 @@ console_message_sent_callback(WebKitWebPage *web_page,
 static void
 document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
 {
-    if (g_object_get_data(G_OBJECT(web_page), "hvml-js-injected")) {
-        LOG_DEBUG("hvml.js injected\n");
-        return;
-    }
-
     const gchar *uri = webkit_web_page_get_uri(web_page);
     LOG_DEBUG("uri: %s\n", uri);
 
@@ -286,6 +281,19 @@ document_loaded_callback(WebKitWebPage *web_page, gpointer user_data)
         return;
     }
 
+    char load_from_url[128];
+    if (hvml_uri_get_query_value(uri, "loadFromURL", load_from_url)) {
+        LOG_DEBUG("Have query 'loadFromURL=%s'\n", load_from_url);
+        goto inject_hvml_js;
+    }
+
+    if (g_object_get_data(G_OBJECT(web_page), "hvml-js-injected")) {
+        LOG_DEBUG("hvml.js injected\n");
+        return;
+    }
+
+
+inject_hvml_js:
     LOG_DEBUG("injecting hvml.js to page (%p)\n", web_page);
 
     /* inject hvml.js */
@@ -397,15 +405,19 @@ window_object_cleared_callback(WebKitScriptWorld* world,
         create_hvml_instance(context, web_page,
                 host, app, runner, group, page, request_id);
 
-        g_signal_connect(web_page, "document-loaded",
-                G_CALLBACK(document_loaded_callback),
-                NULL);
-        g_signal_connect(web_page, "console-message-sent",
-                G_CALLBACK(console_message_sent_callback),
-                NULL);
-        g_signal_connect(web_page, "user-message-received",
-                G_CALLBACK(user_message_received_callback),
-                NULL);
+        char load_from_url[128];
+        if (!hvml_uri_get_query_value(uri, "loadFromURL", load_from_url)) {
+            LOG_DEBUG("No query 'loadFromURL' set callback\n");
+            g_signal_connect(web_page, "document-loaded",
+                    G_CALLBACK(document_loaded_callback),
+                    NULL);
+            g_signal_connect(web_page, "console-message-sent",
+                    G_CALLBACK(console_message_sent_callback),
+                    NULL);
+            g_signal_connect(web_page, "user-message-received",
+                    G_CALLBACK(user_message_received_callback),
+                    NULL);
+        }
     }
     else {
         if (host) free(host);
