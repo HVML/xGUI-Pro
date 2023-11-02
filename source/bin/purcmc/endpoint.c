@@ -1541,6 +1541,77 @@ failed:
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }
 
+static int on_load_from_url(purcmc_server* srv, purcmc_endpoint* endpoint,
+        const pcrdr_msg *msg)
+{
+    pcrdr_msg response = { };
+    int retv = PCRDR_SC_OK;
+    const char *doc_text;
+    size_t doc_len;
+    purcmc_page *page = NULL;
+    purcmc_udom *dom = NULL;
+    char suppressed[LEN_BUFF_LONGLONGINT] = { };
+
+    if ((msg->dataType != PCRDR_MSG_DATA_TYPE_PLAIN) ||
+            msg->data == PURC_VARIANT_INVALID) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    doc_text = purc_variant_get_string_const_ex(msg->data, &doc_len);
+    if (doc_text == NULL || doc_len == 0) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    if (msg->target == PCRDR_MSG_TARGET_PLAINWINDOW ||
+            msg->target == PCRDR_MSG_TARGET_WIDGET) {
+        page = (void *)(uintptr_t)msg->targetValue;
+    }
+
+    if (page == NULL) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    /* Since PURCMC-120, pass the coroutine handle */
+    if (msg->elementType != PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    uint64_t crtn = (uint64_t)strtoull(
+            purc_variant_get_string_const(msg->elementValue), NULL, 16);
+    dom = srv->cbs.load_from_url(endpoint->session, page,
+            PCRDR_K_OPERATION_LOADFROMURL, PCRDR_OPERATION_LOADFROMURL,
+            purc_variant_get_string_const(msg->requestId),
+            doc_text, doc_len, crtn, suppressed, &retv);
+    if (retv == 0) {
+        srv->cbs.pend_response(endpoint->session, page,
+                purc_variant_get_string_const(msg->operation),
+                purc_variant_get_string_const(msg->requestId),
+                dom, suppressed);
+        return PCRDR_SC_OK;
+    }
+
+failed:
+    response.type = PCRDR_MSG_TYPE_RESPONSE;
+    response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
+    response.retCode = retv;
+    response.resultValue = (uint64_t)(uintptr_t)dom;
+    /* Since PURCMC-120, return the coroutine handle which is suppressed */
+    if (suppressed[0]) {
+        response.dataType = PCRDR_MSG_DATA_TYPE_PLAIN;
+        response.data = purc_variant_make_string(suppressed, false);
+    }
+    else {
+        response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+    }
+
+    return purcmc_endpoint_send_response(srv, endpoint, &response);
+}
+
 static inline int write_xxx(purcmc_server* srv, purcmc_endpoint* endpoint,
         int op, const char* op_name, const pcrdr_msg *msg)
 {
@@ -2258,6 +2329,7 @@ static struct request_handler {
     { PCRDR_OPERATION_INSERTAFTER, on_insert_after },
     { PCRDR_OPERATION_INSERTBEFORE, on_insert_before },
     { PCRDR_OPERATION_LOAD, on_load },
+    { PCRDR_OPERATION_LOADFROMURL, on_load_from_url },
     { PCRDR_OPERATION_PREPEND, on_prepend },
     { PCRDR_OPERATION_REGISTER, on_register },
     { PCRDR_OPERATION_REMOVEPAGEGROUP, on_remove_page_group },
