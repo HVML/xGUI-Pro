@@ -798,12 +798,12 @@ find_page_element(pcdom_document_t *dom_doc,
 }
 
 #define HTML_FRAG_PLAINWINDOW  \
-    "<figure id='%s-%s' class='%s' name='%s' title='%s' style='%s' level='%s'></figure>"
+    "<figure id='%s-%s' class='%s' name='%s' title='%s' style='%s'></figure>"
 
 void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         void *session, const char *group_id, const char *window_name,
         const char *class_name, const char *title, const char *layout_style,
-        const char *window_level, purc_variant_t toolkit_style, void *init_arg,
+        purc_variant_t toolkit_style, void *init_arg,
         int *retv)
 {
     pcdom_document_t *dom_doc = pcdom_interface_document(layouter->dom_doc);
@@ -833,8 +833,7 @@ void *ws_layouter_add_plain_window(struct ws_layouter *layouter,
         gchar *html_fragment = g_strdup_printf(HTML_FRAG_PLAINWINDOW,
                 group_id, window_name, class_name ? class_name : "",
                 window_name, title ? title : "",
-                layout_style ? layout_style : "",
-                window_level ? window_level : "");
+                layout_style ? layout_style : "");
         subtree = dom_parse_fragment(dom_doc, element,
             html_fragment, strlen(html_fragment));
         g_free(html_fragment);

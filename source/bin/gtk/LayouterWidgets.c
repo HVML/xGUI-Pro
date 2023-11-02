@@ -74,8 +74,6 @@ void gtk_imp_evaluate_geometry(struct ws_widget_info *style,
     struct purc_window_geometry geometry;
     if (purc_evaluate_standalone_window_geometry_from_styles(layout_style,
                 &screen_info, &geometry) == 0) {
-        printf("Window geometry: %d, %d, %d x %d\n",
-                geometry.x, geometry.y, geometry.width, geometry.height);
         style->x = geometry.x;
         style->y = geometry.y;
         style->w = geometry.width;
@@ -97,6 +95,10 @@ void gtk_imp_convert_style(struct ws_widget_info *style,
         return;
 
     purc_variant_t tmp;
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "windowLevel"))) {
+        style->level = purc_variant_get_string_const(tmp);
+    }
+
     if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "darkMode")) &&
             purc_variant_is_true(tmp)) {
         style->darkMode = true;

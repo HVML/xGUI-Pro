@@ -108,7 +108,7 @@ typedef struct purcmc_server_callbacks {
             const char *request_id,
             const char *page_id, const char *group, const char *name,
             const char *klass, const char *title, const char *layout_style,
-            const char *window_level, purc_variant_t toolkit_style, int *retv);
+            purc_variant_t toolkit_style, int *retv);
     int (*update_plainwin)(purcmc_session *, purcmc_workspace *,
             purcmc_page *page, const char *property, purc_variant_t value);
     int (*destroy_plainwin)(purcmc_session *, purcmc_workspace *,

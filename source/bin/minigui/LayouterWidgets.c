@@ -37,6 +37,17 @@
 #include <string.h>
 #include <webkit2/webkit2.h>
 
+void mg_imp_get_monitor_geometry(struct ws_metrics *ws_geometry)
+{
+    RECT rc = GetScreenRect();
+    ws_geometry->width  = RECTW(rc);
+    ws_geometry->height = RECTH(rc);
+
+    /* TODO: Get from MiniGUI runtime configuration. */
+    ws_geometry->dpi = 96;
+    ws_geometry->density = 1.0;
+}
+
 void mg_imp_convert_style(struct ws_widget_info *style,
         purc_variant_t toolkit_style)
 {
@@ -50,6 +61,10 @@ void mg_imp_convert_style(struct ws_widget_info *style,
         return;
 
     purc_variant_t tmp;
+    if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "windowLevel"))) {
+        style->level = purc_variant_get_string_const(tmp);
+    }
+
     if ((tmp = purc_variant_object_get_by_ckey(toolkit_style, "darkMode")) &&
             purc_variant_is_true(tmp)) {
         style->darkMode = true;
@@ -71,6 +86,29 @@ void mg_imp_convert_style(struct ws_widget_info *style,
         if (value) {
             style->backgroundColor = value;
         }
+    }
+}
+
+void mg_imp_evaluate_geometry(struct ws_widget_info *style,
+        const char *layout_style)
+{
+    struct ws_metrics ws_geometry;
+    mg_imp_get_monitor_geometry(&ws_geometry);
+
+    struct purc_screen_info screen_info;
+    screen_info.width   = ws_geometry.width;
+    screen_info.height  = ws_geometry.height;
+    screen_info.dpi     = ws_geometry.dpi;
+    screen_info.density = ws_geometry.density;
+
+    struct purc_window_geometry geometry;
+    if (purc_evaluate_standalone_window_geometry_from_styles(layout_style,
+                &screen_info, &geometry) == 0) {
+        style->x = geometry.x;
+        style->y = geometry.y;
+        style->w = geometry.width;
+        style->h = geometry.height;
+        style->flags |= WSWS_FLAG_GEOMETRY;
     }
 }
 

@@ -916,7 +916,7 @@ purcmc_page *mg_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace, const char *request_id,
         const char *page_id, const char *group, const char *name,
         const char *klass, const char *title, const char *layout_style,
-        const char *window_level, purc_variant_t toolkit_style, int *retv)
+        purc_variant_t toolkit_style, int *retv)
 {
     void *plainwin = NULL;
 
@@ -938,8 +938,10 @@ purcmc_page *mg_create_plainwin(purcmc_session *sess,
         style.flags = WSWS_FLAG_NAME | WSWS_FLAG_TITLE;
         style.name = name;
         style.title = title;
-        style.level = window_level;
         mg_imp_convert_style(&style, toolkit_style);
+        if (layout_style) {
+            mg_imp_evaluate_geometry(&style, layout_style);
+        }
         plainwin = mg_imp_create_widget(workspace, sess,
                 WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, &webview_param, &style);
 
@@ -954,7 +956,7 @@ purcmc_page *mg_create_plainwin(purcmc_session *sess,
 
         /* create a plain window in the specified group */
         plainwin = ws_layouter_add_plain_window(workspace->layouter, sess,
-                group, name, klass, title, layout_style, window_level,
+                group, name, klass, title, layout_style,
                 toolkit_style, &webview_param, retv);
     }
 
@@ -1432,15 +1434,6 @@ mg_set_property_in_dom(purcmc_session *sess, const char *request_id,
     return PURC_VARIANT_INVALID;
 }
 
-static void get_monitor_geometry(struct ws_metrics *ws_geometry)
-{
-    RECT rc = GetScreenRect();
-    ws_geometry->width  = RECTW(rc);
-    ws_geometry->height = RECTH(rc);
-    ws_geometry->dpi = 72; /* TODO: calculate from physical width and height */
-    ws_geometry->density = 27;
-}
-
 int mg_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
         const char *content, size_t length)
 {
@@ -1449,7 +1442,7 @@ int mg_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
     workspace = sess->workspace;   /* only one workspace */
     if (workspace->layouter == NULL) {
         struct ws_metrics metrics;
-        get_monitor_geometry(&metrics);
+        mg_imp_get_monitor_geometry(&metrics);
         LOG_INFO("Monitor size: %u x %u\n", metrics.width, metrics.height);
 
         workspace->layouter = ws_layouter_new(&metrics, content, length,
