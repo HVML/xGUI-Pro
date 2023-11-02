@@ -888,6 +888,10 @@ purcmc_page *gtk_create_plainwin(purcmc_session *sess,
         style.name = name;
         style.title = title;
         gtk_imp_convert_style(&style, toolkit_style);
+
+        if (layout_style) {
+            gtk_imp_evaluate_geometry(&style, layout_style);
+        }
         plainwin = gtk_imp_create_widget(workspace, sess,
                 WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, webview, &style);
 
@@ -1380,27 +1384,6 @@ gtk_set_property_in_dom(purcmc_session *sess, const char *request_id,
     return PURC_VARIANT_INVALID;
 }
 
-static void get_monitor_geometry(struct ws_metrics *ws_geometry)
-{
-    GdkDisplay* dsp = gdk_display_get_default();
-    assert(dsp);
-
-    GdkMonitor* monitor = gdk_display_get_primary_monitor(dsp);
-    if (monitor) {
-        GdkRectangle geometry;
-        gdk_monitor_get_geometry(monitor, &geometry);
-        ws_geometry->width  = geometry.width;
-        ws_geometry->height = geometry.height;
-    }
-    else {
-        ws_geometry->width  = 1920;
-        ws_geometry->height = 1080;
-    }
-
-    ws_geometry->dpi = 72; /* TODO: calculate from physical width and height */
-    ws_geometry->density = 27;
-}
-
 int gtk_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
         const char *content, size_t length)
 {
@@ -1409,7 +1392,7 @@ int gtk_set_page_groups(purcmc_session *sess, purcmc_workspace *workspace,
     workspace = sess->workspace;   /* only one workspace */
     if (workspace->layouter == NULL) {
         struct ws_metrics metrics;
-        get_monitor_geometry(&metrics);
+        gtk_imp_get_monitor_geometry(&metrics);
         LOG_INFO("Monitor size: %u x %u\n", metrics.width, metrics.height);
 
         workspace->layouter = ws_layouter_new(&metrics, content, length,

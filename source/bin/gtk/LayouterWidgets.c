@@ -37,6 +37,53 @@
 #include <gtk/gtk.h>
 #include <webkit2/webkit2.h>
 
+void gtk_imp_get_monitor_geometry(struct ws_metrics *ws_geometry)
+{
+    GdkDisplay* dsp = gdk_display_get_default();
+    assert(dsp);
+
+    GdkMonitor* monitor = gdk_display_get_primary_monitor(dsp);
+    if (monitor) {
+        GdkRectangle geometry;
+        gdk_monitor_get_geometry(monitor, &geometry);
+        ws_geometry->width  = geometry.width;
+        ws_geometry->height = geometry.height;
+    }
+    else {
+        ws_geometry->width  = 1920;
+        ws_geometry->height = 1080;
+    }
+
+    /* TODO: calculate from physical width and height */
+    ws_geometry->dpi = 96;
+    ws_geometry->density = 1.0;
+}
+
+void gtk_imp_evaluate_geometry(struct ws_widget_info *style,
+        const char *layout_style)
+{
+    struct ws_metrics ws_geometry;
+    gtk_imp_get_monitor_geometry(&ws_geometry);
+
+    struct purc_screen_info screen_info;
+    screen_info.width   = ws_geometry.width;
+    screen_info.height  = ws_geometry.height;
+    screen_info.dpi     = ws_geometry.dpi;
+    screen_info.density = ws_geometry.density;
+
+    struct purc_window_geometry geometry;
+    if (purc_evaluate_standalone_window_geometry_from_styles(layout_style,
+                &screen_info, &geometry) == 0) {
+        printf("Window geometry: %d, %d, %d x %d\n",
+                geometry.x, geometry.y, geometry.width, geometry.height);
+        style->x = geometry.x;
+        style->y = geometry.y;
+        style->w = geometry.width;
+        style->h = geometry.height;
+        style->flags |= WSWS_FLAG_GEOMETRY;
+    }
+}
+
 void gtk_imp_convert_style(struct ws_widget_info *style,
         purc_variant_t toolkit_style)
 {
