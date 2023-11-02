@@ -33,8 +33,8 @@ struct ws_layouter;
 struct ws_metrics {
     unsigned int    width;
     unsigned int    height;
-    unsigned int    dpi;
-    unsigned int    density;
+    float           dpi;
+    float           density;
 };
 
 typedef enum {

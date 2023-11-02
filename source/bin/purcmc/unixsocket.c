@@ -62,6 +62,14 @@ int us_listen (USServer* server)
     int    fd, len;
     struct sockaddr_un unix_addr;
 
+    if (purc_check_unix_socket (server->config->unixsocket) == 0) {
+        purc_log_error ("There is already an HVML renderer running on the socket: %s\n",
+            server->config->unixsocket);
+        return -1;
+    }
+
+    unlink (server->config->unixsocket);
+
     /* create a Unix domain stream socket */
     if ((fd = socket (AF_UNIX, SOCK_STREAM, 0)) < 0) {
         purc_log_error ("Error duing calling `socket` in us_listen: %s\n",

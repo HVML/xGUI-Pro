@@ -29,6 +29,7 @@
 #include "utils/list.h"
 #include "utils/kvlist.h"
 #include "utils/sorted-array.h"
+#include <purc/purc-helpers.h>
 
 /* handle types */
 enum {
@@ -73,8 +74,13 @@ struct purcmc_session {
 extern "C" {
 #endif
 
+void gtk_imp_get_monitor_geometry(struct ws_metrics *ws_geometry);
+
 void gtk_imp_convert_style(struct ws_widget_info *style,
         purc_variant_t toolkit_style);
+
+void gtk_imp_evaluate_geometry(struct ws_widget_info *style,
+        const char *layout_style);
 
 void *gtk_imp_create_widget(void *workspace, void *session,
         ws_widget_type_t type, void *window,
