@@ -35,6 +35,7 @@ set(xguipro_PLATFORM_INDEPENDENT_DIRS
     "layouter"
     "schema"
     "sd"
+    "utils"
 )
 
 APPEND_ALL_SOURCE_FILES_IN_DIRLIST(xguipro_SOURCES
