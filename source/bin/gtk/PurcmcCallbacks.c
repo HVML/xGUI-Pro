@@ -866,7 +866,7 @@ purcmc_page *gtk_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace, const char *request_id,
         const char *page_id, const char *group, const char *name,
         const char *klass, const char *title, const char *layout_style,
-        const char *window_level, purc_variant_t toolkit_style, int *retv)
+        purc_variant_t toolkit_style, int *retv)
 {
     void *plainwin = NULL;
 
@@ -906,7 +906,7 @@ purcmc_page *gtk_create_plainwin(purcmc_session *sess,
 
         /* create a plain window in the specified group */
         plainwin = ws_layouter_add_plain_window(workspace->layouter, sess,
-                group, name, klass, title, layout_style, window_level,
+                group, name, klass, title, layout_style,
                 toolkit_style, webview, retv);
     }
 
