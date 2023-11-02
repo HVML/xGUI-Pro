@@ -73,6 +73,8 @@ struct purcmc_session {
 extern "C" {
 #endif
 
+void mg_imp_get_monitor_geometry(struct ws_metrics *ws_geometry);
+
 void mg_imp_convert_style(struct ws_widget_info *style,
         purc_variant_t toolkit_style);
 
