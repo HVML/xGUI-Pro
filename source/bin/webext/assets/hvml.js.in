@@ -59,6 +59,9 @@ if (checkHVML()) {
         HVML.post("page-loaded", "doc",
             "blank",
             JSON.stringify(data));
+        const interestedElements = document.querySelectorAll("[hvml-events]");
+        if (interestedElements.length > 0)
+            registerEventsListener(interestedElements);
     });
     HVML.onrequest = function (json) {
         const dom_update_ops = ['append', 'prepend', 'insertAfter',
@@ -67,7 +70,7 @@ if (checkHVML()) {
         msg = JSON.parse(json);
 
         if (msg.operation === 'loadFromURL') {
-            var url = msg.data + "?irId=" + msg.requestId;
+            var url = msg.data + "?irId=" + msg.requestId + "&loadFromURL=1";
             window.location = url;
             return { requestId: msg.requestId, state: "Ok" };
         }
