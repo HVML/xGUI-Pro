@@ -151,7 +151,7 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
             h = style->h;
         }
 
-        MoveWindow(hwnd, rect.left, rect.top, w, h, false);
+        MoveWindow(hwnd, style->x, style->y, w, h, false);
     }
 
     browser_plain_window_set_view(plainwin, web_view_param);
