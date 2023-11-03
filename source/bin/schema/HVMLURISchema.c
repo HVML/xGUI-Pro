@@ -61,6 +61,7 @@
 #define SPLASH_FILE_SUFFIX         "jpg"
 #define QUERY_SEPERATOR            '?'
 
+#define REDIRECT_LOCAL_FILE         0
 
 struct hvml_broken_down_uri {
     const char *uri;
@@ -374,6 +375,30 @@ out:
     return need_redirect;
 }
 
+void finish_with_redirect(WebKitURISchemeRequest *request, const char *url)
+{
+    LOG_WARN("response with redirect url: %s\n", url);
+    GInputStream *stream = NULL;
+    WebKitURISchemeResponse *response = NULL;;
+
+    gchar *contents = (gchar *)blank_page;
+    gsize content_length = strlen(contents);
+
+    stream = g_memory_input_stream_new_from_data(contents, content_length, NULL);
+    response = webkit_uri_scheme_response_new(stream, content_length);
+
+    SoupMessageHeaders *header = soup_message_headers_new(SOUP_MESSAGE_HEADERS_RESPONSE);
+    soup_message_headers_append(header, "Location", url);
+    webkit_uri_scheme_response_set_status(response, 302, NULL);
+    webkit_uri_scheme_response_set_http_headers(response, header);
+    webkit_uri_scheme_response_set_content_type(response, "text/html");
+
+    webkit_uri_scheme_request_finish_with_response(request, response);
+
+    g_object_unref(response);
+    g_object_unref(stream);
+}
+
 void do_redirect(WebKitURISchemeRequest *request, purcmc_endpoint *endpoint,
         struct hvml_broken_down_uri *uri_st)
 {
@@ -662,8 +687,15 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
                 page, &content_length, 0);
         max_to_load = content_length;
 #else
+#if REDIRECT_LOCAL_FILE
+        char rpath[PATH_MAX+1];
+        sprintf(rpath, "file://%s/%s", WEBKIT_WEBEXT_DIR, page);
+        finish_with_redirect(request, rpath);
+        goto done;
+#else
         contents = open_and_load_asset("WEBKIT_WEBEXT_DIR", WEBKIT_WEBEXT_DIR,
                 page, &max_to_load, &fd, &content_length);
+#endif
 #endif
 
         if (contents == NULL) {
@@ -730,6 +762,12 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
                         "Invalid HVML URI (%s): bad app or runner name", uri);
                 goto error;
             }
+#if REDIRECT_LOCAL_FILE
+            char rpath[PATH_MAX+1];
+            sprintf(rpath, "file://%s/%s", prefix, page);
+            finish_with_redirect(request, rpath);
+            goto done;
+#endif
         }
         else {
             if (!purc_hvml_uri_get_query_value_alloc(uri,
