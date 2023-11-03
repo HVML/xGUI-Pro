@@ -67,6 +67,7 @@ struct purcmc_session {
     char *uri_prefix;
 
     bool allow_switching_rdr;
+    bool is_removing;
 };
 
 #ifdef __cplusplus

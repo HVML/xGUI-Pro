@@ -639,13 +639,14 @@ static int on_start_session(purcmc_server* srv, purcmc_endpoint* endpoint,
 static int on_end_session(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
-    pcrdr_msg response = { };
-
     if (endpoint->session) {
         srv->cbs.remove_session(endpoint->session);
         endpoint->session = NULL;
     }
 
+#if 0
+    /* conn is closed */
+    pcrdr_msg response = { };
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
     response.sourceURI = PURC_VARIANT_INVALID;
@@ -654,6 +655,9 @@ static int on_end_session(purcmc_server* srv, purcmc_endpoint* endpoint,
     response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
+#else
+    return PCRDR_SC_OK;
+#endif
 }
 
 static int on_create_workspace(purcmc_server* srv, purcmc_endpoint* endpoint,

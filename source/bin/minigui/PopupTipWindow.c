@@ -97,14 +97,18 @@ static void on_paint(HWND hWnd, HDC hdc)
 
     sprintf(buf, s_res, srv->host, srv->port);
 
+    PLOGFONT old_lf = NULL;
     dw = GetWindowAdditionalData2(hWnd);
     if (dw) {
         PLOGFONT lf = (PLOGFONT) dw;
-        SelectFont(hdc, lf);
+        old_lf = SelectFont(hdc, lf);
     }
     SetTextColor(hdc, DWORD2Pixel(hdc, 0xFFFFFFFF));
     SetBkMode(hdc, BM_TRANSPARENT);
     DrawText(hdc, buf, -1, &client_rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+    if (old_lf) {
+        SelectFont(hdc, old_lf);
+    }
 }
 
 
@@ -145,10 +149,10 @@ popup_tip_wndproc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 DWORD dw = GetWindowAdditionalData(hWnd);
                 struct sd_remote_service *srv = (struct sd_remote_service *)dw;
-                SendNotifyMessage(hWnd, MSG_CLOSE, 0, 0);
                 show_switch_renderer_window((HWND)srv->hostingWindow, srv);
+                SendNotifyMessage(hWnd, MSG_CLOSE, 0, 0);
             }
-            break;
+            return 0;
 
         case MSG_DESTROY:
             break;

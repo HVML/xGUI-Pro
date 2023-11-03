@@ -467,6 +467,7 @@ static int on_each_ostack(void *ctxt, const char *name, void *data)
 int mg_remove_session(purcmc_session *sess)
 {
     LOG_DEBUG("removing session (%p)...\n", sess);
+    sess->is_removing = true;
 
     LOG_DEBUG("destroy all windows/widgets created by this session...\n");
     pcutils_kvlist_for_each_safe(sess->workspace->page_owners, sess,
@@ -527,7 +528,7 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
         if (BROWSER_IS_PLAIN_WINDOW(container)) {
 
             /* endpoint might be deleted already. */
-            if (endpoint) {
+            if (endpoint && !sess->is_removing) {
                 /* post `destroy` event for the plainwindow */
                 event.target = PCRDR_MSG_TARGET_PLAINWINDOW;
                 event.targetValue = PTR2U64(container);
@@ -546,7 +547,7 @@ static gboolean on_webview_close(WebKitWebView *webview, purcmc_session *sess)
         }
         else {
             /* endpoint might be deleted already. */
-            if (endpoint) {
+            if (endpoint && !sess->is_removing) {
                 /* post `destroy` event for the page */
                 event.target = PCRDR_MSG_TARGET_WIDGET;
                 event.targetValue = PTR2U64(container);
