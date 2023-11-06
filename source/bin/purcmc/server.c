@@ -1025,8 +1025,14 @@ void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
             if_index, service_name, reg_type, hostname, port, txt_record, endpoint);
 
     if (!endpoint) {
-        purc_log_info("Found remote service %s:%d , curr endpoint is null.\n",
+        purc_log_info("Found remote service %s:%d, curr endpoint is null.\n",
                 hostname, port);
+        goto out;
+    }
+
+    if (!endpoint->allow_switching_rdr) {
+        purc_log_info("Found remote service %s:%d,"
+                " curr endpoint do not allow switching rdr.\n", hostname, port);
         goto out;
     }
 

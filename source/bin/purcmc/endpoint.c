@@ -556,13 +556,16 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
         if (auth_ret == IDNO) {
             return PCRDR_SC_UNAUTHORIZED;
         }
-
-        tmp = purc_variant_object_get_by_ckey(data, "alllowSwitchingRdr");
-        if (tmp) {
-            endpoint->allow_switching_rdr = purc_variant_booleanize(tmp);
-        }
     }
 #endif
+
+    tmp = purc_variant_object_get_by_ckey(data, "alllowSwitchingRdr");
+    if (tmp) {
+        endpoint->allow_switching_rdr = purc_variant_booleanize(tmp);
+    }
+    else {
+        endpoint->allow_switching_rdr = true;
+    }
 
     purc_name_tolower_copy (host_name, norm_host_name, PURC_LEN_HOST_NAME);
     purc_name_tolower_copy (app_name, norm_app_name, PURC_LEN_APP_NAME);
