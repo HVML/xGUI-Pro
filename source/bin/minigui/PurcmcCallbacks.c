@@ -917,8 +917,9 @@ purcmc_page *mg_create_plainwin(purcmc_session *sess,
         purcmc_workspace *workspace, const char *request_id,
         const char *page_id, const char *group, const char *name,
         const char *klass, const char *title, const char *layout_style,
-        purc_variant_t toolkit_style, int *retv)
+        const char *transition_style, purc_variant_t toolkit_style, int *retv)
 {
+    (void) transition_style;
     void *plainwin = NULL;
 
     workspace = sess->workspace;

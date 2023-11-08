@@ -45,7 +45,7 @@ purcmc_page *mg_create_plainwin(purcmc_session *, purcmc_workspace *,
         const char *request_id,
         const char *page_id, const char *group, const char *name,
         const char *klass, const char *title, const char *layout_style,
-        purc_variant_t toolkit_style, int *retv);
+        const char *transition_style, purc_variant_t toolkit_style, int *retv);
 int mg_update_plainwin(purcmc_session *, purcmc_workspace *,
         purcmc_page *win, const char *property, purc_variant_t value);
 int mg_destroy_plainwin(purcmc_session *, purcmc_workspace *,
