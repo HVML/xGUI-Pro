@@ -1028,18 +1028,9 @@ done:
 }
 #endif
 
-int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
-        purcmc_page *page, const char *property, purc_variant_t value)
+static int update_plainwin(BrowserPlainWindow *window, const char *property,
+        purc_variant_t value)
 {
-    int retv;
-
-    workspace = sess->workspace;   /* only one workspace */
-    if (validate_handle(sess, page, &retv) == NULL) {
-        return retv;
-    }
-
-    void *plainwin = (void *)page;
-
     if (strcmp(property, "name") == 0) {
         /* Forbid to change name of a plain window */
         return PCRDR_SC_FORBIDDEN;
@@ -1051,7 +1042,7 @@ int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
     else if (strcmp(property, "title") == 0) {
         const char *title = purc_variant_get_string_const(value);
         if (title) {
-            browser_plain_window_hide(BROWSER_PLAIN_WINDOW(plainwin));
+            browser_plain_window_hide(window);
         }
         else {
             return PCRDR_SC_BAD_REQUEST;
@@ -1063,8 +1054,55 @@ int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
     else if (strcmp(property, "toolkitStyle") == 0) {
         /* TODO */
     }
+    else if (strcmp(property, "transitionStyle") == 0) {
+        /* TODO */
+    }
 
     return PCRDR_SC_OK;
+}
+
+static const char *plainwin_properties[] = {
+    "name",
+    "class",
+    "title",
+    "layoutStyle",
+    "toolkitStyle",
+    "transitionStyle"
+};
+
+static size_t nr_plainwin_properties = PCA_TABLESIZE(plainwin_properties);
+
+int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
+        purcmc_page *page, const char *property, purc_variant_t value)
+{
+    int retv;
+
+    workspace = sess->workspace;   /* only one workspace */
+    if (validate_handle(sess, page, &retv) == NULL) {
+        return retv;
+    }
+
+    BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(page);
+    if (property != NULL) {
+        return  update_plainwin(window, property, value);
+    }
+
+    for (size_t i = 0; i < nr_plainwin_properties; i++) {
+        purc_variant_t tmp = purc_variant_object_get_by_ckey(value,
+                plainwin_properties[i]);
+        if (tmp) {
+            retv = update_plainwin(window, plainwin_properties[i], tmp);
+            if (retv != PCRDR_SC_OK) {
+                return retv;
+            }
+        }
+    }
+
+    /* data must be object */
+    return PCRDR_SC_OK;
+
+
+    return retv;
 }
 
 int mg_destroy_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
