@@ -51,7 +51,7 @@ GType browser_plain_window_get_type(void);
 
 BrowserPlainWindow* browser_plain_window_new(HWND, WebKitWebContext*,
         const char *name, const char *title, const char *window_level,
-        struct purc_window_transition *transition,
+        const struct purc_window_transition *transition,
         gboolean forHVML);
 HWND browser_plain_window_get_hwnd(BrowserPlainWindow*);
 WebKitWebContext* browser_plain_window_get_web_context(BrowserPlainWindow*);
@@ -65,6 +65,14 @@ void browser_plain_window_show(BrowserPlainWindow*);
 void browser_plain_window_load_uri(BrowserPlainWindow*, const char *);
 void browser_plain_window_load_session(BrowserPlainWindow*, const char*);
 void browser_plain_window_set_background_color(BrowserPlainWindow*, GAL_Color*);
+
+void browser_plain_window_set_transition(BrowserPlainWindow*,
+        struct purc_window_transition *transition);
+struct purc_window_transition *
+browser_plain_window_get_transition(BrowserPlainWindow*);
+
+void browser_plain_window_layout(BrowserPlainWindow*, int x, int y, int w,
+        int h, bool enable_transition);
 
 G_END_DECLS
 

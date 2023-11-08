@@ -141,7 +141,7 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
         WebKitWebViewParam *web_view_param, const struct ws_widget_info *style)
 {
     BrowserPlainWindow *plainwin;
-    struct purc_window_transition *transition = NULL;
+    const struct purc_window_transition *transition = NULL;
     if (style->flags & WSWS_FLAG_TRANSITION) {
         transition = &style->transition;
     }

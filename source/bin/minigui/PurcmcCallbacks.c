@@ -1075,14 +1075,19 @@ static int update_plainwin(BrowserPlainWindow *window, const char *property,
             h = style.h;
         }
 
-        /* TODO: transition */
-        MoveWindow(hwnd, style.x, style.y, w, h, false);
+        browser_plain_window_layout(window, style.x, style.y, w, h, true);
     }
     else if (strcmp(property, PLAINWIN_PROP_TOOLKITSTYLE) == 0) {
         /* TODO */
     }
     else if (strcmp(property, PLAINWIN_PROP_TRANSITIONSTYLE) == 0) {
         /* TODO */
+        struct ws_widget_info style = { };
+        const char *transition_style = purc_variant_get_string_const(value);
+        mg_imp_evaluate_transition(&style, transition_style);
+        if (style.flags & WSWS_FLAG_TRANSITION) {
+            browser_plain_window_set_transition(window, &style.transition);
+        }
     }
 
 out:

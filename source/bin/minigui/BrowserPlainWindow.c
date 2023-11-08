@@ -379,7 +379,7 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
 BrowserPlainWindow *
 browser_plain_window_new(HWND parent, WebKitWebContext *webContext,
         const char *name, const char *title, const char *window_level,
-        struct purc_window_transition *transition,
+        const struct purc_window_transition *transition,
         BOOL forHVML)
 {
     BrowserPlainWindow *window =
@@ -648,4 +648,26 @@ void browser_plain_window_show(BrowserPlainWindow *window)
 {
     g_return_if_fail(BROWSER_IS_PLAIN_WINDOW(window));
     ShowWindow(window->hwnd, SW_SHOWNORMAL);
+}
+
+void browser_plain_window_set_transition(BrowserPlainWindow *window,
+        struct purc_window_transition *transition)
+{
+    window->transition = *transition;
+}
+
+struct purc_window_transition *
+browser_plain_window_get_transition(BrowserPlainWindow *window)
+{
+    return &window->transition;
+}
+
+
+void browser_plain_window_layout(BrowserPlainWindow *window, int x, int y, int w,
+        int h, bool enable_transition)
+{
+    HWND hwnd = window->hwnd;
+
+    /* TODO: transition */
+    MoveWindow(hwnd, x, y, w, h, false);
 }
