@@ -1049,7 +1049,27 @@ static int update_plainwin(BrowserPlainWindow *window, const char *property,
         }
     }
     else if (strcmp(property, "layoutStyle") == 0) {
-        /* TODO */
+        struct ws_widget_info style = { };
+        const char *layout_style = purc_variant_get_string_const(value);
+        mg_imp_evaluate_geometry(&style, layout_style);
+
+        if (!(style.flags & WSWS_FLAG_GEOMETRY)) {
+            goto out;
+        }
+
+        HWND hwnd = browser_plain_window_get_hwnd(window);
+        RECT rect;
+        GetWindowRect(hwnd, &rect);
+
+        unsigned w = RECTW(rect);
+        unsigned h = RECTH(rect);
+        if (style.w > 0 && style.h > 0) {
+            w = style.w;
+            h = style.h;
+        }
+
+        /* TODO: transition */
+        MoveWindow(hwnd, style.x, style.y, w, h, false);
     }
     else if (strcmp(property, "toolkitStyle") == 0) {
         /* TODO */
@@ -1058,6 +1078,7 @@ static int update_plainwin(BrowserPlainWindow *window, const char *property,
         /* TODO */
     }
 
+out:
     return PCRDR_SC_OK;
 }
 
