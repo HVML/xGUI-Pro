@@ -1137,6 +1137,11 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
         goto failed;
     }
 
+    if (msg->dataType == PCRDR_MSG_DATA_TYPE_VOID) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
     if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_HANDLE) {
         const char *element = purc_variant_get_string_const(msg->elementValue);
         if (element == NULL) {
@@ -1148,6 +1153,41 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
         handle = strtoull(element, NULL, 16);
         page = (void *)(uintptr_t)handle;
     }
+    else if (msg->elementType == PCRDR_MSG_ELEMENT_TYPE_ID) {
+        const char *name_group = purc_variant_get_string_const(msg->elementValue);
+
+        if (name_group == NULL) {
+            retv = PCRDR_SC_BAD_REQUEST;
+            goto failed;
+        }
+
+        char idbuf[PURC_MAX_WIDGET_ID];
+        char name[PURC_LEN_IDENTIFIER + 1];
+        const char *group;
+        group = purc_check_and_make_plainwin_id(idbuf, name, name_group);
+        if (group == PURC_INVPTR) {
+            retv = PCRDR_SC_BAD_REQUEST;
+            goto failed;
+        }
+
+        /* Since PURCMC-120, support the special page name. */
+        if (name[0] == '_') {    // reserved name
+            int v = pcrdr_check_reserved_page_name(name);
+            if (v < 0) {
+                retv = PCRDR_SC_BAD_REQUEST;
+                goto failed;
+            }
+
+            /* support for reserved name */
+            if (srv->cbs.get_special_plainwin) {
+                page = srv->cbs.get_special_plainwin(endpoint->session, workspace,
+                        group, (pcrdr_resname_page_k)v);
+            }
+        }
+        else {
+            page = srv->cbs.find_page(endpoint->session, workspace, idbuf);
+        }
+    }
 
     if (page == NULL) {
         retv = PCRDR_SC_BAD_REQUEST;
@@ -1156,9 +1196,12 @@ static int on_update_plain_window(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     const char *property;
     property = purc_variant_get_string_const(msg->property);
-    if (property == NULL ||
-            !purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME) ||
-            msg->dataType == PCRDR_MSG_DATA_TYPE_VOID) {
+    if (property == NULL && !purc_variant_is_object(msg->data)) {
+        retv = PCRDR_SC_BAD_REQUEST;
+        goto failed;
+    }
+
+    if (property && !purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME)){
         retv = PCRDR_SC_BAD_REQUEST;
         goto failed;
     }
