@@ -1061,17 +1061,6 @@ static int update_plainwin(BrowserPlainWindow *window, const char *property,
     return PCRDR_SC_OK;
 }
 
-static const char *plainwin_properties[] = {
-    "name",
-    "class",
-    "title",
-    "layoutStyle",
-    "toolkitStyle",
-    "transitionStyle"
-};
-
-static size_t nr_plainwin_properties = PCA_TABLESIZE(plainwin_properties);
-
 int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         purcmc_page *page, const char *property, purc_variant_t value)
 {
@@ -1084,23 +1073,25 @@ int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
 
     BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(page);
     if (property != NULL) {
-        return  update_plainwin(window, property, value);
+        return update_plainwin(window, property, value);
     }
 
-    for (size_t i = 0; i < nr_plainwin_properties; i++) {
-        purc_variant_t tmp = purc_variant_object_get_by_ckey(value,
-                plainwin_properties[i]);
-        if (tmp) {
-            retv = update_plainwin(window, plainwin_properties[i], tmp);
-            if (retv != PCRDR_SC_OK) {
-                return retv;
-            }
+    struct pcvrnt_object_iterator* it;
+    it = pcvrnt_object_iterator_create_begin(value);
+    while (it) {
+        const char     *key = pcvrnt_object_iterator_get_ckey(it);
+        purc_variant_t  val = pcvrnt_object_iterator_get_value(it);
+        retv = update_plainwin(window, key, val);
+        if (retv != PCRDR_SC_OK) {
+            break;
+        }
+
+        bool having = pcvrnt_object_iterator_next(it);
+        if (!having) {
+            break;
         }
     }
-
-    /* data must be object */
-    return PCRDR_SC_OK;
-
+    pcvrnt_object_iterator_release(it);
 
     return retv;
 }
