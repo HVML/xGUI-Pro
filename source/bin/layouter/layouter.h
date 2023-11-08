@@ -24,6 +24,7 @@
 #define XGUIPRO_LAYOUTER_LAYOUTER_H
 
 #include <purc/purc-variant.h>
+#include <purc/purc-helpers.h>
 
 #define DEF_LAYOUT_CSS  "assets/workspace-layouter.css"
 
@@ -48,10 +49,11 @@ typedef enum {
     WS_WIDGET_TYPE_TABBEDPAGE,      /* a tabbed page for a webview */
 } ws_widget_type_t;
 
-#define WSWS_FLAG_NAME      0x00000001
-#define WSWS_FLAG_TITLE     0x00000002
-#define WSWS_FLAG_GEOMETRY  0x00000004
-#define WSWS_FLAG_TOOLKIT   0x00000008
+#define WSWS_FLAG_NAME         0x00000001
+#define WSWS_FLAG_TITLE        0x00000002
+#define WSWS_FLAG_GEOMETRY     0x00000004
+#define WSWS_FLAG_TOOLKIT      0x00000008
+#define WSWS_FLAG_TRANSITION   0x00000010
 
 struct ws_widget_info {
     unsigned int flags;
@@ -76,6 +78,8 @@ struct ws_widget_info {
     float       brlt, brtr, brrb, brbl; /* border radius */
 
     float       opacity;
+
+    struct purc_window_transition transition;
 };
 
 typedef void (*wsltr_convert_style_fn)(struct ws_widget_info *style,

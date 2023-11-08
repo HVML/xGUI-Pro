@@ -38,6 +38,7 @@ enum {
     PROP_NAME,
     PROP_PARENT_WINDOW,
     PROP_WINDOW_LEVEL,
+    PROP_WINDOW_TRANSITION,
     PROP_FOR_HVML,
 
     N_PROPERTIES
@@ -58,6 +59,8 @@ struct _BrowserPlainWindow {
     HWND parentWindow;
     HWND hwnd;
     HWND toolWindow;
+
+    struct purc_window_transition transition;
 };
 
 struct _BrowserPlainWindowClass {
@@ -241,6 +244,14 @@ static void browserPlainWindowSetProperty(GObject *object, guint propId,
             }
         }
         break;
+    case PROP_WINDOW_TRANSITION:
+        {
+            gpointer *p = g_value_get_pointer(value);
+            if (p) {
+                window->transition = *(struct purc_window_transition*)p;
+            }
+        }
+        break;
     case PROP_FOR_HVML:
         {
             window->forHVML = g_value_get_boolean(value);
@@ -339,6 +350,14 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
                 G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
     g_object_class_install_property(
             gobjectClass,
+            PROP_WINDOW_TRANSITION,
+            g_param_spec_pointer(
+                "transition",
+                "transition",
+                "The window transition",
+                G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+    g_object_class_install_property(
+            gobjectClass,
             PROP_FOR_HVML,
             g_param_spec_boolean(
                 "for-hvml",
@@ -360,6 +379,7 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
 BrowserPlainWindow *
 browser_plain_window_new(HWND parent, WebKitWebContext *webContext,
         const char *name, const char *title, const char *window_level,
+        struct purc_window_transition *transition,
         BOOL forHVML)
 {
     BrowserPlainWindow *window =
@@ -368,6 +388,7 @@ browser_plain_window_new(HWND parent, WebKitWebContext *webContext,
                       "title", title,
                       "parent-window", parent,
                       "window-level", window_level,
+                      "transition", transition,
                       "for-hvml", forHVML,
                       NULL));
 
@@ -510,7 +531,8 @@ static WebKitWebView *webViewCreate(WebKitWebView *webView,
         WebKitNavigationAction *navigation, BrowserPlainWindow *window)
 {
     BrowserPlainWindow *newWindow = browser_plain_window_new(NULL,
-            window->webContext, window->name, window->title, WINDOW_LEVEL_NORMAL, FALSE);
+            window->webContext, window->name, window->title, WINDOW_LEVEL_NORMAL,
+            &window->transition, FALSE);
     WebKitWebViewParam param = window->param;
     param.relatedView = webView;
     browser_plain_window_set_view(newWindow, &param);

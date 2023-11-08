@@ -944,6 +944,10 @@ purcmc_page *mg_create_plainwin(purcmc_session *sess,
         if (layout_style) {
             mg_imp_evaluate_geometry(&style, layout_style);
         }
+
+        if (transition_style) {
+            mg_imp_evaluate_transition(&style, transition_style);
+        }
         plainwin = mg_imp_create_widget(workspace, sess,
                 WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, &webview_param, &style);
 

@@ -51,6 +51,7 @@ GType browser_plain_window_get_type(void);
 
 BrowserPlainWindow* browser_plain_window_new(HWND, WebKitWebContext*,
         const char *name, const char *title, const char *window_level,
+        struct purc_window_transition *transition,
         gboolean forHVML);
 HWND browser_plain_window_get_hwnd(BrowserPlainWindow*);
 WebKitWebContext* browser_plain_window_get_web_context(BrowserPlainWindow*);

@@ -82,6 +82,9 @@ void mg_imp_convert_style(struct ws_widget_info *style,
 void mg_imp_evaluate_geometry(struct ws_widget_info *style,
         const char *layout_style);
 
+void mg_imp_evaluate_transition(struct ws_widget_info *style,
+        const char *transition_style);
+
 void *mg_imp_create_widget(void *workspace, void *session,
         ws_widget_type_t type, void *window,
         void *parent, void *init_arg, const struct ws_widget_info *style);

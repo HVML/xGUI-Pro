@@ -112,6 +112,15 @@ void mg_imp_evaluate_geometry(struct ws_widget_info *style,
     }
 }
 
+void mg_imp_evaluate_transition(struct ws_widget_info *style,
+        const char *transition_style)
+{
+    if (purc_evaluate_standalone_window_transition_from_styles(transition_style,
+                &style->transition) == 0) {
+        style->flags |= WSWS_FLAG_TRANSITION;
+    }
+}
+
 #if 0
 static void
 on_destroy_plain_window(BrowserPlainWindow *window, purcmc_session *sess)
@@ -132,9 +141,14 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
         WebKitWebViewParam *web_view_param, const struct ws_widget_info *style)
 {
     BrowserPlainWindow *plainwin;
+    struct purc_window_transition *transition = NULL;
+    if (style->flags & WSWS_FLAG_TRANSITION) {
+        transition = &style->transition;
+    }
+
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(g_xgui_main_window,
                 sess->web_context, style->name, style->title,
-                style->level, TRUE));
+                style->level, transition, TRUE));
 
     HWND hwnd = browser_plain_window_get_hwnd(plainwin);
     RECT rect;

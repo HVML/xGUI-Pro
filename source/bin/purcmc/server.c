@@ -953,7 +953,9 @@ const char *xguipro_txt_records[] = {
 
 static size_t nr_xguipro_txt_records = 1;
 
+#if PLATFORM(MINIGUI)
 extern HWND g_xgui_main_window;
+#endif
 
 gboolean start_dnssd_browsing_cb(gpointer user_data)
 {

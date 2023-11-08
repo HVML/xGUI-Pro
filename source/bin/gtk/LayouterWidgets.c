@@ -82,6 +82,15 @@ void gtk_imp_evaluate_geometry(struct ws_widget_info *style,
     }
 }
 
+void gtk_imp_evaluate_transition(struct ws_widget_info *style,
+        const char *transition_style)
+{
+    if (purc_evaluate_standalone_window_transition_from_styles(transition_style,
+                &style->transition) == 0) {
+        style->flags |= WSWS_FLAG_TRANSITION;
+    }
+}
+
 void gtk_imp_convert_style(struct ws_widget_info *style,
         purc_variant_t toolkit_style)
 {
@@ -128,6 +137,12 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
         WebKitWebView *web_view, const struct ws_widget_info *style)
 {
     BrowserPlainWindow *plainwin;
+#if 0
+    struct purc_window_transition *transition = NULL;
+    if (style->flags & WSWS_FLAG_TRANSITION) {
+        transition = &style->transition;
+    }
+#endif
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(NULL,
                 sess->web_context, style->name, style->title));
 

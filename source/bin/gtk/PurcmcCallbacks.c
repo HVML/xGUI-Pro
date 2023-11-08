@@ -893,6 +893,11 @@ purcmc_page *gtk_create_plainwin(purcmc_session *sess,
         if (layout_style) {
             gtk_imp_evaluate_geometry(&style, layout_style);
         }
+
+        if (transition_style) {
+            gtk_imp_evaluate_transition(&style, transition_style);
+        }
+
         plainwin = gtk_imp_create_widget(workspace, sess,
                 WS_WIDGET_TYPE_PLAINWINDOW, NULL, NULL, webview, &style);
 
