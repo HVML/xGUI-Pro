@@ -222,6 +222,12 @@ static gboolean on_hvml_post(WebKitWebPage* web_page,
     return TRUE;
 }
 
+static char *on_hvml_url_translate(WebKitWebPage* web_page,
+        const char *url)
+{
+    return g_strdup(url);
+}
+
 static struct HVMLInfo *create_hvml_instance(JSCContext *context,
         WebKitWebPage* web_page,
         char *host, char *app, char* runner, char *group, char *page,
@@ -234,6 +240,10 @@ static struct HVMLInfo *create_hvml_instance(JSCContext *context,
             G_CALLBACK(on_hvml_post), NULL, NULL,
             G_TYPE_BOOLEAN, 4,
             G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
+    jsc_class_add_method(hvmlClass, "url_translate",
+            G_CALLBACK(on_hvml_url_translate), NULL, NULL,
+            G_TYPE_STRING, 1,
+            G_TYPE_STRING);
 
     struct HVMLInfo *info = calloc(1, sizeof(struct HVMLInfo));
 
