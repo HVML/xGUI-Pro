@@ -237,3 +237,101 @@ void xgui_webview_draw_background_callback(HWND hWnd, HDC hdc, RECT rect)
     FillBoxWithBitmap(hdc, x, y, dw, dh, g_xgui_window_bg);
 }
 
+enum EffMotionType xgui_get_motion_type(purc_window_transition_function func)
+{
+    switch (func) {
+        case PURC_WINDOW_TRANSITION_FUNCTION_LINEAR:
+            return Linear;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INQUAD:
+            return InQuad;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTQUAD:
+            return OutQuad;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INOUTQUAD:
+            return InOutQuad;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTINQUAD:
+            return OutInQuad;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INCUBIC:
+            return InCubic;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTCUBIC:
+            return OutCubic;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INOUTCUBIC:
+            return InOutCubic;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTINCUBIC:
+            return OutInCubic;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INQUART:
+            return InQuart;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTQUART:
+            return OutQuart;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INOUTQUART:
+            return InOutQuart;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTINQUART:
+            return OutInQuart;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INQUINT:
+            return InQuint;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTQUINT:
+            return OutQuint;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INOUTQUINT:
+            return InOutQuint;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTINQUINT:
+            return OutInQuint;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INSINE:
+            return InSine;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTSINE:
+            return OutSine;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INOUTSINE:
+            return InOutSine;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTINSINE:
+            return OutInSine;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INEXPO:
+            return InExpo;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTEXPO:
+            return OutExpo;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INOUTEXPO:
+            return InOutExpo;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTINEXPO:
+            return OutInExpo;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INCIRC:
+            return InCirc;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTCIRC:
+            return OutCirc;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INOUTCIRC:
+            return InOutCirc;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTINCIRC:
+            return OutInCirc;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INELASTIC:
+            return InElastic;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTELASTIC:
+            return OutElastic;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INOUTELASTIC:
+            return InOutElastic;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTINELASTIC:
+            return OutInElastic;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INBACK:
+            return InBack;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTBACK:
+            return OutBack;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INOUTBACK:
+            return InOutBack;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTINBACK:
+            return OutInBack;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INBOUNCE:
+            return InBounce;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTBOUNCE:
+            return OutBounce;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INOUTBOUNCE:
+            return InOutBounce;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTINBOUNCE:
+            return OutInBounce;
+        case PURC_WINDOW_TRANSITION_FUNCTION_INCURVE:
+            return InCurve;
+        case PURC_WINDOW_TRANSITION_FUNCTION_OUTCURVE:
+            return OutCurve;
+        case PURC_WINDOW_TRANSITION_FUNCTION_SINECURVE:
+            return SineCurve;
+        case PURC_WINDOW_TRANSITION_FUNCTION_COSINECURVE:
+            return CosineCurve;
+        default:
+            return NCurveTypes;
+    }
+}
+

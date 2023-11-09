@@ -662,12 +662,66 @@ browser_plain_window_get_transition(BrowserPlainWindow *window)
     return &window->transition;
 }
 
+#ifdef USE_ANIMATION
+static void animated_cb(MGEFF_ANIMATION handle, HWND hWnd, int id, RECT *rc)
+{
+    (void) handle;
+    MoveWindow(hWnd, rc->left, rc->top, RECTWP(rc), RECTHP(rc), FALSE);
+}
+
+static void move_window_with_transition(BrowserPlainWindow *window, int x,
+        int y, int w, int h)
+{
+    struct purc_window_transition *transition;
+    transition = browser_plain_window_get_transition(window);
+    if (transition->move_func == PURC_WINDOW_TRANSTION_FUNCTION_NONE
+            || transition->move_duration == 0) {
+        MoveWindow(hwnd, x, y, w, h, false);
+        return;
+    }
+
+    enum EffMotionType motion = xgui_get_motion_type(transition->move_func);
+    MGEFF_ANIMATION animation;
+    animation = mGEffAnimationCreate((void *)hWnd, (void *)animated_cb, 1,
+            MGEFF_RECT);
+    if (animation) {
+        RECT start_rc, end_rc;
+        GetWindowRect(hWnd, &start_rc);
+        end_rc.left = x;
+        end_rc.top = y;
+        end_rc.right = end_rc.left + w;
+        end_rc.bottom = end_rc.top + h;
+
+        mGEffAnimationSetStartValue(animation, &start_rc);
+        mGEffAnimationSetEndValue(animation, &end_rc);
+        mGEffAnimationSetDuration(animation, 200);
+        mGEffAnimationSetProperty(animation, MGEFF_PROP_LOOPCOUNT, 1);
+        mGEffAnimationSetCurve(animation, transition->move_duration);
+        mGEffAnimationSyncRun(animation);
+
+        mGEffAnimationDelete(animation);
+    }
+
+}
 
 void browser_plain_window_layout(BrowserPlainWindow *window, int x, int y, int w,
         int h, bool enable_transition)
 {
+    (void) enable_transition;
     HWND hwnd = window->hwnd;
-
-    /* TODO: transition */
+    if (enable_transition && enable_transition) {
+        move_window_with_transition(window, x, y, w, h);
+    }
+    else {
+        MoveWindow(hwnd, x, y, w, h, false);
+    }
+}
+#else
+void browser_plain_window_layout(BrowserPlainWindow *window, int x, int y, int w,
+        int h, bool enable_transition)
+{
+    (void) enable_transition;
+    HWND hwnd = window->hwnd;
     MoveWindow(hwnd, x, y, w, h, false);
 }
+#endif /* USE_ANIMATION */

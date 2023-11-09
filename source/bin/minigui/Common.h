@@ -24,6 +24,7 @@
 
 #include <webkit2/webkit2.h>
 #include <purc/purc-pcrdr.h>
+#include <mgeff/mgeff.h>
 
 #define IDC_BROWSER             140
 #define IDC_PLAIN_WINDOW        141
@@ -70,6 +71,8 @@ void xgui_load_window_bg();
 void xgui_unload_window_bg();
 
 void xgui_webview_draw_background_callback(HWND hWnd, HDC hdc, RECT rect);
+
+enum EffMotionType xgui_get_motion_type(purc_window_transition_function func);
 
 #ifdef __cplusplus
 }
