@@ -480,27 +480,9 @@ void do_redirect(WebKitURISchemeRequest *request, purcmc_endpoint *endpoint,
 
     LOG_DEBUG("origin uri (%s), redirect uri (%s)\n", uri_st->uri, url);
 
-    GInputStream *stream = NULL;
-    WebKitURISchemeResponse *response = NULL;;
-
-    gchar *contents = (gchar *)blank_page;
-    gsize content_length = strlen(contents);
-
-    stream = g_memory_input_stream_new_from_data(contents, content_length, NULL);
-    response = webkit_uri_scheme_response_new(stream, content_length);
-
-    SoupMessageHeaders *header = soup_message_headers_new(SOUP_MESSAGE_HEADERS_RESPONSE);
-    soup_message_headers_append(header, "Location", url);
-    webkit_uri_scheme_response_set_status(response, 302, NULL);
-    webkit_uri_scheme_response_set_http_headers(response, header);
-    webkit_uri_scheme_response_set_content_type(response, "text/html");
-
-    webkit_uri_scheme_request_finish_with_response(request, response);
-
+    finish_with_redirect(request, url);
     free(url);
 
-    g_object_unref(response);
-    g_object_unref(stream);
 }
 
 void load_local_assets(WebKitURISchemeRequest *request,
