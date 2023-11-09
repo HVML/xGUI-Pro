@@ -30,6 +30,28 @@
 
 #include "webext/log.h"
 
+#include <stdio.h>
+
+#define HVML_SCHEMA                 "hvml://"
+#define QUERY_SEPERATOR             '?'
+
+#define LEN_HOST_NAME               127
+#define LEN_APP_NAME                127
+#define LEN_RUNNER_NAME             63
+#define LEN_IDENTIFIER               63
+
+#define RUNNER_HTTP                 "_http"
+#define RUNNER_HTTPS                "_https"
+#define RUNNER_FTP                  "_ftp"
+#define RUNNER_FTPS                 "_ftps"
+#define RUNNER_FILE                 "_file"
+
+#define SCHEMA_HTTP                 "http"
+#define SCHEMA_HTTPS                "https"
+#define SCHEMA_FTP                  "ftp"
+#define SCHEMA_FTPS                 "ftps"
+#define SCHEMA_FILE                 "file"
+
 struct HVMLInfo {
     const char* vendor;
     int   version;
@@ -222,10 +244,130 @@ static gboolean on_hvml_post(WebKitWebPage* web_page,
     return TRUE;
 }
 
+static const char *locate_query(const char *url)
+{
+    const char *query = NULL;
+    query = url;
+    while (*query && *query != QUERY_SEPERATOR) {
+        query++;
+    }
+
+    if (query[0] == 0) {
+        query = NULL;
+    }
+    else {
+        query += 1;
+        if (query[0] == 0) {
+            query = NULL;
+        }
+    }
+    return query;
+}
+
 static char *on_hvml_url_translate(WebKitWebPage* web_page,
         const char *url)
 {
-    return g_strdup(url);
+    if (strncmp(url, HVML_SCHEMA, strlen(HVML_SCHEMA)) != 0) {
+        return g_strdup(url);
+    }
+
+    struct HVMLInfo *info;
+    info = g_object_get_data(G_OBJECT(web_page), "hvml-instance");
+    g_assert_true(info != NULL);
+
+    char *res_url = NULL;
+    char *host = NULL, *app = NULL, *runner = NULL, *group = NULL, *page = NULL;
+    const char *query = NULL;
+    const char *port = NULL;
+    char schema[LEN_RUNNER_NAME + 1];
+    bool is_file_schema = false;
+
+    bool ret = hvml_uri_split_alloc(url, &host, &app, &runner, &group, &page);
+    if (!ret) {
+        goto out;
+    }
+    query = locate_query(url);
+
+    port = strstr(host, ":");
+    if (port && port[1]) {
+        port = port + 1;
+    }
+
+    if (strcmp(runner, RUNNER_HTTP) == 0) {
+        strcpy(schema, SCHEMA_HTTP);
+    }
+    else if (strcmp(runner, RUNNER_HTTPS) == 0) {
+        strcpy(schema, SCHEMA_HTTPS);
+    }
+    else if (strcmp(runner, RUNNER_FTP) == 0) {
+        strcpy(schema, SCHEMA_FTP);
+    }
+    else if (strcmp(runner, RUNNER_FTPS) == 0) {
+        strcpy(schema, SCHEMA_FTPS);
+    }
+    else if (strcmp(runner, RUNNER_FILE) == 0) {
+        is_file_schema = true;
+        strcpy(schema, SCHEMA_FILE);
+    }
+    else {
+        goto out;
+    }
+
+    size_t nr_url = LEN_HOST_NAME + LEN_APP_NAME + LEN_RUNNER_NAME;
+
+    if (port) {
+        nr_url += strlen(port);
+    }
+
+    if (page) {
+        nr_url += strlen(page);
+    }
+
+    if (query) {
+        nr_url += strlen(query);
+    }
+
+    res_url = g_malloc(nr_url + 1);
+    if (!res_url) {
+        goto out;
+    }
+
+    if (is_file_schema) {
+        snprintf(res_url, nr_url, "%s:///app/%s/exported/%s", schema,
+                info->appName, page);
+    }
+    else if (port) {
+        snprintf(res_url, nr_url, "%s://%s:%s/%s/exported/%s", schema,
+                info->hostName, port, info->appName, page);
+    }
+    else {
+        snprintf(res_url, nr_url, "%s://%s/%s/exported/%s", schema,
+                info->hostName, info->appName, page);
+    }
+
+    if (query) {
+        strcat(res_url, "?");
+        strcat(res_url, query);
+    }
+
+out:
+    if (host) {
+        free(host);
+    }
+    if (app) {
+        free(app);
+    }
+    if (runner) {
+        free(runner);
+    }
+    if (group) {
+        free(group);
+    }
+    if (page) {
+        free(page);
+    }
+
+    return res_url ? res_url : g_strdup(url);
 }
 
 static struct HVMLInfo *create_hvml_instance(JSCContext *context,
