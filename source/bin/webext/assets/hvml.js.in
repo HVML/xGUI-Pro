@@ -70,7 +70,12 @@ if (checkHVML()) {
         msg = JSON.parse(json);
 
         if (msg.operation === 'loadFromURL') {
-            var url = msg.data + "?irId=" + msg.requestId + "&loadFromURL=1";
+            var url = msg.data + "?irId=" + msg.requestId + "&loadFromURL=1" +
+                "&host=" + HVML.hostName +
+                "&app=" + HVML.appName +
+                "&runner=" + HVML.runnerName +
+                "&group=" + HVML.groupName +
+                "&page=" + HVML.pageName;
             window.location = url;
             return { requestId: msg.requestId, state: "Ok" };
         }

@@ -554,12 +554,44 @@ window_object_cleared_callback(WebKitScriptWorld* world,
         JSCContext *context;
         context = webkit_frame_get_js_context_for_script_world(frame, world);
 
-        create_hvml_instance(context, web_page,
-                host, app, runner, group, page, request_id);
+        char buf[128];
+        bool load_from_url = hvml_uri_get_query_value(uri, "loadFromURL", buf);
+        if (load_from_url) {
+            hvml_uri_get_query_value(uri, "host", buf);
+            if (host) {
+                free(host);
+            }
+            host = strdup(buf);
 
-        char load_from_url[128];
-        if (!hvml_uri_get_query_value(uri, "loadFromURL", load_from_url)) {
-            LOG_DEBUG("No query 'loadFromURL' set callback\n");
+            hvml_uri_get_query_value(uri, "app", buf);
+            if (app) {
+                free(app);
+            }
+            app = strdup(buf);
+
+            hvml_uri_get_query_value(uri, "runner", buf);
+            if (runner) {
+                free(runner);
+            }
+            runner = strdup(buf);
+
+            hvml_uri_get_query_value(uri, "group", buf);
+            if (group) {
+                free(group);
+            }
+            group = strdup(buf);
+
+            hvml_uri_get_query_value(uri, "page", buf);
+            if (page) {
+                free(page);
+            }
+            page = strdup(buf);
+            create_hvml_instance(context, web_page,
+                    host, app, runner, group, page, request_id);
+        }
+        else {
+            create_hvml_instance(context, web_page,
+                    host, app, runner, group, page, request_id);
             g_signal_connect(web_page, "document-loaded",
                     G_CALLBACK(document_loaded_callback),
                     NULL);
