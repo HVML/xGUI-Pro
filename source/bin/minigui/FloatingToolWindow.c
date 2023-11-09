@@ -20,6 +20,8 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <glib.h>
@@ -148,7 +150,7 @@ static const unsigned char _png_close_data[] = {
 #define MINIMIZED_WIDTH     48
 #define MINIMIZED_HEIGHT    48
 
-#ifdef USE_ANIMATION
+#if USE(ANIMATION)
 static void animated_cb(MGEFF_ANIMATION handle, HWND hWnd, int id, POINT *pt)
 {
     RECT rcWnd;
@@ -219,7 +221,7 @@ static void minimize_tool_window(HWND hWnd)
     IncludeWindowStyle(hWnd, WS_MINIMIZE);
     UpdateWindow(hWnd, FALSE);
 }
-#endif
+#endif /* USE(ANIMATION) */
 
 #define MARGIN_PADDING  10
 

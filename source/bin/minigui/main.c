@@ -928,7 +928,7 @@ int MiniGUIMain (int argc, const char* argv[])
     JoinLayer(NAME_DEF_LAYER , "xGUI Pro" , 0 , 0);
 #endif
 
-#ifdef USE_ANIMATION
+#if USE(ANIMATION)
     mGEffInit();
 #endif
 
@@ -942,7 +942,7 @@ int MiniGUIMain (int argc, const char* argv[])
     g_application_run(g_xgui_application, 0, NULL);
     g_object_unref(g_xgui_application);
 
-#ifdef USE_ANIMATION
+#if USE(ANIMATION)
     mGEffDeinit();
 #endif
 

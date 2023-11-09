@@ -20,9 +20,8 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#if defined(HAVE_CONFIG_H) && HAVE_CONFIG_H && defined(BUILDING_WITH_CMAKE)
-#include "cmakeconfig.h"
-#endif
+#include "config.h"
+
 #include "main.h"
 #include "BrowserPlainWindow.h"
 #include "FloatingToolWindow.h"
@@ -662,7 +661,7 @@ browser_plain_window_get_transition(BrowserPlainWindow *window)
     return &window->transition;
 }
 
-#ifdef USE_ANIMATION
+#if USE(ANIMATION)
 static void animated_cb(MGEFF_ANIMATION handle, HWND hWnd, int id, RECT *rc)
 {
     (void) handle;
@@ -674,19 +673,19 @@ static void move_window_with_transition(BrowserPlainWindow *window, int x,
 {
     struct purc_window_transition *transition;
     transition = browser_plain_window_get_transition(window);
-    if (transition->move_func == PURC_WINDOW_TRANSTION_FUNCTION_NONE
+    if (transition->move_func == PURC_WINDOW_TRANSITION_FUNCTION_NONE
             || transition->move_duration == 0) {
-        MoveWindow(hwnd, x, y, w, h, false);
+        MoveWindow(window->hwnd, x, y, w, h, false);
         return;
     }
 
     enum EffMotionType motion = xgui_get_motion_type(transition->move_func);
     MGEFF_ANIMATION animation;
-    animation = mGEffAnimationCreate((void *)hWnd, (void *)animated_cb, 1,
+    animation = mGEffAnimationCreate((void *)window->hwnd, (void *)animated_cb, 1,
             MGEFF_RECT);
     if (animation) {
         RECT start_rc, end_rc;
-        GetWindowRect(hWnd, &start_rc);
+        GetWindowRect(window->hwnd, &start_rc);
         end_rc.left = x;
         end_rc.top = y;
         end_rc.right = end_rc.left + w;
@@ -694,9 +693,9 @@ static void move_window_with_transition(BrowserPlainWindow *window, int x,
 
         mGEffAnimationSetStartValue(animation, &start_rc);
         mGEffAnimationSetEndValue(animation, &end_rc);
-        mGEffAnimationSetDuration(animation, 200);
+        mGEffAnimationSetDuration(animation, transition->move_duration);
         mGEffAnimationSetProperty(animation, MGEFF_PROP_LOOPCOUNT, 1);
-        mGEffAnimationSetCurve(animation, transition->move_duration);
+        mGEffAnimationSetCurve(animation, motion);
         mGEffAnimationSyncRun(animation);
 
         mGEffAnimationDelete(animation);
@@ -724,4 +723,4 @@ void browser_plain_window_layout(BrowserPlainWindow *window, int x, int y, int w
     HWND hwnd = window->hwnd;
     MoveWindow(hwnd, x, y, w, h, false);
 }
-#endif /* USE_ANIMATION */
+#endif /* USE(ANIMATION) */
