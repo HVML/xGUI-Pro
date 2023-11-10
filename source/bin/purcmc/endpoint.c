@@ -559,7 +559,7 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
     }
 #endif
 
-    tmp = purc_variant_object_get_by_ckey(data, "alllowSwitchingRdr");
+    tmp = purc_variant_object_get_by_ckey(data, "allowSwitchingRdr");
     if (tmp) {
         endpoint->allow_switching_rdr = purc_variant_booleanize(tmp);
     }
