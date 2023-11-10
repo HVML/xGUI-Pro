@@ -249,11 +249,11 @@ static char *load_app_runner_asset_content(const char *app, const char *runner,
     gchar *path;
 
     if (runner) {
-        path = g_strdup_printf("/app/%s/shared/assets/%s_%s.%s", app, name,
+        path = g_strdup_printf("/app/%s/exported/assets/%s_%s.%s", app, name,
                 runner, suffix);
     }
     else {
-        path = g_strdup_printf("/app/%s/shared/assets/%s.%s", app, name, suffix);
+        path = g_strdup_printf("/app/%s/exported/assets/%s.%s", app, name, suffix);
     }
 
     if (path) {
