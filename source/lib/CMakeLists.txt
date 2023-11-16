@@ -54,11 +54,11 @@ XGUIPRO_COPY_FILES(xGUIPro_CopyPrivateHeaders
 )
 list(APPEND xGUIPro_INTERFACE_DEPENDENCIES xGUIPro_CopyPrivateHeaders)
 # xGUIPro_CopyPrivateHeaders needs to have a direct or indirect
-# dependency of xGUIPro target for CMake Visual Studio generator to
-# eliminate duplicated custom commands. Otherwise, CSSPropertyNames.h
+# dependency of xGUIPro target for CMake Visual Studio generator to # eliminate duplicated custom commands. Otherwise, CSSPropertyNames.h
 # will be generated in both projects.
 if (NOT INTERNAL_BUILD)
     add_dependencies(xGUIPro_CopyPrivateHeaders xGUIPro)
+    add_dependencies(xGUIPro WTF)
 endif ()
 
 XGUIPRO_COMPUTE_SOURCES(xGUIPro)
