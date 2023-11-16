@@ -18,7 +18,7 @@ finish-args:
   - --filesystem=xdg-documents
 
 cleanup:
-  - '/include'
+#  - '/include'
   - '*.a'
 
 modules:
@@ -34,7 +34,9 @@ modules:
       - -DUSE_LCMS=OFF
     sources:
       - type: archive
-        url: https://files.fmsoft.cn/sources/WebKitHBD-GTK-2.34.1-20231115-071458-Source.tar.xz
+        url: file:///srv/build/sources/WebKitHBD-2.34.1-20231116-075505-Source.tar.xz
+        archive-type: tar-xz
+        sha256: 01d27dd7f19425d739902fd1e6cdb39a2ef400d0e1064a9cf074e38d3823992a
 
   - name: PurC
     buildsystem: cmake
@@ -46,6 +48,19 @@ modules:
       - -DENABLE_API_TESTS=OFF
     sources:
       - type: git
-        url: ssh://git4os@gitlab.fmsoft.cn:hvml/purc.git
-        tag: ver-0.9.16
+        path: /srv/build/hvml/purc/
+        branch: purcmc-160
+        # tag: ver-0.9.16
+
+  - name: xGUI-Pro
+    buildsystem: cmake
+    config-opts:
+      - -DPORT=GTK
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - -DUSE_SOUP2=OFF
+    sources:
+      - type: git
+        path: /srv/build/hvml/xgui-pro/
+        branch: main
+        # tag: ver-0.9.16
 
