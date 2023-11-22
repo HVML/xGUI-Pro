@@ -25,6 +25,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <glib.h>
+#include <glib-unix.h>
+#include <gio/gio.h>
 
 
 time_t xgutils_get_monotoic_time_ms(void)
@@ -33,5 +36,22 @@ time_t xgutils_get_monotoic_time_ms(void)
 
     clock_gettime(CLOCK_MONOTONIC, &tp);
     return tp.tv_sec * 1000 + tp.tv_nsec * 1.0E-6;
+}
+
+void xgutils_global_set_data(const char *key, void *pointer)
+{
+    GApplication *app = g_application_get_default();
+    if (app) {
+        g_object_set_data(G_OBJECT(app), key, pointer);
+    }
+}
+
+void *xgutils_global_get_data(const char *key)
+{
+    GApplication *app = g_application_get_default();
+    if (app) {
+        return g_object_get_data(G_OBJECT(app), key);
+    }
+    return NULL;
 }
 

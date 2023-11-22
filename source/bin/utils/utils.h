@@ -42,11 +42,22 @@
 #define LOG_INFO(x, ...)    \
     purc_log_info("%s: " x, __func__, ##__VA_ARGS__)
 
+#define APP_PROP_PURCMC_SERVER      "app-prop-purcmc-server"
+
+#define xgutils_set_purcmc_server(server) \
+    xgutils_global_set_data(APP_PROP_PURCMC_SERVER, server)
+#define xguitls_get_purcmc_server() \
+    (struct purcmc_server *)xgutils_global_get_data(APP_PROP_PURCMC_SERVER)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 time_t xgutils_get_monotoic_time_ms(void);
+
+
+void xgutils_global_set_data(const char *key, void *pointer);
+void *xgutils_global_get_data(const char *key);
 
 #ifdef __cplusplus
 }

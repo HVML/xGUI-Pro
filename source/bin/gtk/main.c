@@ -35,6 +35,7 @@
 #include "schema/HVMLURISchema.h"
 
 #include "purcmc/purcmc.h"
+#include "utils/utils.h"
 
 #include <errno.h>
 #include <gtk/gtk.h>
@@ -803,6 +804,7 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
         exit(EXIT_FAILURE);
     }
 
+    xgutils_set_purcmc_server(pcmc_srv);
     GMainContext *context = g_main_context_default();
 
     GSource *source;
