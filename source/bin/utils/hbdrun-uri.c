@@ -108,7 +108,8 @@ static unsigned int get_path_comp_len(const char *str)
 {
     unsigned int len = 0;
 
-    while (*str && *str != COMP_SEPERATOR) {
+    while (*str && *str != COMP_SEPERATOR
+            && *str != QUERY_SEPERATOR) {
         len++;
         str++;
     }

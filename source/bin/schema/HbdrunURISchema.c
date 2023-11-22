@@ -131,10 +131,28 @@ static const char *confirm_page_template = ""
 "        <script type='text/javascript' src='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/js/bootstrap.bundle.min.js'></script>"
 ""
 "        <script>"
-"            function on_radio_change(elem)"
-"            {"
+"            let httpRequest;"
+"            function on_radio_change(elem) {"
 "                const btn = document.getElementById('id_accept');"
 "                btn.textContent = elem.value;"
+"                var result = elem.getAttribute('data-result');"
+"                btn.setAttribute('data-result', result);"
+"            }"
+""
+"            function on_action_result() {"
+"                if (httpRequest.readyState === XMLHttpRequest.DONE) {"
+"                    window.close();"
+"                }"
+"            }"
+""
+"            function on_result(elem)"
+"            {"
+"                var result = elem.getAttribute('data-result');"
+"                var uri = 'hbdrun://action?type=confirm&result=' + result;"
+"                httpRequest = new XMLHttpRequest();"
+"                httpRequest.onreadystatechange = on_action_result;"
+"                httpRequest.open('POST', uri);"
+"                httpRequest.send();"
 "            }"
 "        </script>"
 ""
@@ -154,13 +172,13 @@ static const char *confirm_page_template = ""
 "                <p class='lead mb-4'>%s</p>"
 "                <div class='d-grid gap-2 d-flex justify-content-around'>"
 "                    <div class='btn-group'>"
-"                        <button type='button' class='btn btn-primary' id='id_accept'>%s</button>"
+"                        <button type='button' class='btn btn-primary' id='id_accept' data-result='AcceptOnce' onclick='on_result(this)'>%s</button>"
 "                        <button type='button' class='btn btn-primary dropdown-toggle dropdown-toggle-split' data-bs-toggle='dropdown' aria-expanded='false'>"
 "                        </button>"
 "                        <ul class='dropdown-menu'>"
 "                            <li>"
 "                                <div class='form-check mx-1'>"
-"                                    <input class='form-check-input' type='radio' name='acceptRadio' id='id_accept_once' value='%s' onchange='on_radio_change(this)' checked>"
+"                                    <input class='form-check-input' type='radio' name='acceptRadio' id='id_accept_once' data-result='AcceptOnce' value='%s' onchange='on_radio_change(this)' checked>"
 "                                    <label class='form-check-label' for='id_accept_once'>"
 "                                        %s"
 "                                    </label>"
@@ -168,7 +186,7 @@ static const char *confirm_page_template = ""
 "                            </li>"
 "                            <li>"
 "                                <div class='form-check mx-1'>"
-"                                    <input class='form-check-input' type='radio' name='acceptRadio' id='id_accept_always' value='%s' onchange='on_radio_change(this)' >"
+"                                    <input class='form-check-input' type='radio' name='acceptRadio' id='id_accept_always' data-result='AcceptAlways' value='%s' onchange='on_radio_change(this)' >"
 "                                    <label class='form-check-label' for='id_accept_always'>"
 "                                        %s"
 "                                    </label>"
@@ -176,7 +194,7 @@ static const char *confirm_page_template = ""
 "                            </li>"
 "                        </ul>"
 "                    </div>"
-"                    <button type='button' class='btn btn-outline-secondary'>%s</button>"
+"                    <button type='button' class='btn btn-outline-secondary' data-result='Decline' onclick='on_result(this)'>%s</button>"
 "                </div>"
 "            </div>"
 "        </div>"
@@ -346,7 +364,6 @@ static void on_hbdrun_confirm(WebKitURISchemeRequest *request,
         LOG_WARN("Can not allocate memory for confirm page (%s)", uri);
         goto error;
     }
-    fprintf(stderr, "#####> confirm content \n%s\n", contents);
     send_response(request, 200, "text/html", contents, strlen(contents), g_free);
     return;
 
@@ -474,13 +491,13 @@ void hbdrunURISchemeRequestCallback(WebKitURISchemeRequest *request,
     if (!hbdrun_uri_split(uri,
             host, NULL, NULL, NULL, NULL) ||
             !purc_is_valid_host_name(host)) {
-        LOG_WARN("Invalid hbdrun URI (%s): bad host", uri);
+        LOG_WARN("Invalid hbdrun URI (%s): bad host (%s)", uri, host);
         goto error;
     }
 
     hbdrun_handler handler = find_hbdrun_handler(host);
     if (handler == NOT_FOUND_HANDLER) {
-        LOG_WARN("Invalid hbdrun URI (%s): bad host", uri);
+        LOG_WARN("Invalid hbdrun URI (%s): not found handle for '%s'", uri, host);
         goto error;
     }
 
