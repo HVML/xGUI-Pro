@@ -25,6 +25,8 @@
 
 #include <webkit2/webkit2.h>
 
+#define BROWSER_HBDRUN_SCHEME           "hbdrun"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

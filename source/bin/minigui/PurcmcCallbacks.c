@@ -30,6 +30,7 @@
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "schema/HVMLURISchema.h"
+#include "schema/HbdrunURISchema.h"
 #include "LayouterWidgets.h"
 
 #include "purcmc/purcmc.h"
@@ -419,6 +420,10 @@ purcmc_session *mg_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
     webkit_web_context_register_uri_scheme(web_context,
             BROWSER_HVML_SCHEME,
             (WebKitURISchemeRequestCallback)hvmlURISchemeRequestCallback,
+            web_context, NULL);
+    webkit_web_context_register_uri_scheme(web_context,
+            BROWSER_HBDRUN_SCHEME,
+            (WebKitURISchemeRequestCallback)hbdrunURISchemeRequestCallback,
             web_context, NULL);
 
     sess->webkit_settings = webkit_settings;

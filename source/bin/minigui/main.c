@@ -32,6 +32,7 @@
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "schema/HVMLURISchema.h"
+#include "schema/HbdrunURISchema.h"
 #include "Common.h"
 #include "BrowserPlainWindow.h"
 
@@ -818,6 +819,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
 
     // hvml schema
     webkit_web_context_register_uri_scheme(webContext, BROWSER_HVML_SCHEME, (WebKitURISchemeRequestCallback)hvmlURISchemeRequestCallback, webContext, NULL);
+    webkit_web_context_register_uri_scheme(webContext, BROWSER_HBDRUN_SCHEME, (WebKitURISchemeRequestCallback)hbdrunURISchemeRequestCallback, webContext, NULL);
 
     if (contentFilter) {
         GFile *contentFilterFile = g_file_new_for_commandline_arg(contentFilter);
