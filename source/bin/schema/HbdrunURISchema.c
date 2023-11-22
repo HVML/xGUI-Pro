@@ -28,6 +28,7 @@
 //#include "LayouterWidgets.h"
 
 #include "utils/utils.h"
+#include "utils/hbdrun-uri.h"
 #include "purcmc/server.h"
 #include "purcmc/purcmc.h"
 
@@ -37,6 +38,7 @@
 #include <gio/gunixinputstream.h>
 
 #include <assert.h>
+#include <stdio.h>
 
 #define HBDRUN_SCHEMA_TYPE_VERSION          "version"
 #define HBDRUN_SCHEMA_TYPE_APPS             "apps"
@@ -59,7 +61,7 @@ static const char *runners_page_templage = ""
 "        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>"
 "        <meta name='viewport' content='width=device-width, initial-scale=1'>"
 "        <!-- Bootstrap core CSS -->"
-"        <link rel='stylesheet' href='//localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/css/bootstrap.min.css' />"
+"        <link rel='stylesheet' href='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/css/bootstrap.min.css' />"
 "        <script type='text/javascript' src='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/js/bootstrap.min.js'></script>"
 ""
 "        <style>"
@@ -123,7 +125,7 @@ static const char *confirm_page_template = ""
 "        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>"
 "        <meta name='viewport' content='width=device-width, initial-scale=1'>"
 "        <!-- Bootstrap core CSS -->"
-"        <link rel='stylesheet' href='//localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/css/bootstrap.min.css' />"
+"        <link rel='stylesheet' href='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/css/bootstrap.min.css' />"
 "        <script type='text/javascript' src='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/js/bootstrap.min.js'></script>"
 ""
 "        <script>"
@@ -342,6 +344,7 @@ static void on_hbdrun_confirm(WebKitURISchemeRequest *request,
         LOG_WARN("Can not allocate memory for confirm page (%s)", uri);
         goto error;
     }
+    fprintf(stderr, "#####> confirm content \n%s\n", contents);
     send_response(request, 200, "text/html", contents, strlen(contents), g_free);
     return;
 
@@ -411,7 +414,7 @@ void hbdrunURISchemeRequestCallback(WebKitURISchemeRequest *request,
     const char *uri = webkit_uri_scheme_request_get_uri(request);
     char host[PURC_LEN_HOST_NAME + 1];
 
-    if (!purc_hvml_uri_split(uri,
+    if (!hbdrun_uri_split(uri,
             host, NULL, NULL, NULL, NULL) ||
             !purc_is_valid_host_name(host)) {
         LOG_WARN("Invalid hbdrun URI (%s): bad host", uri);
