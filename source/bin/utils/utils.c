@@ -31,6 +31,7 @@
 
 #include <webkit2/webkit2.h>
 #include <purcmc/purcmc.h>
+#include <schema/HbdrunURISchema.h>
 
 #if PLATFORM(MINIGUI)
 #include <minigui/BrowserPlainWindow.h>
@@ -115,6 +116,27 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(NULL,
                 web_context, label, label));
 #endif
-    return 0;
+
+    GMainContext *context = g_main_context_default();
+    int result = IDNO;
+    while (true) {
+        g_main_context_iteration(context, FALSE);
+        char *p = g_object_get_data(G_OBJECT(web_view),
+                BROWSER_HBDRUN_ACTION_PARAM_RESULT);
+        if (p != NULL) {
+            /* TODO : keep result */
+            if (strcasecmp(p, CONFIRM_RESULT_DECLINE) == 0) {
+                result = IDNO;
+            }
+            else {
+                result = IDYES;
+            }
+            g_object_set_data(G_OBJECT(web_view),
+                BROWSER_HBDRUN_ACTION_PARAM_RESULT, NULL);
+            g_free(p);
+            break;
+        }
+    }
+    return result;
 }
 
