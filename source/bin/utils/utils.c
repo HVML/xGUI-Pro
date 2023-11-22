@@ -29,6 +29,20 @@
 #include <glib-unix.h>
 #include <gio/gio.h>
 
+#include <webkit2/webkit2.h>
+#include <purcmc/purcmc.h>
+
+#if PLATFORM(MINIGUI)
+#include <minigui/BrowserPlainWindow.h>
+#else
+#include <gtk/BrowserPlainWindow.h>
+#endif
+
+#include "utils.h"
+
+#if PLATFORM(MINIGUI)
+extern HWND g_xgui_main_window;
+#endif
 
 time_t xgutils_get_monotoic_time_ms(void)
 {
@@ -53,5 +67,54 @@ void *xgutils_global_get_data(const char *key)
         return g_object_get_data(G_OBJECT(app), key);
     }
     return NULL;
+}
+
+int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
+        const char *app_icon)
+{
+    (void) app_label;
+    (void) app_desc;
+    (void) app_icon;
+
+    WebKitWebContext *web_context = xguitls_get_web_context();
+    if (!web_context) {
+        return -1;
+    }
+
+    struct purcmc_server *server = xguitls_get_purcmc_server();
+    const char *hbdrun_url = "hbdrun://confirm";
+
+    BrowserPlainWindow *plainwin;
+#if PLATFORM(MINIGUI)
+    HWND hWnd = GetActiveWindow();
+    hWnd = hWnd ? hWnd : g_xgui_main_window;
+    plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(hWnd,
+                web_context, app_label, app_label,
+                WINDOW_LEVEL_HIGHER, NULL, TRUE));
+    WebKitSettings *webkit_settings = purcmc_rdrsrv_get_user_data(server);
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
+    WebKitWebsitePolicies *defaultWebsitePolicies = g_object_get_data(
+            G_OBJECT(webkit_settings), "default-website-policies");
+#endif
+
+    WebKitWebViewParam param = {
+        .webContext = web_context,
+        .settings = webkit_settings,
+        .userContentManager = NULL,
+        .isControlledByAutomation = webkit_web_context_is_automation_allowed(web_context),
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
+        .websitePolicies = defaultWebsitePolicies,
+#endif
+        .webViewId = IDC_BROWSER,
+    };
+    browser_plain_window_set_view(plainwin, &param);
+    browser_plain_window_load_uri(plainwin, hbdrun_url);
+    WebKitWebView *web_view = browser_plain_window_get_view(plainwin);
+    g_object_set_data(G_OBJECT(web_view), "purcmc-container", plainwin);
+#else
+    plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(NULL,
+                web_context, label, label));
+#endif
+    return 0;
 }
 

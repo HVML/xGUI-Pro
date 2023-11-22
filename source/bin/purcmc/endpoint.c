@@ -29,6 +29,7 @@
 #include "endpoint.h"
 #include "unixsocket.h"
 #include "websocket.h"
+#include "utils/utils.h"
 
 #if PLATFORM(MINIGUI)
 #include "minigui/AuthWindow.h"
@@ -550,9 +551,13 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
 
         const char *s_label = purc_variant_get_string_const(label);
         const char *s_desc = purc_variant_get_string_const(desc);
+#if 0
         HWND hWnd = GetActiveWindow();
         int auth_ret = show_auth_window(hWnd ? hWnd : g_xgui_main_window,
                 app_name, s_label, s_desc, host_name, ut);
+#else
+        int auth_ret = xgutils_show_confirm_window(s_label, s_desc, NULL);
+#endif
         if (auth_ret == IDNO) {
             return PCRDR_SC_UNAUTHORIZED;
         }

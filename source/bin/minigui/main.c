@@ -822,6 +822,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     // hvml schema
     webkit_web_context_register_uri_scheme(webContext, BROWSER_HVML_SCHEME, (WebKitURISchemeRequestCallback)hvmlURISchemeRequestCallback, webContext, NULL);
     webkit_web_context_register_uri_scheme(webContext, BROWSER_HBDRUN_SCHEME, (WebKitURISchemeRequestCallback)hbdrunURISchemeRequestCallback, webContext, NULL);
+    xgutils_set_web_context(webContext);
 
     if (contentFilter) {
         GFile *contentFilterFile = g_file_new_for_commandline_arg(contentFilter);

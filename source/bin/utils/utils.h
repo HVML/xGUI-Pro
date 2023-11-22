@@ -43,11 +43,17 @@
     purc_log_info("%s: " x, __func__, ##__VA_ARGS__)
 
 #define APP_PROP_PURCMC_SERVER      "app-prop-purcmc-server"
+#define APP_PROP_WEB_CONTEXT        "app-prop-web-context"
 
 #define xgutils_set_purcmc_server(server) \
     xgutils_global_set_data(APP_PROP_PURCMC_SERVER, server)
 #define xguitls_get_purcmc_server() \
     (struct purcmc_server *)xgutils_global_get_data(APP_PROP_PURCMC_SERVER)
+
+#define xgutils_set_web_context(ctxt) \
+    xgutils_global_set_data(APP_PROP_WEB_CONTEXT, ctxt)
+#define xguitls_get_web_context() \
+    (WebKitWebContext *)xgutils_global_get_data(APP_PROP_WEB_CONTEXT)
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,6 +64,9 @@ time_t xgutils_get_monotoic_time_ms(void);
 
 void xgutils_global_set_data(const char *key, void *pointer);
 void *xgutils_global_get_data(const char *key);
+
+int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
+        const char *app_icon);
 
 #ifdef __cplusplus
 }
