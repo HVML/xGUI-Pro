@@ -53,6 +53,8 @@ typedef void (*hbdrun_handler)(WebKitURISchemeRequest *request,
 static const char *error_page =
     "<html><body><h1>%d : %s</h1></body></html>";
 
+static const char *confirm_success = "{'code':200}";
+
 /* title, cards */
 static const char *runners_page_templage = ""
 "<!DOCTYPE html>"
@@ -357,12 +359,67 @@ error:
     }
 }
 
+static void on_hbdrun_action_confirm(WebKitURISchemeRequest *request,
+        WebKitWebContext *webContext, const char *uri)
+{
+    char *err_info = NULL;
+    char *result = NULL;
+    if (!hbdrun_uri_get_query_value_alloc(uri,
+                BROWSER_HBDRUN_ACTION_PARAM_RESULT, &result)) {
+        err_info = g_strdup_printf("invalid result param (%s)", uri);
+        goto error;
+    }
+
+    WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
+    g_object_set_data(G_OBJECT(webview), BROWSER_HBDRUN_ACTION_PARAM_RESULT,
+            result);
+
+    send_response(request, 200, "application/json", (char *)confirm_success,
+            strlen(confirm_success), NULL);
+    return;
+
+error:
+    if (err_info) {
+        send_error_response(request, 500, "text/html", err_info, strlen(err_info), g_free);
+    }
+
+    if (result) {
+        g_free(result);
+    }
+}
+
 static void on_hbdrun_action(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext, const char *uri)
 {
     (void) request;
     (void) webContext;
     (void) uri;
+    char *err_info = NULL;
+    char *type = NULL;
+    if (!hbdrun_uri_get_query_value_alloc(uri,
+                BROWSER_HBDRUN_ACTION_PARAM_TYPE, &type)) {
+        err_info = g_strdup_printf("invalid rquest type (%s)", uri);
+        goto error;
+    }
+
+    /* confirm */
+    if (strcasecmp(type, BROWSER_HBDRUN_ACTION_TYPE_CONFIRM) == 0) {
+        on_hbdrun_action_confirm(request, webContext, uri);
+    }
+
+    if (type) {
+        g_free(type);
+    }
+    return;
+
+error:
+    if (err_info) {
+        send_error_response(request, 500, "text/html", err_info, strlen(err_info), g_free);
+    }
+
+    if (type) {
+        g_free(type);
+    }
 }
 
 static struct hbdrun_handler {

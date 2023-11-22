@@ -25,7 +25,16 @@
 
 #include <webkit2/webkit2.h>
 
-#define BROWSER_HBDRUN_SCHEME           "hbdrun"
+#define BROWSER_HBDRUN_SCHEME                           "hbdrun"
+
+#define BROWSER_HBDRUN_ACTION_PARAM_TYPE                "type"
+#define BROWSER_HBDRUN_ACTION_PARAM_RESULT              "result"
+
+#define BROWSER_HBDRUN_ACTION_TYPE_CONFIRM              "confirm"
+
+#define CONFIRM_RESULT_ACCEPT_ONCE                      "AcceptOnce"
+#define CONFIRM_RESULT_ACCEPT_ALWAYS                    "AcceptALWAYS"
+#define CONFIRM_RESULT_DECLINE                          "Decline"
 
 #ifdef __cplusplus
 extern "C" {
