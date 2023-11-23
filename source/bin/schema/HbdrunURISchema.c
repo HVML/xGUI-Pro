@@ -95,7 +95,7 @@ static const char *runners_page_templage = ""
 static const char *runner_template = ""
 "                                <div class='list-group-item list-group-item-action d-flex' >"
 "                                    <div>"
-"                                        <input class='form-check-input me-1 h5' type='checkbox' value='' id='firstCheckbox' checked>"
+"                                        <input class='form-check-input me-1 h5' type='checkbox' value='' id='firstCheckbox'>"
 "                                    </div>"
 "                                    <div class='w-95'>"
 "                                        <label class='form-check-label h5' for='firstCheckbox'>%s</label>"
@@ -104,8 +104,8 @@ static const char *runner_template = ""
 "                                </div>"
 "";
 
-/* icon, app label, desc, runners, switch button text */
-static const char *runners_card_templage = ""
+/* icon, app label, desc */
+static const char *runners_card_tmpl_prefix = ""
 "                    <div class='col mx-auto'>"
 "                        <div class='card card-cover h-100 overflow-hidden text-bg-light rounded-4 shadow-lg p-3'>"
 "                            <div class='d-inline-flex  align-items-center'>"
@@ -116,7 +116,10 @@ static const char *runners_card_templage = ""
 "                            </div>"
 "                            <p>%s</p>"
 "                            <div class='list-group'>"
-"%s"
+"";
+
+/* button */
+static const char *runners_card_tmpl_suffix = ""
 "                            </div>"
 "                            <button type='button' class='btn btn-primary m-3'>%s</button>"
 "                        </div>"
@@ -293,14 +296,6 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
         goto error;
     }
 
-    /* TODO: multiply runners */
-    {
-        const char *label = "主行者";
-        const char *endpoint = "edpt://localhost/cn.fmsoft.hvml.xGUIPro/lockscreen";
-        g_output_stream_printf(runner_output_stream, NULL, NULL, NULL, runner_template,
-                label, endpoint);
-    }
-
     /* icon, app label, desc, runners, switch button text */
     // runners_card_templage = ""
     card_output_stream = g_memory_output_stream_new(NULL, 0, g_realloc, g_free);
@@ -309,16 +304,26 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
         goto error;
     }
 
+    const char *app_label = "智能面板";
+    const char *app_desc = "这是智能面板的应用，主要用于显示设备态态，操控相关设备";
+    const char *switch_btn = "切换";
+    g_output_stream_printf(card_output_stream, NULL, NULL, NULL,
+            runners_card_tmpl_prefix, icon, app_label, app_desc);
+
+    /* TODO: multiply runners */
     {
-        const char *app_label = "智能面板";
-        const char *app_desc = "这是智能面板的应用，主要用于显示设备态态，操控相关设备";
-        const char *switch_btn = "切换";
-        g_output_stream_printf(card_output_stream, NULL, NULL, NULL, runners_card_templage,
-                icon, app_label, app_desc,
-                g_memory_output_stream_get_data(
-                    G_MEMORY_OUTPUT_STREAM(runner_output_stream)),
-                switch_btn);
+        const char *label = "主行者";
+        const char *endpoint = "edpt://localhost/cn.fmsoft.hvml.xGUIPro/lockscreen";
+        g_output_stream_printf(card_output_stream, NULL, NULL, NULL, runner_template,
+                label, endpoint);
+        label = "次行者";
+        endpoint = "edpt://localhost/cn.fmsoft.hvml.xGUIPro/main";
+        g_output_stream_printf(card_output_stream, NULL, NULL, NULL, runner_template,
+                label, endpoint);
     }
+
+        g_output_stream_printf(card_output_stream, NULL, NULL, NULL,
+                runners_card_tmpl_suffix, switch_btn);
 
     /* title, cards */
     // runners_page_templage;
@@ -335,10 +340,7 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
         }
         send_response(request, 200, "text/html", contents, strlen(contents), g_free);
         if (card_output_stream) {
-            g_object_unref(runner_output_stream);
-        }
-        if (runner_output_stream) {
-            g_object_unref(runner_output_stream);
+            g_object_unref(card_output_stream);
         }
         return;
     }
@@ -349,9 +351,6 @@ error:
     }
     if (card_output_stream) {
         g_object_unref(card_output_stream);
-    }
-    if (runner_output_stream) {
-        g_object_unref(runner_output_stream);
     }
 }
 
