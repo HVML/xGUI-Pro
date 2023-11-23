@@ -47,6 +47,10 @@
 #define HBDRUN_SCHEMA_TYPE_CONFIRM          "confirm"
 #define HBDRUN_SCHEMA_TYPE_ACTION           "action"
 
+#define CONFIRM_BTN_TEXT_ACCEPT_ONCE        "接受一次"
+#define CONFIRM_BTN_TEXT_ACCEPT_ALWAYS      "始终接受"
+#define CONFIRM_BTN_TEXT_DECLINE            "拒绝"
+
 typedef void (*hbdrun_handler)(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext, const char *uri);
 
@@ -342,23 +346,35 @@ static void on_hbdrun_confirm(WebKitURISchemeRequest *request,
     (void) request;
     (void) webContext;
     (void) uri;
+    size_t nr_uri = strlen(uri) + 1;
 
-    /* test code */
-    const char *icon = "hvml://localhost/_renderer/_builtin/-/assets/hvml.png";
-    const char *app_label = "Smart Panel";
-    const char *app_desc = "Smart panel, it replaces your traditional light switch"
-        "and then communicates with other smart devices over Wi-Fi, "
-        "making it a combined smart light system and smart audio system.";
-    const char *accept_once = "Accept Once";
-    const char *accept_always = "Accept Always";
-    const char *decline = "Decline";
+    char label[nr_uri];
+    hbdrun_uri_get_query_value(uri, CONFIRM_PARAM_LABEL, label);
+    char *app_label = g_uri_unescape_string(label, NULL);
+
+    char desc[nr_uri];
+    hbdrun_uri_get_query_value(uri, CONFIRM_PARAM_DESC, desc);
+    char *app_desc = g_uri_unescape_string(desc, NULL);
+
+    char icon[nr_uri];
+    hbdrun_uri_get_query_value(uri, CONFIRM_PARAM_ICON, icon);
+    char *app_icon = g_uri_unescape_string(icon, NULL);
+
+    const char *accept_once = CONFIRM_BTN_TEXT_ACCEPT_ONCE;
+    const char *accept_always = CONFIRM_BTN_TEXT_ACCEPT_ALWAYS;
+    const char *decline = CONFIRM_BTN_TEXT_DECLINE;
 
     /* icon url, app label, desc, accept once, accept once, accept once,
      * accept always, accept always, Decline  */
     char *err_info = NULL;
     char *contents = g_strdup_printf(confirm_page_template,
-            icon, app_label, app_desc, accept_once, accept_once, accept_once,
+            app_icon, app_label, app_desc, accept_once, accept_once, accept_once,
             accept_always, accept_always, decline);
+
+    g_free(app_label);
+    g_free(app_desc);
+    g_free(app_icon);
+
     if (!contents) {
         err_info = g_strdup_printf("Can not allocate memory for confirm page (%s)", uri);
         LOG_WARN("Can not allocate memory for confirm page (%s)", uri);

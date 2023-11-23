@@ -36,6 +36,10 @@
 #define CONFIRM_RESULT_ACCEPT_ALWAYS                    "AcceptALWAYS"
 #define CONFIRM_RESULT_DECLINE                          "Decline"
 
+#define CONFIRM_PARAM_LABEL                             "label"
+#define CONFIRM_PARAM_DESC                              "desc"
+#define CONFIRM_PARAM_ICON                              "icon"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

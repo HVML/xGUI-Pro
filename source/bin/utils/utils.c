@@ -71,11 +71,16 @@ void *xgutils_global_get_data(const char *key)
 }
 
 int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
-        const char *app_icon)
+        const char *app_icon, uint64_t timeout_seconds)
 {
     (void) app_label;
     (void) app_desc;
     (void) app_icon;
+    (void) timeout_seconds;
+
+    if (!app_icon) {
+        app_icon = "hvml://localhost/_renderer/_builtin/-/assets/hvml.png";
+    }
 
     WebKitWebContext *web_context = xguitls_get_web_context();
     if (!web_context) {
@@ -83,7 +88,9 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
     }
 
     struct purcmc_server *server = xguitls_get_purcmc_server();
-    const char *hbdrun_url = "hbdrun://confirm";
+
+    char *uri = g_strdup_printf("hbdrun://confirm?label=%s&desc=%s&icon=%s",
+            app_label, app_desc, app_icon);
 
     BrowserPlainWindow *plainwin;
 #if PLATFORM(MINIGUI)
@@ -109,7 +116,7 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
         .webViewId = IDC_BROWSER,
     };
     browser_plain_window_set_view(plainwin, &param);
-    browser_plain_window_load_uri(plainwin, hbdrun_url);
+    browser_plain_window_load_uri(plainwin, uri);
     WebKitWebView *web_view = browser_plain_window_get_view(plainwin);
     g_object_set_data(G_OBJECT(web_view), "purcmc-container", plainwin);
 #else
@@ -136,6 +143,10 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
             g_free(p);
             break;
         }
+    }
+
+    if (uri) {
+        g_free(uri);
     }
     return result;
 }
