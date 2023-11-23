@@ -59,8 +59,8 @@ static const char *error_page =
 
 static const char *confirm_success = "{'code':200}";
 
-/* title, cards */
-static const char *runners_page_templage = ""
+/* title */
+static const char *runners_page_tmpl_prefix = ""
 "<!DOCTYPE html>"
 "<html lang='zh-CN'>"
 "    <head>"
@@ -82,7 +82,9 @@ static const char *runners_page_templage = ""
 "                <h2 class='pb-2 border-bottom'>%s</h2>"
 ""
 "                <div class='row row-cols-1 row-cols-lg-2 row-cols-xl-3 align-items-stretch g-4 py-5'>"
-"%s"
+"";
+
+static const char *runners_page_tmpl_suffix = ""
 "                </div>"
 ""
 "            </div>"
@@ -284,73 +286,73 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
     (void) request;
     (void) webContext;
     (void) uri;
-
     const char *icon = "hvml://localhost/_renderer/_builtin/-/assets/hvml.png";
-    /* runner label, runner endpoint */
-    // runner_template = ""
-    char *err_info = NULL;
-    GOutputStream *card_output_stream = NULL;
-    GOutputStream *runner_output_stream = g_memory_output_stream_new(NULL, 0, g_realloc, g_free);
-    if (!runner_output_stream) {
-        err_info = g_strdup_printf("Can not allocate memory (%s)", uri);
-        goto error;
-    }
-
-    /* icon, app label, desc, runners, switch button text */
-    // runners_card_templage = ""
-    card_output_stream = g_memory_output_stream_new(NULL, 0, g_realloc, g_free);
-    if (!card_output_stream) {
-        err_info = g_strdup_printf("Can not allocate memory (%s)", uri);
-        goto error;
-    }
-
-    const char *app_label = "智能面板";
-    const char *app_desc = "这是智能面板的应用，主要用于显示设备态态，操控相关设备";
+    const char *title = "所有应用";
     const char *switch_btn = "切换";
-    g_output_stream_printf(card_output_stream, NULL, NULL, NULL,
-            runners_card_tmpl_prefix, icon, app_label, app_desc);
 
-    /* TODO: multiply runners */
-    {
-        const char *label = "主行者";
-        const char *endpoint = "edpt://localhost/cn.fmsoft.hvml.xGUIPro/lockscreen";
-        g_output_stream_printf(card_output_stream, NULL, NULL, NULL, runner_template,
-                label, endpoint);
-        label = "次行者";
-        endpoint = "edpt://localhost/cn.fmsoft.hvml.xGUIPro/main";
-        g_output_stream_printf(card_output_stream, NULL, NULL, NULL, runner_template,
-                label, endpoint);
+    struct kvlist app_list;
+    kvlist_init(&app_list, NULL);
+
+    struct purcmc_server *server = xguitls_get_purcmc_server();
+
+    GOutputStream *page_stream = NULL;
+    page_stream = g_memory_output_stream_new(NULL, 0, g_realloc, g_free);
+    g_output_stream_printf(page_stream, NULL, NULL, NULL,
+            runners_page_tmpl_prefix, title);
+
+    char *err_info = NULL;
+    const char *name;
+    void *next, *data;
+    purcmc_endpoint *endpoint;
+    kvlist_for_each_safe(&server->endpoint_list, name, next, data) {
+        endpoint = *(purcmc_endpoint **)data;
+        GOutputStream *stream = kvlist_get(&app_list, endpoint->app_name);
+        if (!stream) {
+            stream = g_memory_output_stream_new(NULL, 0, g_realloc, g_free);
+            if (!stream) {
+                err_info = g_strdup_printf("Can not allocate memory for runner page");
+                goto error;
+            }
+            kvlist_set(&app_list, endpoint->app_name, &stream);
+            g_output_stream_printf(stream, NULL, NULL, NULL,
+                runners_card_tmpl_prefix, icon, endpoint->app_name,
+                endpoint->app_name);
+        }
+        g_output_stream_printf(stream, NULL, NULL, NULL, runner_template,
+                endpoint->runner_name, name);
     }
 
-        g_output_stream_printf(card_output_stream, NULL, NULL, NULL,
+    kvlist_for_each_safe(&app_list, name, next, data) {
+        GOutputStream *stream = *(GOutputStream **)data;
+        g_output_stream_printf(stream, NULL, NULL, NULL,
                 runners_card_tmpl_suffix, switch_btn);
-
-    /* title, cards */
-    // runners_page_templage;
-    {
-        const char *title = "所有应用";
         gpointer *cards = g_memory_output_stream_get_data(
-                G_MEMORY_OUTPUT_STREAM(card_output_stream));
-        char *contents = g_strdup_printf(runners_page_templage,
-                title, cards);
-        if (!contents) {
-            err_info = g_strdup_printf("Can not allocate memory for runners page (%s)", uri);
-            LOG_WARN("Can not allocate memory for runners page (%s)", uri);
-            goto error;
-        }
-        send_response(request, 200, "text/html", contents, strlen(contents), g_free);
-        if (card_output_stream) {
-            g_object_unref(card_output_stream);
-        }
-        return;
+                G_MEMORY_OUTPUT_STREAM(stream));
+        gsize size = g_memory_output_stream_get_size(
+                G_MEMORY_OUTPUT_STREAM(stream));
+        g_output_stream_write(page_stream, cards, size, NULL, NULL);
+        g_object_unref(stream);
     }
+    g_output_stream_write(page_stream, runners_page_tmpl_suffix,
+            strlen(runners_page_tmpl_suffix), NULL, NULL);
+
+    g_output_stream_close(page_stream, NULL, NULL);
+    gsize size = g_memory_output_stream_get_size(
+            G_MEMORY_OUTPUT_STREAM(page_stream));
+    data = g_memory_output_stream_steal_data(
+            G_MEMORY_OUTPUT_STREAM(page_stream));
+    send_response(request, 200, "text/html", (char*)data, size, g_free);
+    if (page_stream) {
+        g_object_unref(page_stream);
+    }
+    return;
 
 error:
     if (err_info) {
         send_error_response(request, 500, "text/html", err_info, strlen(err_info), g_free);
     }
-    if (card_output_stream) {
-        g_object_unref(card_output_stream);
+    if (page_stream) {
+        g_object_unref(page_stream);
     }
 }
 
