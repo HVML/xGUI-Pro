@@ -70,32 +70,16 @@ void *xgutils_global_get_data(const char *key)
     return NULL;
 }
 
-int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
-        const char *app_icon, uint64_t timeout_seconds)
+static BrowserPlainWindow *create_plainwin_with_uri(const char *name,
+        const char *title, const char *uri)
 {
-    (void) app_label;
-    (void) app_desc;
-    (void) app_icon;
-    (void) timeout_seconds;
-
-    if (!app_icon) {
-        app_icon = "hvml://localhost/_renderer/_builtin/-/assets/hvml.png";
-    }
-
+    BrowserPlainWindow *plainwin = NULL;
     WebKitWebContext *web_context = xguitls_get_web_context();
     if (!web_context) {
-        return -1;
+        return NULL;
     }
 
     struct purcmc_server *server = xguitls_get_purcmc_server();
-
-    char *uri = g_strdup_printf("hbdrun://confirm?%s=%s&%s=%s&%s=%s&%s=%ld",
-            CONFIRM_PARAM_LABEL, app_label,
-            CONFIRM_PARAM_DESC, app_desc,
-            CONFIRM_PARAM_ICON, app_icon,
-            CONFIRM_PARAM_TIMEOUT, timeout_seconds);
-
-    BrowserPlainWindow *plainwin;
     WebKitSettings *webkit_settings = purcmc_rdrsrv_get_user_data(server);
 
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
@@ -111,7 +95,7 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
     HWND hWnd = GetActiveWindow();
     hWnd = hWnd ? hWnd : g_xgui_main_window;
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(hWnd,
-                web_context, app_label, app_label,
+                web_context, name, title,
                 WINDOW_LEVEL_HIGHER, NULL, TRUE));
 
     WebKitWebViewParam param = {
@@ -130,7 +114,7 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
     g_object_set_data(G_OBJECT(web_view), "purcmc-container", plainwin);
 #else
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(NULL,
-                web_context, app_label, app_label));
+                web_context, name, title));
 
     GtkApplication *application;
     application = g_object_get_data(G_OBJECT(webkit_settings), "gtk-application");
@@ -155,9 +139,32 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
     browser_plain_window_load_uri(plainwin, uri);
     gtk_widget_show(GTK_WIDGET(plainwin));
 #endif
+    return plainwin;
+}
+
+int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
+        const char *app_icon, uint64_t timeout_seconds)
+{
+    int result = CONFIRM_RESULT_ID_DECLINE;
+    if (!app_icon) {
+        app_icon = "hvml://localhost/_renderer/_builtin/-/assets/hvml.png";
+    }
+
+    char *uri = g_strdup_printf("hbdrun://confirm?%s=%s&%s=%s&%s=%s&%s=%ld",
+            CONFIRM_PARAM_LABEL, app_label,
+            CONFIRM_PARAM_DESC, app_desc,
+            CONFIRM_PARAM_ICON, app_icon,
+            CONFIRM_PARAM_TIMEOUT, timeout_seconds);
+
+    BrowserPlainWindow *plainwin;
+    plainwin = create_plainwin_with_uri(app_label, app_label, uri);
+    if (!plainwin) {
+        goto out;
+    }
+
+    WebKitWebView *web_view = browser_plain_window_get_view(plainwin);
 
     GMainContext *context = g_main_context_default();
-    int result = CONFIRM_RESULT_ID_DECLINE;
     while (true) {
         g_main_context_iteration(context, FALSE);
         char *p = g_object_get_data(G_OBJECT(web_view),
@@ -180,6 +187,7 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
         }
     }
 
+out:
     if (uri) {
         g_free(uri);
     }
