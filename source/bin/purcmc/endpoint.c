@@ -32,7 +32,11 @@
 #include "utils/utils.h"
 
 #if PLATFORM(MINIGUI)
-#include "minigui/AuthWindow.h"
+#include <minigui/common.h>
+#include <minigui/minigui.h>
+#include <minigui/gdi.h>
+#include <minigui/window.h>
+#include <minigui/control.h>
 bool mg_find_handle(void *session, uint64_t handle, void **data);
 #endif
 
