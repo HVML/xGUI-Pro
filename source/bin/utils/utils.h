@@ -55,6 +55,10 @@
 #define xguitls_get_web_context() \
     (WebKitWebContext *)xgutils_global_get_data(APP_PROP_WEB_CONTEXT)
 
+#define CONFIRM_RESULT_ID_ACCEPT_ONCE                   1
+#define CONFIRM_RESULT_ID_ACCEPT_ALWAYS                 2
+#define CONFIRM_RESULT_ID_DECLINE                       3
+
 #ifdef __cplusplus
 extern "C" {
 #endif

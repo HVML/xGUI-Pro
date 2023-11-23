@@ -475,9 +475,6 @@ failed:
 typedef int (*request_handler)(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg);
 
-#if PLATFORM(MINIGUI)
-extern HWND g_xgui_main_window;
-#endif
 static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
         purc_variant_t data)
 {
@@ -529,7 +526,6 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
         return PCRDR_SC_NOT_ACCEPTABLE;
     }
 
-#if PLATFORM(MINIGUI)
     /* popup auth window  */
     if ((tmp = purc_variant_object_get_by_ckey(data, "signature"))) {
         purc_variant_t label = purc_variant_object_get_by_ckey(data, "appLabel");
@@ -554,18 +550,12 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
         const char *s_label = purc_variant_get_string_const(label);
         const char *s_desc = purc_variant_get_string_const(desc);
         const char *s_icon = purc_variant_get_string_const(icon);
-#if 0
-        HWND hWnd = GetActiveWindow();
-        int auth_ret = show_auth_window(hWnd ? hWnd : g_xgui_main_window,
-                app_name, s_label, s_desc, host_name, ut);
-#else
+
         int auth_ret = xgutils_show_confirm_window(s_label, s_desc, s_icon, ut);
-#endif
-        if (auth_ret == IDNO) {
+        if (auth_ret == CONFIRM_RESULT_ID_DECLINE) {
             return PCRDR_SC_UNAUTHORIZED;
         }
     }
-#endif
 
     tmp = purc_variant_object_get_by_ckey(data, "allowSwitchingRdr");
     if (tmp) {

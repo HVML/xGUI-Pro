@@ -96,22 +96,28 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
             CONFIRM_PARAM_TIMEOUT, timeout_seconds);
 
     BrowserPlainWindow *plainwin;
+    WebKitSettings *webkit_settings = purcmc_rdrsrv_get_user_data(server);
+
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
+    WebKitWebsitePolicies *defaultWebsitePolicies = g_object_get_data(
+            G_OBJECT(webkit_settings), "default-website-policies");
+#endif
+
+    WebKitUserContentManager *uc_manager;
+    uc_manager = g_object_get_data(G_OBJECT(webkit_settings),
+            "default-user-content-manager");
+
 #if PLATFORM(MINIGUI)
     HWND hWnd = GetActiveWindow();
     hWnd = hWnd ? hWnd : g_xgui_main_window;
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(hWnd,
                 web_context, app_label, app_label,
                 WINDOW_LEVEL_HIGHER, NULL, TRUE));
-    WebKitSettings *webkit_settings = purcmc_rdrsrv_get_user_data(server);
-#if WEBKIT_CHECK_VERSION(2, 30, 0)
-    WebKitWebsitePolicies *defaultWebsitePolicies = g_object_get_data(
-            G_OBJECT(webkit_settings), "default-website-policies");
-#endif
 
     WebKitWebViewParam param = {
         .webContext = web_context,
         .settings = webkit_settings,
-        .userContentManager = NULL,
+        .userContentManager = uc_manager,
         .isControlledByAutomation = webkit_web_context_is_automation_allowed(web_context),
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
         .websitePolicies = defaultWebsitePolicies,
@@ -124,11 +130,34 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
     g_object_set_data(G_OBJECT(web_view), "purcmc-container", plainwin);
 #else
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(NULL,
-                web_context, label, label));
+                web_context, app_label, app_label));
+
+    GtkApplication *application;
+    application = g_object_get_data(G_OBJECT(webkit_settings), "gtk-application");
+
+    gtk_application_add_window(GTK_APPLICATION(application),
+            GTK_WINDOW(plainwin));
+
+    WebKitWebView *web_view = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+                "web-context", web_context,
+                "settings", webkit_settings,
+                "user-content-manager", uc_manager,
+                "is-controlled-by-automation",
+                webkit_web_context_is_automation_allowed(web_context),
+#if WEBKIT_CHECK_VERSION(2, 30, 0)
+                "website-policies", defaultWebsitePolicies,
+#endif
+                NULL));
+
+    g_object_set_data(G_OBJECT(web_view), "purcmc-container", plainwin);
+
+    browser_plain_window_set_view(plainwin, web_view);
+    browser_plain_window_load_uri(plainwin, uri);
+    gtk_widget_show(GTK_WIDGET(plainwin));
 #endif
 
     GMainContext *context = g_main_context_default();
-    int result = IDNO;
+    int result = CONFIRM_RESULT_ID_DECLINE;
     while (true) {
         g_main_context_iteration(context, FALSE);
         char *p = g_object_get_data(G_OBJECT(web_view),
@@ -136,10 +165,13 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
         if (p != NULL) {
             /* TODO : keep result */
             if (strcasecmp(p, CONFIRM_RESULT_DECLINE) == 0) {
-                result = IDNO;
+                result = CONFIRM_RESULT_ID_DECLINE;
             }
-            else {
-                result = IDYES;
+            else if (strcasecmp(p, CONFIRM_RESULT_ACCEPT_ONCE) == 0) {
+                result = CONFIRM_RESULT_ID_ACCEPT_ONCE;
+            }
+            else if (strcasecmp(p, CONFIRM_RESULT_ACCEPT_ALWAYS) == 0) {
+                result = CONFIRM_RESULT_ID_ACCEPT_ALWAYS;
             }
             g_object_set_data(G_OBJECT(web_view),
                 BROWSER_HBDRUN_ACTION_PARAM_RESULT, NULL);
