@@ -39,6 +39,7 @@
 #define CONFIRM_PARAM_LABEL                             "label"
 #define CONFIRM_PARAM_DESC                              "desc"
 #define CONFIRM_PARAM_ICON                              "icon"
+#define CONFIRM_PARAM_TIMEOUT                           "timeout"
 
 #ifdef __cplusplus
 extern "C" {

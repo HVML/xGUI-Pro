@@ -89,8 +89,11 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
 
     struct purcmc_server *server = xguitls_get_purcmc_server();
 
-    char *uri = g_strdup_printf("hbdrun://confirm?label=%s&desc=%s&icon=%s",
-            app_label, app_desc, app_icon);
+    char *uri = g_strdup_printf("hbdrun://confirm?%s=%s&%s=%s&%s=%s&%s=%ld",
+            CONFIRM_PARAM_LABEL, app_label,
+            CONFIRM_PARAM_DESC, app_desc,
+            CONFIRM_PARAM_ICON, app_icon,
+            CONFIRM_PARAM_TIMEOUT, timeout_seconds);
 
     BrowserPlainWindow *plainwin;
 #if PLATFORM(MINIGUI)

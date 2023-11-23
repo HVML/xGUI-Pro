@@ -123,7 +123,7 @@ static const char *runners_card_templage = ""
 "                    </div>"
 "";
 
-/* icon url, app label, desc, accept once, accept once, accept once, accept always, accept always, Decline  */
+/* timeout, decline, icon url, app label, desc, accept once, accept once, accept once, accept always, accept always, Decline  */
 static const char *confirm_page_template = ""
 "<!DOCTYPE html>"
 "<html lang='zh-CN'>"
@@ -136,6 +136,21 @@ static const char *confirm_page_template = ""
 ""
 "        <script>"
 "            let httpRequest;"
+"            let timerId;"
+"            let timeout = %s;"
+"            let decline = '%s';"
+""
+"            window.addEventListener('load', (event) => {"
+"                timerId = setInterval(function(){"
+"                    const btn = document.getElementById('id_decline');"
+"                    btn.textContent = decline + '(' + timeout + ')';"
+"                    timeout = timeout - 1;"
+"                    if (timeout == 0) {"
+"                        clearInterval(timerId);"
+"                        on_result(btn);"
+"                    }"
+"                }, 1000);"
+"            });"
 "            function on_radio_change(elem) {"
 "                const btn = document.getElementById('id_accept');"
 "                btn.textContent = elem.value;"
@@ -198,7 +213,7 @@ static const char *confirm_page_template = ""
 "                            </li>"
 "                        </ul>"
 "                    </div>"
-"                    <button type='button' class='btn btn-outline-secondary' data-result='Decline' onclick='on_result(this)'>%s</button>"
+"                    <button type='button' class='btn btn-outline-secondary' data-result='Decline' id='id_decline' onclick='on_result(this)'>%s</button>"
 "                </div>"
 "            </div>"
 "        </div>"
@@ -360,20 +375,25 @@ static void on_hbdrun_confirm(WebKitURISchemeRequest *request,
     hbdrun_uri_get_query_value(uri, CONFIRM_PARAM_ICON, icon);
     char *app_icon = g_uri_unescape_string(icon, NULL);
 
+    char timeout[nr_uri];
+    hbdrun_uri_get_query_value(uri, CONFIRM_PARAM_TIMEOUT, timeout);
+    char *s_timeout = g_uri_unescape_string(timeout, NULL);
+
     const char *accept_once = CONFIRM_BTN_TEXT_ACCEPT_ONCE;
     const char *accept_always = CONFIRM_BTN_TEXT_ACCEPT_ALWAYS;
     const char *decline = CONFIRM_BTN_TEXT_DECLINE;
 
-    /* icon url, app label, desc, accept once, accept once, accept once,
-     * accept always, accept always, Decline  */
+    /* timeout, decline, icon url, app label, desc, accept once,
+     * accept once, accept once, accept always, accept always, Decline  */
     char *err_info = NULL;
-    char *contents = g_strdup_printf(confirm_page_template,
+    char *contents = g_strdup_printf(confirm_page_template, timeout, decline,
             app_icon, app_label, app_desc, accept_once, accept_once, accept_once,
             accept_always, accept_always, decline);
 
     g_free(app_label);
     g_free(app_desc);
     g_free(app_icon);
+    g_free(s_timeout);
 
     if (!contents) {
         err_info = g_strdup_printf("Can not allocate memory for confirm page (%s)", uri);
