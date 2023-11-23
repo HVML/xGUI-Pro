@@ -194,3 +194,9 @@ out:
     return result;
 }
 
+int xgutils_show_runners_window(void)
+{
+    const char *uri = "hbdrun://runners";
+    create_plainwin_with_uri("runners", "runners", uri);
+    return 0;
+}

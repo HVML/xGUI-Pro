@@ -72,6 +72,8 @@ void *xgutils_global_get_data(const char *key);
 int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
         const char *app_icon, uint64_t timeout_seconds);
 
+int xgutils_show_runners_window(void);
+
 #ifdef __cplusplus
 }
 #endif
