@@ -137,6 +137,10 @@ struct purcmc_endpoint
     char*   host_name;
     char*   app_name;
     char*   runner_name;
+    char*   app_label;
+    char*   app_desc;
+    char*   runner_label;
+    char*   app_icon;
 
     purcmc_session *session;
 

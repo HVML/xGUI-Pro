@@ -315,11 +315,13 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
             }
             kvlist_set(&app_list, endpoint->app_name, &stream);
             g_output_stream_printf(stream, NULL, NULL, NULL,
-                runners_card_tmpl_prefix, icon, endpoint->app_name,
-                endpoint->app_name);
+                runners_card_tmpl_prefix,
+                endpoint->app_icon ? endpoint->app_icon : icon,
+                endpoint->app_label,
+                endpoint->app_desc);
         }
         g_output_stream_printf(stream, NULL, NULL, NULL, runner_template,
-                endpoint->runner_name, name);
+                endpoint->runner_label, name);
     }
 
     kvlist_for_each_safe(&app_list, name, next, data) {

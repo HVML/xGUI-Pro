@@ -263,6 +263,10 @@ int del_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint, int cause)
     if (endpoint->host_name) free (endpoint->host_name);
     if (endpoint->app_name) free (endpoint->app_name);
     if (endpoint->runner_name) free (endpoint->runner_name);
+    if (endpoint->app_label) free (endpoint->app_label);
+    if (endpoint->app_desc) free (endpoint->app_desc);
+    if (endpoint->runner_label) free (endpoint->runner_label);
+    if (endpoint->app_icon) free (endpoint->app_icon);
 
     free (endpoint);
     purc_log_warn ("purcmc_endpoint (%s) removed\n", endpoint_name);
@@ -530,13 +534,21 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
         return PCRDR_SC_NOT_ACCEPTABLE;
     }
 
+    purc_variant_t icon = purc_variant_object_get_by_ckey(data, "appIcon");
+    purc_variant_t label = purc_variant_object_get_by_ckey(data, "appLabel");
+    purc_variant_t desc = purc_variant_object_get_by_ckey(data, "appDesc");
+    purc_variant_t runner_label = purc_variant_object_get_by_ckey(data, "runnerLabel");
+    if (!label || !desc) {
+        return PCRDR_SC_UNAUTHORIZED;
+    }
+
+    const char *s_label = purc_variant_get_string_const(label);
+    const char *s_desc = purc_variant_get_string_const(desc);
+    const char *s_icon = purc_variant_get_string_const(icon);
+    const char *s_runner_label = purc_variant_get_string_const(runner_label);
+
     /* popup auth window  */
     if ((tmp = purc_variant_object_get_by_ckey(data, "signature"))) {
-        purc_variant_t label = purc_variant_object_get_by_ckey(data, "appLabel");
-        purc_variant_t desc = purc_variant_object_get_by_ckey(data, "appDesc");
-        if (!label || !desc) {
-            return PCRDR_SC_UNAUTHORIZED;
-        }
 
         uint64_t ut = 0;
         purc_variant_t timeout = purc_variant_object_get_by_ckey(data,
@@ -548,12 +560,6 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
         if (ut == 0) {
             ut = 10;
         }
-
-        purc_variant_t icon = purc_variant_object_get_by_ckey(data, "appIcon");
-
-        const char *s_label = purc_variant_get_string_const(label);
-        const char *s_desc = purc_variant_get_string_const(desc);
-        const char *s_icon = purc_variant_get_string_const(icon);
 
         int auth_ret = xgutils_show_confirm_window(s_label, s_desc, s_icon, ut);
         if (auth_ret == CONFIRM_RESULT_ID_DECLINE) {
@@ -607,6 +613,10 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
     endpoint->host_name = strdup (host_name);
     endpoint->app_name = strdup (app_name);
     endpoint->runner_name = strdup (runner_name);
+    endpoint->app_label = s_label ? strdup(s_label) : NULL;
+    endpoint->app_desc = s_desc ? strdup(s_desc) : NULL;
+    endpoint->runner_label = s_runner_label ? strdup(s_runner_label) : NULL;
+    endpoint->app_icon = s_icon ? strdup(s_icon) : NULL;
     endpoint->status = ES_READY;
 
     return PCRDR_SC_OK;
