@@ -334,7 +334,9 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
                 G_MEMORY_OUTPUT_STREAM(stream));
         g_output_stream_write(page_stream, cards, size, NULL, NULL);
         g_object_unref(stream);
+        kvlist_delete(&app_list, name);
     }
+    kvlist_free(&app_list);
     g_output_stream_write(page_stream, runners_page_tmpl_suffix,
             strlen(runners_page_tmpl_suffix), NULL, NULL);
 
