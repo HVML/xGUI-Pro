@@ -31,6 +31,7 @@
 #include <glib.h>
 
 #include "utils/kvlist.h"
+#include "utils/utils.h"
 
 #include "server.h"
 #include "websocket.h"
@@ -808,6 +809,7 @@ init_server(void)
     /* TODO for host name */
     the_server.server_name = strdup(sd_get_local_hostname());
     kvlist_init(&the_server.endpoint_list, NULL);
+    kvlist_init(&the_server.dnssd_rdr_list, NULL);
     avl_init(&the_server.living_avl, comp_living_time, true, NULL);
 
     return 0;
@@ -889,6 +891,17 @@ deinit_server(void)
 
         gslist_remove_nodes(the_server.dangling_endpoints);
     }
+
+    kvlist_for_each_safe(&the_server.dnssd_rdr_list, name, next, data) {
+        struct dnssd_rdr *rdr = *(struct dnssd_rdr **)data;
+        free(rdr->hostname);
+        if (rdr->text_record) {
+            free(rdr->text_record);
+        }
+        free(rdr);
+        kvlist_delete(&the_server.dnssd_rdr_list, name);
+    }
+    kvlist_free(&the_server.dnssd_rdr_list);
 
     us_stop(the_server.us_srv);
     if (the_server.ws_srv)
@@ -1020,6 +1033,29 @@ void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
         }
     }
 #endif
+    {
+        /* host + :(1) + port(5) */
+        size_t nr_name = strlen(hostname) + 7;
+        char name[nr_name];
+        sprintf(name, "%s:%d", hostname, port);
+
+        void *p = kvlist_get(&server->dnssd_rdr_list, name);
+        if (p) {
+            struct dnssd_rdr *rdr = *(struct dnssd_rdr **)p;
+            rdr->last_update_at = xgutils_get_monotoic_time_ms();
+        }
+        else {
+            struct dnssd_rdr *rdr = malloc(sizeof(struct dnssd_rdr));
+            rdr->hostname = strdup(hostname);
+            rdr->port = port;
+            rdr->text_record = strdup(txt_record);
+            rdr->nr_text_record = len_txt_record;
+            rdr->last_update_at = xgutils_get_monotoic_time_ms();
+            kvlist_set(&server->dnssd_rdr_list, name, &rdr);
+
+            /* TODO: animation notification */
+        }
+    }
 
     purcmc_endpoint* endpoint = get_curr_endpoint(server);
     purc_log_warn("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
