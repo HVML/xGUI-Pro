@@ -180,7 +180,8 @@ void sd_remote_service_destroy(struct sd_remote_service *srv)
     }
 }
 
-void post_new_rendereer_event(struct sd_remote_service *srv)
+void switch_new_renderer(struct purcmc_server *server,
+        purcmc_endpoint *endpoint, const char *host, uint16_t port)
 {
     //struct purcmc_server *server;
     //purcmc_endpoint *endpoint;
@@ -199,9 +200,9 @@ void post_new_rendereer_event(struct sd_remote_service *srv)
     event.data = purc_variant_make_object(0, PURC_VARIANT_INVALID,
             PURC_VARIANT_INVALID);
 
-    size_t nr = strlen(WS_SCHEMA) + strlen(srv->host) + 10;
+    size_t nr = strlen(WS_SCHEMA) + strlen(host) + 10;
     char uri[nr];
-    sprintf(uri, "%s%s:%d", WS_SCHEMA, srv->host, srv->port);
+    sprintf(uri, "%s%s:%d", WS_SCHEMA, host, port);
     purc_variant_t v_uri = purc_variant_make_string_static(uri, false);
     purc_variant_t v_common = purc_variant_make_string_static(V_WEBSOCKET,
             false);
@@ -209,6 +210,12 @@ void post_new_rendereer_event(struct sd_remote_service *srv)
     purc_variant_object_set_by_ckey(event.data, KEY_NEW_RENDERER_COMM, v_common);
     purc_variant_object_set_by_ckey(event.data, KEY_NEW_RENDERER_URI, v_uri);
 
-    purcmc_endpoint_post_event(srv->server, srv->endpoint, &event);
+    purcmc_endpoint_post_event(server, endpoint, &event);
 }
+
+void post_new_rendereer_event(struct sd_remote_service *srv)
+{
+    switch_new_renderer(srv->server, srv->endpoint, srv->host, srv->port);
+}
+
 

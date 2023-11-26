@@ -59,6 +59,9 @@ void sd_remote_service_destroy(struct sd_remote_service *srv);
 
 void post_new_rendereer_event(struct sd_remote_service *srv);
 
+void switch_new_renderer(struct purcmc_server *server,
+        purcmc_endpoint *endpoint, const char *host, uint16_t port);
+
 #ifdef __cplusplus
 }
 #endif
