@@ -93,14 +93,14 @@ static const char *runners_page_tmpl_suffix = ""
 "</html>"
 "";
 
-/* runner label, runner endpoint */
+/* id,id, runner label, runner endpoint */
 static const char *runner_template = ""
 "                                <div class='list-group-item list-group-item-action d-flex' >"
 "                                    <div>"
-"                                        <input class='form-check-input me-1 h5' type='checkbox' value='' id='firstCheckbox'>"
+"                                        <input class='form-check-input me-1 h5' type='checkbox' value='' id='id_runner_%d'>"
 "                                    </div>"
 "                                    <div class='w-95'>"
-"                                        <label class='form-check-label h5' for='firstCheckbox'>%s</label>"
+"                                        <label class='form-check-label h5' for='id_runner_%d'>%s</label>"
 "                                        <p class='mb-1 text-truncate'>%s</p>"
 "                                    </div>"
 "                                </div>"
@@ -303,6 +303,7 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
     char *err_info = NULL;
     const char *name;
     void *next, *data;
+    int idx = 0;
     purcmc_endpoint *endpoint;
     kvlist_for_each_safe(&server->endpoint_list, name, next, data) {
         endpoint = *(purcmc_endpoint **)data;
@@ -321,7 +322,8 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
                 endpoint->app_desc);
         }
         g_output_stream_printf(stream, NULL, NULL, NULL, runner_template,
-                endpoint->runner_label, name);
+                idx, idx, endpoint->runner_label, name);
+        idx++;
     }
 
     kvlist_for_each_safe(&app_list, name, next, data) {
