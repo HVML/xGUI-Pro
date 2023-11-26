@@ -31,6 +31,7 @@
 #include "utils/hbdrun-uri.h"
 #include "purcmc/server.h"
 #include "purcmc/purcmc.h"
+#include "sd/sd.h"
 
 #include <webkit2/webkit2.h>
 #include <purc/purc-pcrdr.h>
@@ -71,24 +72,25 @@ static const char *runners_page_tmpl_prefix = ""
 "        <script type='text/javascript' src='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/js/bootstrap.bundle.min.js'></script>"
 ""
 "        <script>"
-"            var select_count = 0;"
 "            var has_rdr = %s;"
 "            var rdr_dialog;"
 "            function on_change(e) {"
+"                var result = e.target.getAttribute('data-link-btn');"
+"                const button = document.getElementById(result);"
+"                var select_count = button.getAttribute('data-select-count');"
 "                if (e.target.checked) {"
 "                    select_count++;"
 "                }"
 "                else {"
 "                    select_count--;"
 "                }"
-"                var result = e.target.getAttribute('data-link-btn');"
-"                const button = document.getElementById(result);"
 "                if (select_count > 0 && has_rdr) {"
 "                    button.removeAttribute('disabled');"
 "                }"
 "                else {"
 "                    button.setAttribute('disabled', '');"
 "                }"
+"                button.setAttribute('data-select-count', select_count)"
 "            }"
 "            window.addEventListener('load', (event) => {"
 "                const input = document.querySelector('input');"
@@ -100,6 +102,9 @@ static const char *runners_page_tmpl_prefix = ""
 "            });"
 ""
 "            function on_card_switch_click(e) {"
+"                var link_id = e.getAttribute('data-link-id');"
+"                var switch_now_btn = document.getElementById('id_switch_now_btn');"
+"                switch_now_btn.setAttribute('data-link-id', link_id);"
 "                rdr_dialog.show();"
 "            }"
 ""
@@ -114,11 +119,36 @@ static const char *runners_page_tmpl_prefix = ""
 "            }"
 ""
 "            function on_switch_now_click(e) {"
+"                var link_id = e.getAttribute('data-link-id');"
+"                var parentElem = document.getElementById(link_id);"
+"                const inpputElems = parentElem.querySelectorAll('input');"
+"                var param='';"
+"                inpputElems.forEach((item) => {"
+"                    var endpoint = item.getAttribute('data-endpoint');"
+"                    param += endpoint + ';'"
+"                });"
+"                var activeElem = document.getElementsByClassName('active');"
+"                var rdr = activeElem[0].getAttribute('data-rdr-name');"
+"                do_switch_rdr(param.substr(0, param.length-1), rdr);"
 "                rdr_dialog.hide();"
 "            }"
 ""
 "            function on_close_page_click() {"
 "                window.close();"
+"            }"
+""
+"            function on_action_result() {"
+"                if (httpRequest.readyState === XMLHttpRequest.DONE) {"
+"                    window.close();"
+"                }"
+"            }"
+""
+"            function do_switch_rdr(endpoints, rdr) {"
+"                var uri = 'hbdrun://action?type=switchRdr&endpoints=' + endpoints+ '&rdr=' + rdr;"
+"                httpRequest = new XMLHttpRequest();"
+"                httpRequest.onreadystatechange = on_action_result;"
+"                httpRequest.open('POST', uri);"
+"                httpRequest.send();"
 "            }"
 "        </script>"
 "        <style>"
@@ -154,7 +184,7 @@ static const char *runners_page_tmpl_suffix = ""
 "%s"
 "                            </ul>"
 "                        </div>"
-"                        <button type='button' class='btn btn-primary m-3' onclick='on_switch_now_click(this)' %s>Switch now</button>"
+"                        <button type='button' class='btn btn-primary m-3' id='id_switch_now_btn' data-link-id='' onclick='on_switch_now_click(this)' %s>Switch now</button>"
 "                    </div>"
 "                </div>"
 "            </div>"
@@ -164,18 +194,18 @@ static const char *runners_page_tmpl_suffix = ""
 "";
 
 static const char *runners_rdr_tmpl = ""
-"                                <li class='list-group-item'>%s</li>"
+"                                <li class='list-group-item' data-rdr-name='%s'>%s</li>"
 "";
 
 static const char *runners_rdr_active_tmpl = ""
-"                                <li class='list-group-item active'>%s</li>"
+"                                <li class='list-group-item active' data-rdr-name='%s'>%s</li>"
 "";
 
-/* runner_id, app_name, runner_id, runner label, runner endpoint */
+/* runner_id, app_name, endpoint, runner_id, runner label, runner endpoint */
 static const char *runner_template = ""
 "                                <div class='list-group-item list-group-item-action d-flex' >"
 "                                    <div>"
-"                                        <input class='form-check-input me-1 h5' type='checkbox' value='' id='id_runner_%d' data-link-btn='id_btn_%s' >"
+"                                        <input class='form-check-input me-1 h5' type='checkbox' value='' id='id_runner_%d' data-link-btn='id_btn_%s' data-endpoint='%s'>"
 "                                    </div>"
 "                                    <div class='w-95'>"
 "                                        <label class='form-check-label w-95' for='id_runner_%d'>"
@@ -186,7 +216,7 @@ static const char *runner_template = ""
 "                                </div>"
 "";
 
-/* icon, app label, desc */
+/* icon, app label, desc, app name */
 static const char *runners_card_tmpl_prefix = ""
 "                    <div class='col mx-auto'>"
 "                        <div class='card card-cover h-100 overflow-hidden text-bg-light rounded-4 shadow-lg p-3'>"
@@ -197,13 +227,13 @@ static const char *runners_card_tmpl_prefix = ""
 "                                <h3 class='fs-2 ms-2'>%s</h3>"
 "                            </div>"
 "                            <p>%s</p>"
-"                            <div class='list-group'>"
+"                            <div class='list-group' id='id_rdrlist_%s'>"
 "";
 
-/* app_name, button */
+/* app_name, app_name, button */
 static const char *runners_card_tmpl_suffix = ""
 "                            </div>"
-"                            <button type='button' class='btn btn-primary m-3' id='id_btn_%s' onclick='on_card_switch_click(this)' disabled>%s</button>"
+"                            <button type='button' class='btn btn-primary m-3' id='id_btn_%s' data-link-id='id_rdrlist_%s' onclick='on_card_switch_click(this)' data-select-count=0 disabled>%s</button>"
 "                        </div>"
 "                    </div>"
 "";
@@ -401,18 +431,18 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
             g_output_stream_printf(stream, NULL, NULL, NULL,
                 runners_card_tmpl_prefix,
                 endpoint->app_icon ? endpoint->app_icon : icon,
-                endpoint->app_label,
-                endpoint->app_desc);
+                endpoint->app_label, endpoint->app_desc,
+                endpoint->app_name);
         }
         g_output_stream_printf(stream, NULL, NULL, NULL, runner_template,
-                idx, endpoint->app_name, idx, endpoint->runner_label, name);
+                idx, endpoint->app_name, name, idx, endpoint->runner_label, name);
         idx++;
     }
 
     kvlist_for_each_safe(&app_list, name, next, data) {
         GOutputStream *stream = *(GOutputStream **)data;
         g_output_stream_printf(stream, NULL, NULL, NULL,
-                runners_card_tmpl_suffix, endpoint->app_name, switch_btn);
+                runners_card_tmpl_suffix, name, name, switch_btn);
         gpointer *cards = g_memory_output_stream_get_data(
                 G_MEMORY_OUTPUT_STREAM(stream));
         gsize size = g_memory_output_stream_get_size(
@@ -433,11 +463,11 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
             rdr = *(struct dnssd_rdr **)data;
             if (idx == 0) {
                 g_output_stream_printf(stream, NULL, NULL, NULL,
-                    runners_rdr_active_tmpl, rdr->hostname);
+                    runners_rdr_active_tmpl, name, rdr->hostname);
             }
             else {
                 g_output_stream_printf(stream, NULL, NULL, NULL,
-                    runners_rdr_tmpl, rdr->hostname);
+                    runners_rdr_tmpl, name, rdr->hostname);
             }
         }
         gpointer *data = g_memory_output_stream_get_data(
@@ -540,6 +570,7 @@ static void on_hbdrun_action_confirm(WebKitURISchemeRequest *request,
     }
 
     WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
+    /* result will free at: xgutils_show_confirm_window */
     g_object_set_data(G_OBJECT(webview), BROWSER_HBDRUN_ACTION_PARAM_RESULT,
             result);
 
@@ -554,6 +585,58 @@ error:
 
     if (result) {
         g_free(result);
+    }
+}
+
+static void on_hbdrun_action_switch_rdr(WebKitURISchemeRequest *request,
+        WebKitWebContext *webContext, const char *uri)
+{
+    char *err_info = NULL;
+    char *endpoints = NULL;
+    char *rdr = NULL;
+    if (!hbdrun_uri_get_query_value_alloc(uri,
+                BROWSER_HBDRUN_ACTION_PARAM_ENDPOINTS, &endpoints)) {
+        err_info = g_strdup_printf("invalid endpoints param (%s)", uri);
+        goto error;
+    }
+
+    if (!hbdrun_uri_get_query_value_alloc(uri,
+                BROWSER_HBDRUN_ACTION_PARAM_RDR, &rdr)) {
+        err_info = g_strdup_printf("invalid rdr param (%s)", uri);
+        goto error;
+    }
+
+    /* TODO */
+    struct purcmc_server *server = xguitls_get_purcmc_server();
+    purcmc_endpoint *endpoint = purcmc_endpoint_from_name(server, endpoints);
+
+    void *data = kvlist_get(&server->dnssd_rdr_list, rdr);
+    struct dnssd_rdr *dnssd_rdr = *(struct dnssd_rdr **)data;
+
+    switch_new_renderer(server, endpoint, dnssd_rdr->hostname, dnssd_rdr->port);
+
+    send_response(request, 200, "application/json", (char *)confirm_success,
+            strlen(confirm_success), NULL);
+    if (rdr) {
+        g_free(rdr);
+    }
+
+    if (endpoints) {
+        g_free(endpoints);
+    }
+    return;
+
+error:
+    if (err_info) {
+        send_error_response(request, 500, "text/html", err_info, strlen(err_info), g_free);
+    }
+
+    if (rdr) {
+        g_free(rdr);
+    }
+
+    if (endpoints) {
+        g_free(endpoints);
     }
 }
 
@@ -574,6 +657,9 @@ static void on_hbdrun_action(WebKitURISchemeRequest *request,
     /* confirm */
     if (strcasecmp(type, BROWSER_HBDRUN_ACTION_TYPE_CONFIRM) == 0) {
         on_hbdrun_action_confirm(request, webContext, uri);
+    }
+    else if (strcasecmp(type, BROWSER_HBDRUN_ACTION_TYPE_SWITCH_RDR) == 0) {
+        on_hbdrun_action_switch_rdr(request, webContext, uri);
     }
 
     if (type) {
