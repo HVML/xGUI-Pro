@@ -59,7 +59,7 @@ static const char *error_page =
 
 static const char *confirm_success = "{'code':200}";
 
-/* title */
+/* has_rdr, title */
 static const char *runners_page_tmpl_prefix = ""
 "<!DOCTYPE html>"
 "<html lang='zh-CN'>"
@@ -70,6 +70,57 @@ static const char *runners_page_tmpl_prefix = ""
 "        <link rel='stylesheet' href='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/css/bootstrap.min.css' />"
 "        <script type='text/javascript' src='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/js/bootstrap.bundle.min.js'></script>"
 ""
+"        <script>"
+"            var select_count = 0;"
+"            var has_rdr = %s;"
+"            var rdr_dialog;"
+"            function on_change(e) {"
+"                if (e.target.checked) {"
+"                    select_count++;"
+"                }"
+"                else {"
+"                    select_count--;"
+"                }"
+"                var result = e.target.getAttribute('data-link-btn');"
+"                const button = document.getElementById(result);"
+"                if (select_count > 0 && has_rdr) {"
+"                    button.removeAttribute('disabled');"
+"                }"
+"                else {"
+"                    button.setAttribute('disabled', '');"
+"                }"
+"            }"
+"            window.addEventListener('load', (event) => {"
+"                const input = document.querySelector('input');"
+"                input.addEventListener('change', on_change);"
+""
+"                const rdr_list = document.getElementById('id_rdr_list');"
+"                rdr_list.addEventListener('click', on_rdr_item_click);"
+"                rdr_dialog = new bootstrap.Modal('#id_rdr_dialog');"
+"            });"
+""
+"            function on_card_switch_click(e) {"
+"                rdr_dialog.show();"
+"            }"
+""
+"            function on_rdr_item_click(e) {"
+"                if (e.target && e.target.nodeName == 'LI') {"
+"                    let current = document.getElementsByClassName('active');"
+"                    if (current.length > 0) {"
+"                        current[0].classList.remove('active');"
+"                    }"
+"                    e.target.classList.add('active');"
+"                }"
+"            }"
+""
+"            function on_switch_now_click(e) {"
+"                rdr_dialog.hide();"
+"            }"
+""
+"            function on_close_page_click() {"
+"                window.close();"
+"            }"
+"        </script>"
 "        <style>"
 "            .w-95 {"
 "                width: 95%!important;"
@@ -79,7 +130,10 @@ static const char *runners_page_tmpl_prefix = ""
 "    <body>"
 "        <main>"
 "            <div class='container px-4 py-5' id='custom-cards'>"
-"                <h2 class='pb-2 border-bottom'>%s</h2>"
+"                <div class='d-flex justify-content-between border-bottom'>"
+"                    <h3 class='pb-2'>%s</h2>"
+"                    <button type='button' class='btn-close' onclick='on_close_page_click()'></button>"
+"                </div>"
 ""
 "                <div class='row row-cols-1 row-cols-lg-2 row-cols-xl-3 align-items-stretch g-4 py-5'>"
 "";
@@ -88,16 +142,40 @@ static const char *runners_page_tmpl_suffix = ""
 "                </div>"
 ""
 "            </div>"
+"            <div class='modal fade' id='id_rdr_dialog' tabindex='-1' aria-labelledby='id_rdr_dialog_title' aria-hidden='true'>"
+"                <div class='modal-dialog modal-dialog-centered  modal-dialog-scrollable'>"
+"                    <div class='modal-content'>"
+"                        <div class='modal-header'>"
+"                            <h1 class='modal-title fs-5' id='id_rdr_dialog_title'>%s</h1>"
+"                            <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>"
+"                        </div>"
+"                        <div class='modal-body'>"
+"                            <ul class='list-group' id='id_rdr_list'>"
+"%s"
+"                            </ul>"
+"                        </div>"
+"                        <button type='button' class='btn btn-primary m-3' onclick='on_switch_now_click(this)' %s>Switch now</button>"
+"                    </div>"
+"                </div>"
+"            </div>"
 "        </main>"
 "    </body>"
 "</html>"
 "";
 
-/* id,id, runner label, runner endpoint */
+static const char *runners_rdr_tmpl = ""
+"                                <li class='list-group-item'>%s</li>"
+"";
+
+static const char *runners_rdr_active_tmpl = ""
+"                                <li class='list-group-item active'>%s</li>"
+"";
+
+/* runner_id, app_name, runner_id, runner label, runner endpoint */
 static const char *runner_template = ""
 "                                <div class='list-group-item list-group-item-action d-flex' >"
 "                                    <div>"
-"                                        <input class='form-check-input me-1 h5' type='checkbox' value='' id='id_runner_%d'>"
+"                                        <input class='form-check-input me-1 h5' type='checkbox' value='' id='id_runner_%d' data-link-btn='id_btn_%s' >"
 "                                    </div>"
 "                                    <div class='w-95'>"
 "                                        <label class='form-check-label w-95' for='id_runner_%d'>"
@@ -122,10 +200,10 @@ static const char *runners_card_tmpl_prefix = ""
 "                            <div class='list-group'>"
 "";
 
-/* button */
+/* app_name, button */
 static const char *runners_card_tmpl_suffix = ""
 "                            </div>"
-"                            <button type='button' class='btn btn-primary m-3'>%s</button>"
+"                            <button type='button' class='btn btn-primary m-3' id='id_btn_%s' onclick='on_card_switch_click(this)' disabled>%s</button>"
 "                        </div>"
 "                    </div>"
 "";
@@ -291,16 +369,19 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
     const char *icon = "hvml://localhost/_renderer/_builtin/-/assets/hvml.png";
     const char *title = "所有应用";
     const char *switch_btn = "切换";
+    const char *rdr_title = "可展现设备";
+    const char *rdr_empty = "未发现可用设备";
 
     struct kvlist app_list;
     kvlist_init(&app_list, NULL);
 
     struct purcmc_server *server = xguitls_get_purcmc_server();
 
+    bool has_rdr = !kvlist_is_empty(&server->dnssd_rdr_list);
     GOutputStream *page_stream = NULL;
     page_stream = g_memory_output_stream_new(NULL, 0, g_realloc, g_free);
     g_output_stream_printf(page_stream, NULL, NULL, NULL,
-            runners_page_tmpl_prefix, title);
+            runners_page_tmpl_prefix, has_rdr?"true":"true", title);
 
     char *err_info = NULL;
     const char *name;
@@ -324,14 +405,14 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
                 endpoint->app_desc);
         }
         g_output_stream_printf(stream, NULL, NULL, NULL, runner_template,
-                idx, idx, endpoint->runner_label, name);
+                idx, endpoint->app_name, idx, endpoint->runner_label, name);
         idx++;
     }
 
     kvlist_for_each_safe(&app_list, name, next, data) {
         GOutputStream *stream = *(GOutputStream **)data;
         g_output_stream_printf(stream, NULL, NULL, NULL,
-                runners_card_tmpl_suffix, switch_btn);
+                runners_card_tmpl_suffix, endpoint->app_name, switch_btn);
         gpointer *cards = g_memory_output_stream_get_data(
                 G_MEMORY_OUTPUT_STREAM(stream));
         gsize size = g_memory_output_stream_get_size(
@@ -341,8 +422,34 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
         kvlist_delete(&app_list, name);
     }
     kvlist_free(&app_list);
-    g_output_stream_write(page_stream, runners_page_tmpl_suffix,
-            strlen(runners_page_tmpl_suffix), NULL, NULL);
+
+
+    if (has_rdr) {
+        GOutputStream *stream;
+        stream = g_memory_output_stream_new(NULL, 0, g_realloc, g_free);
+        struct dnssd_rdr *rdr;
+        int idx = 0;
+        kvlist_for_each_safe(&server->dnssd_rdr_list, name, next, data) {
+            rdr = *(struct dnssd_rdr **)data;
+            if (idx == 0) {
+                g_output_stream_printf(stream, NULL, NULL, NULL,
+                    runners_rdr_active_tmpl, rdr->hostname);
+            }
+            else {
+                g_output_stream_printf(stream, NULL, NULL, NULL,
+                    runners_rdr_tmpl, rdr->hostname);
+            }
+        }
+        gpointer *data = g_memory_output_stream_get_data(
+                G_MEMORY_OUTPUT_STREAM(stream));
+        g_output_stream_printf(page_stream, NULL, NULL, NULL,
+                    runners_page_tmpl_suffix, rdr_title, (char*)data, "");
+        g_object_unref(stream);
+    }
+    else {
+        g_output_stream_printf(page_stream, NULL, NULL, NULL,
+                    runners_page_tmpl_suffix, rdr_title, rdr_empty, "disabled");
+    }
 
     g_output_stream_close(page_stream, NULL, NULL);
     gsize size = g_memory_output_stream_get_size(
