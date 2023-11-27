@@ -148,8 +148,8 @@ static const unsigned char _png_close_data[] = {
   0x42, 0x60, 0x82
 };
 
-#define MINIMIZED_WIDTH     48
-#define MINIMIZED_HEIGHT    48
+#define WND_WIDTH     48
+#define WND_HEIGHT    48
 
 static void on_paint(HWND hWnd, HDC hdc)
 {
@@ -162,9 +162,17 @@ static void on_paint(HWND hWnd, HDC hdc)
     MG_RWops* area;
     area = MGUI_RWFromMem((void *)_png_close_data, sizeof(_png_close_data));
     if (area) {
-        PaintImageEx(hdc, 0, 0, area, "png");
+        //PaintImageEx(hdc, 0, 0, area, "png");
+        StretchPaintImageEx(hdc, 0, 0, client_rc.right, client_rc.bottom, area, "png");
         MGUI_FreeRW(area);
     }
+
+#if 0
+    SetBrushColor(hdc, PIXEL_darkred);
+    int sx = client_rc.right / 2;
+    int sy = client_rc.bottom / 2;
+    FillCircle (hdc, sx, sy, sx);
+#endif
 }
 
 static LRESULT
@@ -182,7 +190,6 @@ FloatingRoundWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         case MSG_LBUTTONUP:
             {
-                fprintf(stderr, "################################################click\n");
                 xgutils_show_runners_window();
             }
             break;
@@ -226,10 +233,10 @@ HWND create_floating_round_window(HWND hostingWnd, const char *title)
     CreateInfo.hCursor = GetSystemCursor(0);
     CreateInfo.hIcon = 0;
     CreateInfo.MainWindowProc = FloatingRoundWinProc;
-    CreateInfo.lx = rcHosting.left + RECTW(rcHosting) - MINIMIZED_WIDTH;
+    CreateInfo.lx = rcHosting.left + RECTW(rcHosting) - WND_WIDTH;
     CreateInfo.ty = rcHosting.top;
     CreateInfo.rx = rcHosting.right;
-    CreateInfo.by = rcHosting.top + MINIMIZED_HEIGHT;
+    CreateInfo.by = rcHosting.top + WND_HEIGHT;
     CreateInfo.iBkColor = COLOR_black;
     CreateInfo.dwAddData = 0;
     CreateInfo.hHosting = hostingWnd;

@@ -34,6 +34,7 @@
 
 GApplication *g_xgui_application = NULL;
 HWND g_xgui_main_window = HWND_NULL;
+HWND g_xgui_floating_round_window = HWND_NULL;
 uint32_t g_xgui_window_count = 0;
 BITMAP xgui_window_bg;
 PBITMAP g_xgui_window_bg = NULL;

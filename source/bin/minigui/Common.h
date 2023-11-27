@@ -44,6 +44,7 @@ extern "C" {
 
 extern GApplication *g_xgui_application;
 extern HWND g_xgui_main_window;
+extern HWND g_xgui_floating_round_window;
 extern PBITMAP g_xgui_window_bg;
 
 typedef struct {
