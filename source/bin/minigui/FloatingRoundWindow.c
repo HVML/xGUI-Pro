@@ -151,6 +151,69 @@ static const unsigned char _png_close_data[] = {
 #define WND_WIDTH     48
 #define WND_HEIGHT    48
 
+#if USE(ANIMATION)
+static void animated_cb(MGEFF_ANIMATION handle, HWND hWnd, int id, RECT *rc)
+{
+    (void) handle;
+    MoveWindow(hWnd, rc->left, rc->top, RECTWP(rc), RECTHP(rc), FALSE);
+}
+
+static void move_window_with_transition(HWND hwnd, int x,
+        int y, int w, int h)
+{
+    MGEFF_ANIMATION animation;
+    animation = mGEffAnimationCreate((void *)hwnd, (void *)animated_cb, 1,
+            MGEFF_RECT);
+    if (animation) {
+        RECT start_rc, end_rc;
+        GetWindowRect(window->hwnd, &start_rc);
+        end_rc.left = x;
+        end_rc.top = y;
+        end_rc.right = end_rc.left + w;
+        end_rc.bottom = end_rc.top + h;
+
+        mGEffAnimationSetStartValue(animation, &start_rc);
+        mGEffAnimationSetEndValue(animation, &end_rc);
+        mGEffAnimationSetDuration(animation, 200);
+        mGEffAnimationSetProperty(animation, MGEFF_PROP_LOOPCOUNT, 1);
+        mGEffAnimationSetCurve(animation, OutExpo);
+        mGEffAnimationSyncRun(animation);
+
+        mGEffAnimationDelete(animation);
+    }
+}
+
+static void floating_round_window_layout(HWND hwnd, int x, int y, int w, int h)
+{
+    move_window_with_transition(hwnd, x, y, w, h);
+}
+#else
+static void floating_round_window_layout(HWND hwnd, int x, int y, int w, int h)
+{
+    MoveWindow(hwnd, x, y, w, h, false);
+}
+#endif /* USE(ANIMATION) */
+
+static void show_full_window(HWND hWnd)
+{
+    RECT rcHosting;
+    GetWindowRect(GetHosting(hWnd), &rcHosting);
+
+    int x = rcHosting.left + RECTW(rcHosting) - WND_WIDTH;
+    int y = rcHosting.top;
+    floating_round_window_layout(hWnd, x, y, WND_WIDTH, WND_HEIGHT);
+}
+
+static void show_half_window(HWND hWnd)
+{
+    RECT rcHosting;
+    GetWindowRect(GetHosting(hWnd), &rcHosting);
+
+    int x = rcHosting.left + RECTW(rcHosting) - WND_WIDTH / 2;
+    int y = rcHosting.top;
+    floating_round_window_layout(hWnd, x, y, WND_WIDTH / 2, WND_HEIGHT);
+}
+
 static void on_paint(HWND hWnd, HDC hdc)
 {
     RECT client_rc;
@@ -162,8 +225,7 @@ static void on_paint(HWND hWnd, HDC hdc)
     MG_RWops* area;
     area = MGUI_RWFromMem((void *)_png_close_data, sizeof(_png_close_data));
     if (area) {
-        //PaintImageEx(hdc, 0, 0, area, "png");
-        StretchPaintImageEx(hdc, 0, 0, client_rc.right, client_rc.bottom, area, "png");
+        PaintImageEx(hdc, 0, 0, area, "png");
         MGUI_FreeRW(area);
     }
 
@@ -180,9 +242,12 @@ FloatingRoundWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
         case MSG_CREATE:
+            show_half_window(hWnd);
             break;
 
         case MSG_TIMER:
+            KillTimer(hWnd, 100);
+            show_half_window(hWnd);
             break;
 
         case MSG_LBUTTONDOWN:
@@ -195,6 +260,8 @@ FloatingRoundWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
 
         case MSG_XGUIPRO_NEW_RDR:
+            SetTimer(hWnd, 100, 500);
+            show_full_window(hWnd);
             break;
 
         case MSG_PAINT: {
