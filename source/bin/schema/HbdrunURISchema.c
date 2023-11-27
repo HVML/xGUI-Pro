@@ -425,6 +425,9 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
     kvlist_for_each_safe(&server->endpoint_list, name, next, data) {
         endpoint = *(purcmc_endpoint **)data;
         void *data = kvlist_get(&app_list, endpoint->app_name);
+        if (strcmp(endpoint->runner_name, "unknown") == 0) {
+            continue;
+        }
         GOutputStream *stream = data ?  *(GOutputStream **) data : NULL;
         if (!stream) {
             stream = g_memory_output_stream_new(NULL, 0, g_realloc, g_free);
