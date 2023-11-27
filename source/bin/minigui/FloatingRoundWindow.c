@@ -227,7 +227,7 @@ HWND create_floating_round_window(HWND hostingWnd, const char *title)
     RECT rcHosting;
     GetWindowRect(hostingWnd, &rcHosting);
     CreateInfo.dwStyle = WS_VISIBLE;
-    CreateInfo.dwExStyle = WS_EX_WINTYPE_HIGHER | WS_EX_TOOLWINDOW;
+    CreateInfo.dwExStyle = WS_EX_WINTYPE_TOOLTIP | WS_EX_TOOLWINDOW;
     CreateInfo.spCaption = title ? title : "";
     CreateInfo.hMenu = 0;
     CreateInfo.hCursor = GetSystemCursor(0);
