@@ -201,9 +201,9 @@ static const char *runners_rdr_active_tmpl = ""
 "                                <li class='list-group-item active' data-rdr-name='%s'>%s</li>"
 "";
 
-/* runner_id, app_name, endpoint, runner_id, runner label, runner endpoint */
+/* disabled, runner_id, app_name, endpoint, runner_id, runner label, runner endpoint */
 static const char *runner_template = ""
-"                                <div class='list-group-item list-group-item-action d-flex' >"
+"                                <div class='list-group-item list-group-item-action d-flex %s' >"
 "                                    <div>"
 "                                        <input class='form-check-input me-1 h5' type='checkbox' value='' id='id_runner_%d' data-link-btn='id_btn_%s' data-endpoint='%s'>"
 "                                    </div>"
@@ -420,7 +420,8 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
     purcmc_endpoint *endpoint;
     kvlist_for_each_safe(&server->endpoint_list, name, next, data) {
         endpoint = *(purcmc_endpoint **)data;
-        GOutputStream *stream = kvlist_get(&app_list, endpoint->app_name);
+        void *data = kvlist_get(&app_list, endpoint->app_name);
+        GOutputStream *stream = data ?  *(GOutputStream **) data : NULL;
         if (!stream) {
             stream = g_memory_output_stream_new(NULL, 0, g_realloc, g_free);
             if (!stream) {
@@ -435,6 +436,7 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
                 endpoint->app_name);
         }
         g_output_stream_printf(stream, NULL, NULL, NULL, runner_template,
+                endpoint->allow_switching_rdr ? "" : "disabled",
                 idx, endpoint->app_name, name, idx, endpoint->runner_label, name);
         idx++;
     }
