@@ -606,14 +606,37 @@ static void on_hbdrun_action_switch_rdr(WebKitURISchemeRequest *request,
         goto error;
     }
 
-    /* TODO */
     struct purcmc_server *server = xguitls_get_purcmc_server();
-    purcmc_endpoint *endpoint = purcmc_endpoint_from_name(server, endpoints);
-
     void *data = kvlist_get(&server->dnssd_rdr_list, rdr);
     struct dnssd_rdr *dnssd_rdr = *(struct dnssd_rdr **)data;
 
-    switch_new_renderer(server, endpoint, dnssd_rdr->hostname, dnssd_rdr->port);
+    const char *line = endpoints;
+    const char *next = NULL;
+    int len = 0;
+    while (line) {
+        if ((next = strstr (line, ";")) != NULL) {
+            len = (next - line);
+        }
+        else {
+            len = strlen (line);
+        }
+
+        if (len <= 0) {
+            break;
+        }
+
+        char tmp[len + 1];
+        memcpy(tmp, line, len);
+        tmp[len] = '\0';
+
+        purcmc_endpoint *endpoint = purcmc_endpoint_from_name(server, tmp);
+        if (endpoint) {
+            switch_new_renderer(server, endpoint, dnssd_rdr->hostname,
+                    dnssd_rdr->port);
+        }
+
+        line = next ? (next + 1) : NULL;
+    }
 
     send_response(request, 200, "application/json", (char *)confirm_success,
             strlen(confirm_success), NULL);
