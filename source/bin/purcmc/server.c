@@ -1053,7 +1053,7 @@ void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
             rdr->last_update_at = xgutils_get_monotoic_time_ms();
             kvlist_set(&server->dnssd_rdr_list, name, &rdr);
 
-            /* TODO: animation notification */
+            xguitls_shake_round_window();
         }
     }
 

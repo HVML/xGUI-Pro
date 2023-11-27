@@ -74,6 +74,8 @@ int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
 
 int xgutils_show_runners_window(void);
 
+int xguitls_shake_round_window(void);
+
 #ifdef __cplusplus
 }
 #endif
