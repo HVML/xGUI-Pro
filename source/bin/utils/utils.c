@@ -92,11 +92,10 @@ static BrowserPlainWindow *create_plainwin_with_uri(const char *name,
             "default-user-content-manager");
 
 #if PLATFORM(MINIGUI)
-    HWND hWnd = GetActiveWindow();
-    hWnd = hWnd ? hWnd : g_xgui_main_window;
+    HWND hWnd = g_xgui_main_window;
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(hWnd,
                 web_context, name, title,
-                WINDOW_LEVEL_HIGHER, NULL, TRUE));
+                WINDOW_LEVEL_TOOLTIP, NULL, TRUE));
 
     WebKitWebViewParam param = {
         .webContext = web_context,
