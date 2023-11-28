@@ -47,6 +47,8 @@ int shake_y = 0;
 int shake_win_w = WIN_WIDTH;
 int shake_win_h = WIN_HEIGHT;
 
+char icon_path[PATH_MAX+1] = {0};
+
 static void screen_changed(GtkWidget *widget, GdkScreen *old_screen,
         gpointer userdata) {
     GdkScreen *screen = gtk_widget_get_screen(widget);
@@ -110,13 +112,15 @@ static gboolean draw_normal_window(GtkWidget *widget, GdkEventExpose *event,
     cairo_paint (cr);
 
     gint root_width, root_height;
-    char rpath[PATH_MAX+1];
-    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
-    if (!webext_dir) {
-        webext_dir = WEBKIT_WEBEXT_DIR;
+    if (!icon_path[0]) {
+        const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
+        if (!webext_dir) {
+            webext_dir = WEBKIT_WEBEXT_DIR;
+        }
+        sprintf(icon_path, "%s/assets/arrow-left.png", webext_dir);
     }
-    sprintf(rpath, "%s/assets/arrow-left.png", webext_dir);
-    cairo_surface_t* image= cairo_image_surface_create_from_png(rpath);
+
+    cairo_surface_t* image= cairo_image_surface_create_from_png(icon_path);
     cairo_set_source_surface(cr, image, 0, 0);
 
     gtk_window_get_size (GTK_WINDOW(widget), &root_width, &root_height);
