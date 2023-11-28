@@ -44,11 +44,13 @@ static void screen_changed(GtkWidget *widget, GdkScreen *old_screen,
     gtk_widget_set_visual(widget, visual);
 }
 
-static void window_clicked(GtkWidget *widget, gpointer data)
+static gboolean window_clicked(GtkWidget *btn, GdkEventButton *event, gpointer userdata)
 {
-    (void) widget;
-    (void) data;
+    (void) btn;
+    (void) event;
+    (void) userdata;
     xgutils_show_runners_window();
+    return TRUE;
 }
 
 static gboolean draw_normal_window(GtkWidget *widget, GdkEventExpose *event,
@@ -104,6 +106,8 @@ GtkWidget *create_normal_window(void)
     gtk_window_set_decorated(GTK_WINDOW (window), FALSE);
     gtk_window_set_default_size(GTK_WINDOW(window), win_w, win_h);
     gtk_window_move(GTK_WINDOW(window), x, y);
+
+    gtk_widget_add_events(window, GDK_BUTTON_PRESS_MASK);
     g_signal_connect(GTK_WINDOW(window), "button-press-event",
             G_CALLBACK(window_clicked), NULL);
 
