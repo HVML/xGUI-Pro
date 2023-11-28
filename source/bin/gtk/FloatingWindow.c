@@ -22,6 +22,8 @@
 
 #include "config.h"
 
+#include "xguipro-features.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <glib.h>
@@ -107,14 +109,21 @@ static gboolean draw_normal_window(GtkWidget *widget, GdkEventExpose *event,
     cairo_set_operator (cr, CAIRO_OPERATOR_SOURCE);
     cairo_paint (cr);
 
-    gint root_width,root_height;
-    cairo_surface_t* m_bgImage = cairo_image_surface_create_from_png("/tmp/a.png");
-    cairo_set_source_surface(cr, m_bgImage, 0, 0);
+    gint root_width, root_height;
+    char rpath[PATH_MAX+1];
+    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
+    if (!webext_dir) {
+        webext_dir = WEBKIT_WEBEXT_DIR;
+    }
+    sprintf(rpath, "%s/assets/arrow-left.png", webext_dir);
+    cairo_surface_t* image= cairo_image_surface_create_from_png(rpath);
+    cairo_set_source_surface(cr, image, 0, 0);
 
     gtk_window_get_size (GTK_WINDOW(widget), &root_width, &root_height);
     cairo_rectangle (cr, 0, 0, root_width, root_height);
     cairo_fill (cr);
     cairo_destroy(cr);
+    cairo_surface_destroy(image);
     return FALSE;
 }
 
