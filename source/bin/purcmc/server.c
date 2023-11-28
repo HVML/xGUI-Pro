@@ -1057,6 +1057,7 @@ void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
         }
     }
 
+#if 0
     purcmc_endpoint* endpoint = get_curr_endpoint(server);
     purc_log_warn("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
             "|port=%d|txt=%s|endpoint=%p\n",
@@ -1089,8 +1090,7 @@ void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
     HWND hWnd = GetActiveWindow();
     rs->hostingWindow = hWnd ? hWnd : g_xgui_main_window;
     create_popup_tip_window((HWND)rs->hostingWindow, rs);
-#else
-    /* TODO: GTK */
+#endif
 #endif
 
 out:
