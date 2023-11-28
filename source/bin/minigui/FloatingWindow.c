@@ -1,5 +1,5 @@
 /*
-** FloatingRoundWindow.c -- The implementation of floating tool window.
+** FloatingWindow.c -- The implementation of floating window.
 **
 ** Copyright (C) 2023 FMSoft <http://www.fmsoft.cn>
 **
@@ -34,7 +34,7 @@
 #include <mgeff/mgeff.h>
 
 #include "xguipro-features.h"
-#include "FloatingRoundWindow.h"
+#include "FloatingWindow.h"
 #include "utils/utils.h"
 
 static const unsigned char _png_close_data[] = {
@@ -183,12 +183,12 @@ static void move_window_with_transition(HWND hwnd, int x,
     }
 }
 
-static void floating_round_window_layout(HWND hwnd, int x, int y, int w, int h)
+static void floating_window_layout(HWND hwnd, int x, int y, int w, int h)
 {
     move_window_with_transition(hwnd, x, y, w, h);
 }
 #else
-static void floating_round_window_layout(HWND hwnd, int x, int y, int w, int h)
+static void floating_window_layout(HWND hwnd, int x, int y, int w, int h)
 {
     MoveWindow(hwnd, x, y, w, h, false);
 }
@@ -201,7 +201,7 @@ static void show_full_window(HWND hWnd)
 
     int x = rcHosting.left + RECTW(rcHosting) - WND_WIDTH;
     int y = rcHosting.top;
-    floating_round_window_layout(hWnd, x, y, WND_WIDTH, WND_HEIGHT);
+    floating_window_layout(hWnd, x, y, WND_WIDTH, WND_HEIGHT);
 }
 
 static void show_half_window(HWND hWnd)
@@ -211,7 +211,7 @@ static void show_half_window(HWND hWnd)
 
     int x = rcHosting.left + RECTW(rcHosting) - WND_WIDTH / 2;
     int y = rcHosting.top;
-    floating_round_window_layout(hWnd, x, y, WND_WIDTH / 2, WND_HEIGHT);
+    floating_window_layout(hWnd, x, y, WND_WIDTH / 2, WND_HEIGHT);
 }
 
 static void on_paint(HWND hWnd, HDC hdc)
@@ -238,7 +238,7 @@ static void on_paint(HWND hWnd, HDC hdc)
 }
 
 static LRESULT
-FloatingRoundWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+FloatingWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
         case MSG_CREATE:
@@ -286,7 +286,7 @@ FloatingRoundWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return DefaultMainWinProc(hWnd, message, wParam, lParam);
 }
 
-HWND create_floating_round_window(HWND hostingWnd, const char *title)
+HWND create_floating_window(HWND hostingWnd, const char *title)
 {
     HWND toolWnd;
     MAINWINCREATE CreateInfo;
@@ -299,7 +299,7 @@ HWND create_floating_round_window(HWND hostingWnd, const char *title)
     CreateInfo.hMenu = 0;
     CreateInfo.hCursor = GetSystemCursor(0);
     CreateInfo.hIcon = 0;
-    CreateInfo.MainWindowProc = FloatingRoundWinProc;
+    CreateInfo.MainWindowProc = FloatingWinProc;
     CreateInfo.lx = rcHosting.left + RECTW(rcHosting) - WND_WIDTH;
     CreateInfo.ty = rcHosting.top;
     CreateInfo.rx = rcHosting.right;

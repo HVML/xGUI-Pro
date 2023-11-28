@@ -38,7 +38,7 @@
 
 #include "purcmc/purcmc.h"
 #include "utils/utils.h"
-#include "FloatingRoundWindow.h"
+#include "FloatingWindow.h"
 
 #include <errno.h>
 #include <string.h>
@@ -867,7 +867,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     browser_plain_window_set_view(mainWindow, &param);
     browser_plain_window_load_uri(mainWindow, BROWSER_DEFAULT_URL);
     g_xgui_main_window = browser_plain_window_get_hwnd(mainWindow);
-    g_xgui_floating_round_window = create_floating_round_window(g_xgui_main_window, NULL);
+    g_xgui_floating_window = create_floating_window(g_xgui_main_window, NULL);
 
     GMainContext *context = g_main_context_default();
 

@@ -1,5 +1,5 @@
 /*
-** FloatingRoundWindow.h -- The declaration of FloatingRoundWindow.
+** FloatingWindow.h -- The declaration of FloatingWindow.
 **
 ** Copyright (C) 2023 FMSoft <http://www.fmsoft.cn>
 **
@@ -20,8 +20,8 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#ifndef FloatingRoundWindow_h
-#define FloatingRoundWindow_h
+#ifndef FloatingWindow_h
+#define FloatingWindow_h
 
 #include <minigui/common.h>
 #include <minigui/minigui.h>
@@ -34,11 +34,11 @@
 extern "C" {
 #endif /* __cplusplus */
 
-HWND create_floating_round_window(HWND hostingWnd, const char *title);
+HWND create_floating_window(HWND hostingWnd, const char *title);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif  /* FloatingRoundWindow_h */
+#endif  /* FloatingWindow_h */
 
