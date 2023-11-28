@@ -78,6 +78,8 @@ static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
 
+GtkWidget *g_xgui_floating_window;
+
 static gchar *argumentToURL(const char *filename)
 {
     if (g_str_equal(filename, "about:gpu"))
@@ -978,7 +980,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     gtk_widget_grab_focus(firstTab);
     gtk_widget_show(GTK_WIDGET(mainWindow));
 
-    GtkWidget *floating_window = create_floating_window();
+    g_xgui_floating_window = create_floating_window();
 }
 
 int main(int argc, char *argv[])

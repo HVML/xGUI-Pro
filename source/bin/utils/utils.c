@@ -45,6 +45,8 @@
 #if PLATFORM(MINIGUI)
 extern HWND g_xgui_main_window;
 extern HWND g_xgui_floating_round_window;
+#else
+extern GtkWidget *g_xgui_floating_window;
 #endif
 
 time_t xgutils_get_monotoic_time_ms(void)
@@ -208,6 +210,7 @@ int xguitls_shake_round_window(void)
     SendNotifyMessage(g_xgui_floating_round_window,
             MSG_XGUIPRO_NEW_RDR, 0, 0);
 #else
+    g_signal_emit_by_name(g_xgui_floating_window, "shake-window");
 #endif
     return 0;
 }
