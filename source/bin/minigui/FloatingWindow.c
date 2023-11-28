@@ -37,6 +37,9 @@
 #include "FloatingWindow.h"
 #include "utils/utils.h"
 
+#define ARRAY_LEFT_IMAGE        "assets/arrow-left.png"
+#define TOGGLE_IMAGE            "assets/toggle.png"
+
 static const unsigned char _png_close_data[] = {
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
   0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
@@ -152,7 +155,7 @@ static const unsigned char _png_close_data[] = {
 #define WND_HEIGHT    48
 
 #if USE(ANIMATION)
-static void animated_cb(MGEFF_ANIMATION handle, HWND hWnd, int id, RECT *rc)
+static void anim_cb(MGEFF_ANIMATION handle, HWND hWnd, int id, RECT *rc)
 {
     (void) handle;
     MoveWindow(hWnd, rc->left, rc->top, RECTWP(rc), RECTHP(rc), FALSE);
@@ -162,7 +165,7 @@ static void move_window_with_transition(HWND hwnd, int x,
         int y, int w, int h)
 {
     MGEFF_ANIMATION animation;
-    animation = mGEffAnimationCreate((void *)hwnd, (void *)animated_cb, 1,
+    animation = mGEffAnimationCreate((void *)hwnd, (void *)anim_cb, 1,
             MGEFF_RECT);
     if (animation) {
         RECT start_rc, end_rc;
