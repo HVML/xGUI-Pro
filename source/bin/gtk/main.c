@@ -30,6 +30,7 @@
 
 #include "main.h"
 #include "BrowserWindow.h"
+#include "FloatingWindow.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "schema/HVMLURISchema.h"
@@ -976,6 +977,8 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
 
     gtk_widget_grab_focus(firstTab);
     gtk_widget_show(GTK_WIDGET(mainWindow));
+
+    GtkWidget *floating_window = create_floating_window();
 }
 
 int main(int argc, char *argv[])
