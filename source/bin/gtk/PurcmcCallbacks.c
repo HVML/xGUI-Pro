@@ -977,6 +977,46 @@ done:
     return plainwin;
 }
 
+#define PLAINWIN_PROP_NAME                  "name"
+#define PLAINWIN_PROP_CLASS                 "class"
+#define PLAINWIN_PROP_TITLE                 "title"
+#define PLAINWIN_PROP_LAYOUTSTYLE           "layoutStyle"
+#define PLAINWIN_PROP_TOOLKITSTYLE          "toolkitStyle"
+#define PLAINWIN_PROP_TRANSITIONSTYLE       "transitionStyle"
+
+static int update_plainwin(BrowserPlainWindow *plainwin, const char *property,
+        purc_variant_t value)
+{
+    if (strcmp(property, PLAINWIN_PROP_NAME) == 0) {
+        /* Forbid to change name of a plain window */
+        return PCRDR_SC_FORBIDDEN;
+    }
+    else if (strcmp(property, PLAINWIN_PROP_CLASS) == 0) {
+        /* Not acceptable to change class of a plain window */
+        return PCRDR_SC_NOT_ACCEPTABLE;
+    }
+    else if (strcmp(property, PLAINWIN_PROP_TITLE) == 0) {
+        const char *title = purc_variant_get_string_const(value);
+        if (title) {
+            browser_plain_window_set_title(plainwin, title);
+        }
+        else {
+            return PCRDR_SC_BAD_REQUEST;
+        }
+    }
+    else if (strcmp(property, PLAINWIN_PROP_LAYOUTSTYLE) == 0) {
+        /* TODO */
+    }
+    else if (strcmp(property, PLAINWIN_PROP_TOOLKITSTYLE) == 0) {
+        /* TODO */
+    }
+    else if (strcmp(property, PLAINWIN_PROP_TRANSITIONSTYLE) == 0) {
+        /* TODO */
+    }
+
+    return PCRDR_SC_OK;
+}
+
 int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         purcmc_page *page, const char *property, purc_variant_t value)
 {
@@ -987,34 +1027,44 @@ int gtk_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         return retv;
     }
 
-    void *plainwin = (void *)page;
-
-    if (strcmp(property, "name") == 0) {
-        /* Forbid to change name of a plain window */
-        return PCRDR_SC_FORBIDDEN;
-    }
-    else if (strcmp(property, "class") == 0) {
-        /* Not acceptable to change class of a plain window */
-        return PCRDR_SC_NOT_ACCEPTABLE;
-    }
-    else if (strcmp(property, "title") == 0) {
-        const char *title = purc_variant_get_string_const(value);
-        if (title) {
-            browser_plain_window_set_title(BROWSER_PLAIN_WINDOW(plainwin),
-                    title);
-        }
-        else {
-            return PCRDR_SC_BAD_REQUEST;
-        }
-    }
-    else if (strcmp(property, "layoutStyle") == 0) {
-        /* TODO */
-    }
-    else if (strcmp(property, "toolkitStyle") == 0) {
-        /* TODO */
+    BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(page);
+    if (property != NULL) {
+        return update_plainwin(window, property, value);
     }
 
-    return PCRDR_SC_OK;
+    /* handle transitionStyle first */
+    purc_variant_t trans = purc_variant_object_get_by_ckey(value,
+            PLAINWIN_PROP_TRANSITIONSTYLE);
+    if (trans) {
+        retv = update_plainwin(window, PLAINWIN_PROP_TRANSITIONSTYLE, trans);
+        if (retv != PCRDR_SC_OK) {
+            return retv;
+        }
+    }
+
+    struct pcvrnt_object_iterator* it;
+    it = pcvrnt_object_iterator_create_begin(value);
+    while (it) {
+        const char     *key = pcvrnt_object_iterator_get_ckey(it);
+        purc_variant_t  val = pcvrnt_object_iterator_get_value(it);
+        if (strcmp(key, PLAINWIN_PROP_TRANSITIONSTYLE) == 0) {
+            goto next;
+        }
+
+        retv = update_plainwin(window, key, val);
+        if (retv != PCRDR_SC_OK) {
+            break;
+        }
+
+next:
+        bool having = pcvrnt_object_iterator_next(it);
+        if (!having) {
+            break;
+        }
+    }
+    pcvrnt_object_iterator_release(it);
+
+    return retv;
 }
 
 int gtk_destroy_plainwin(purcmc_session *sess, purcmc_workspace *workspace,

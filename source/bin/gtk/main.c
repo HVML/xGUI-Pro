@@ -785,6 +785,7 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
         .destroy_widget = gtk_destroy_widget,
 
         .load = gtk_load_or_write,
+        .load_from_url = gtk_load_or_write,
         .write = gtk_load_or_write,
         .register_crtn = gtk_register_crtn,
         .revoke_crtn = gtk_revoke_crtn,
