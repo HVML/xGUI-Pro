@@ -41,6 +41,25 @@
 #define ARRAY_LEFT_IMAGE        "assets/arrow-left.png"
 #define TOGGLE_IMAGE            "assets/toggle.png"
 
+typedef struct tagRequestInfo
+{
+    int id;                     // sub request ID
+    HWND hWnd;                  // the window handle of the sending window
+    unsigned int iData0;
+    unsigned int iData1;
+    unsigned int iData2;
+    unsigned int iData3;
+} RequestInfo;
+
+typedef struct tagReplyInfo
+{
+    int id;                     // sub request ID
+    unsigned int iData0;
+    unsigned int request1;
+    unsigned int request2;
+    unsigned int request3;
+} ReplyInfo;
+
 static const unsigned char _png_close_data[] = {
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
   0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
@@ -170,7 +189,7 @@ static void move_window_with_transition(HWND hwnd, int x,
             MGEFF_RECT);
     if (animation) {
         RECT start_rc, end_rc;
-        GetWindowRect(window->hwnd, &start_rc);
+        GetWindowRect(hwnd, &start_rc);
         end_rc.left = x;
         end_rc.top = y;
         end_rc.right = end_rc.left + w;
@@ -290,6 +309,7 @@ FloatingWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return DefaultMainWinProc(hWnd, message, wParam, lParam);
 }
 
+HWND create_dock_bar (void);
 HWND create_floating_window(HWND hostingWnd, const char *title)
 {
     HWND toolWnd;
@@ -320,6 +340,7 @@ HWND create_floating_window(HWND hostingWnd, const char *title)
     if (toolWnd != HWND_INVALID)
         ShowWindow(toolWnd, SW_SHOWNORMAL);
 
+    create_dock_bar();
     return toolWnd;
 }
 
@@ -340,6 +361,17 @@ HWND create_floating_window(HWND hostingWnd, const char *title)
 // timer
 #define ID_TIMER            100             // for time display
 #define ID_SHOW_TIMER       101             // for display status and dock bar
+
+// Customer Require Id
+#define FIXED_FORMAT_REQID          (MAX_SYS_REQID + 1)
+#define UNFIXED_FORMAT_REQID        (MAX_SYS_REQID + 2)
+
+// Customer sub require Id
+#define REQ_SUBMIT_STATUSBAR_ZNODE  0   // status bar send znode index to server
+#define REQ_GET_TOPMOST_TITLE       1   // get topmost normal window title
+#define REQ_SUBMIT_TOGGLE           2   // toggle the application
+#define REQ_SHOW_PAGE               3   // show target page
+#define REQ_SUBMIT_TOPMOST          4   // set the window to topmost
 
 static int m_DockBar_Height = 0;                // height of dock bar
 static int m_DockBar_X = 0;                     // the X coordinate of top left corner
@@ -397,7 +429,7 @@ static void create_animation(HWND hWnd)
         m_animation = NULL;
     }
 
-    m_animation = mGEffAnimationCreate((void *)hWnd, (void *)animated_cb, 1,
+    m_animation = mGEffAnimationCreate((void *)hWnd, (void *)animated_cb, 2,
             MGEFF_INT);
     if (m_animation) {
         int start = 0;
@@ -434,8 +466,130 @@ static void create_animation(HWND hWnd)
     }
 }
 
+static void toggle_application(HWND hWnd)
+{
+    REQUEST request;
+    RequestInfo requestinfo;
+    ReplyInfo replyInfo;
+
+    requestinfo.id = REQ_SUBMIT_TOGGLE;
+    requestinfo.hWnd = hWnd;
+    requestinfo.iData0 = 0;
+    request.id = FIXED_FORMAT_REQID;
+    request.data = (void *)&requestinfo;
+    request.len_data = sizeof(requestinfo);
+
+    memset(&replyInfo, 0, sizeof(ReplyInfo));
+    ClientRequest(&request, &replyInfo, sizeof(ReplyInfo));
+    if((replyInfo.id == REQ_SUBMIT_TOGGLE) && (replyInfo.iData0))
+    {
+    }
+    else
+    {
+    }
+}
+
+static void paintDockBarIcon(HDC hdc)
+{
+}
+
 static LRESULT DockBarWinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    int i = 0;
+    int x = 0;
+    int y = 0;
+    HDC hdc;
+
+    switch (message)
+    {
+        case MSG_PAINT:
+            hdc = BeginPaint (hWnd);
+            paintDockBarIcon(hdc);
+            EndPaint (hWnd, hdc);
+            return 0;
+
+        case MSG_CREATE:
+            SetTimer(hWnd, ID_SHOW_TIMER, m_dockbar_visible_time);
+            m_direction = DIRECTION_HIDE;
+            m_DockBar_X = m_DockBar_Start_x;
+            m_Arrow_angle = 0;
+            break;
+
+        case MSG_LBUTTONUP:
+            x = LOSWORD (lParam);
+            y = HISWORD (lParam);
+            for(i = 0; i < BUTTON_COUNT; i++) {
+                if(PtInRect(m_rect + i, x, y)) {
+                    break;
+                }
+            }
+            if(i < BUTTON_COUNT) {
+                switch(i) {
+                    case ID_DISPLAY_BUTTON:
+                        if(m_direction == DIRECTION_HIDE)
+                            m_direction = DIRECTION_SHOW;
+                        else
+                            m_direction = DIRECTION_HIDE;
+                        create_animation(hWnd);
+                        break;
+                    case ID_HOME_BUTTON:
+                        break;
+                    case ID_TOGGLE_BUTTON:
+                        toggle_application(hWnd);
+                        break;
+                }
+            }
+
+            break;
+
+        case MSG_COMMAND:
+#if 0
+            code = HIWORD (wParam);
+            id   = LOWORD (wParam);
+            switch(id)
+            {
+                case ID_DISPLAY_BUTTON:
+                    break;
+                case ID_HOME_BUTTON:
+                    break;
+                case ID_TOGGLE_BUTTON:
+                    break;
+                case ID_SETTING_BUTTON:
+                    break;
+                case ID_SHUTDOWN_BUTTON:
+                    break;
+                case ID_ABOUT_BUTTON:
+                    break;
+            }
+#endif
+            break;
+
+        case MSG_TIMER:
+            if(wParam == ID_SHOW_TIMER)
+            {
+                m_direction = DIRECTION_HIDE;
+                create_animation(hWnd);
+                KillTimer(hWnd, ID_SHOW_TIMER);
+            }
+            break;
+
+        case MSG_CLOSE:
+#if 0
+            for(i = 1; i < BUTTON_COUNT; i++)
+            {
+                cairo_surface_destroy(surface[i]);
+                cairo_destroy(cr[i]);
+            }
+            if(m_arrow_svg_handle)
+                g_object_unref(m_arrow_svg_handle);
+#endif
+
+            KillTimer (hWnd, ID_SHOW_TIMER);
+            DestroyAllControls (hWnd);
+            DestroyMainWindow (hWnd);
+            PostQuitMessage (hWnd);
+            return 0;
+    }
     return DefaultMainWinProc (hWnd, message, wParam, lParam);
 }
 
