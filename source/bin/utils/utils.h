@@ -69,8 +69,8 @@ time_t xgutils_get_monotoic_time_ms(void);
 void xgutils_global_set_data(const char *key, void *pointer);
 void *xgutils_global_get_data(const char *key);
 
-int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
-        const char *app_icon, uint64_t timeout_seconds);
+int xgutils_show_confirm_window(const char *app_name, const char *app_label,
+        const char *app_desc, const char *app_icon, uint64_t timeout_seconds);
 
 int xgutils_show_runners_window(void);
 

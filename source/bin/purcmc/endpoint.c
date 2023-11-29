@@ -561,7 +561,8 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
             ut = 10;
         }
 
-        int auth_ret = xgutils_show_confirm_window(s_label, s_desc, s_icon, ut);
+        int auth_ret = xgutils_show_confirm_window(app_name, s_label, s_desc,
+                s_icon, ut);
         if (auth_ret == CONFIRM_RESULT_ID_DECLINE) {
             return PCRDR_SC_UNAUTHORIZED;
         }

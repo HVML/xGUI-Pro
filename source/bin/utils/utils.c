@@ -145,8 +145,8 @@ static BrowserPlainWindow *create_plainwin_with_uri(const char *name,
     return plainwin;
 }
 
-int xgutils_show_confirm_window(const char *app_label, const char *app_desc,
-        const char *app_icon, uint64_t timeout_seconds)
+int xgutils_show_confirm_window(const char *app_name, const char *app_label,
+        const char *app_desc, const char *app_icon, uint64_t timeout_seconds)
 {
     int result = CONFIRM_RESULT_ID_DECLINE;
     if (!app_icon) {
