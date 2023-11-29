@@ -39,6 +39,7 @@
 #include "utils/utils.h"
 
 #define ARRAY_LEFT_IMAGE        "assets/arrow-left.png"
+#define HOME_IMAGE              "assets/home.png"
 #define TOGGLE_IMAGE            "assets/toggle.png"
 
 typedef struct tagRequestInfo
@@ -373,39 +374,74 @@ HWND create_floating_window(HWND hostingWnd, const char *title)
 #define REQ_SHOW_PAGE               3   // show target page
 #define REQ_SUBMIT_TOPMOST          4   // set the window to topmost
 
-static int m_DockBar_Height = 0;                // height of dock bar
-static int m_DockBar_X = 0;                     // the X coordinate of top left corner
 static MGEFF_ANIMATION m_animation = NULL;      // handle of animation
-static int m_direction = DIRECTION_SHOW;        // the direction of animation
-static float m_factor = 0;                      // DPI / 96
-static RECT m_rect[BUTTON_COUNT];               // area for BUTTON
-static float m_Arrow_angle = 0;                 // angle of arrow button
+static int direction = DIRECTION_SHOW;        // the direction of animation
+static float factor = 0;                      // DPI / 96
+static float arrow_angle = 0;                 // angle of arrow button
 
-static int m_DockBar_Start_x = 0;               // it is only for convenience for animation
-static int m_DockBar_Start_y = 0;
-static int m_DockBar_End_x = 0;
-static int m_DockBar_End_y = 0;
+static int dockbar_height = 0;                // height of dock bar
+static int dockbar_x = 0;                     // the X coordinate of top left corner
+static int dockbar_start_x = 0;               // it is only for convenience for animation
+static int dockbar_start_y = 0;
+static int dockbar_end_x = 0;
+static int dockbar_end_y = 0;
 
-static int m_DockBar_Left_Length = 0;           // the visible dock bar length when hidden
-static int m_Button_Interval = 0;               // the interval length between dock buttons
+static int dockbar_left_length = 0;           // the visible dock bar length when hidden
+static int button_interval = 0;               // the interval length between dock buttons
 
-static int m_dockbar_visible_time = 400;        // 400 * 10ms
-static int m_dockbar_show_time = 750;           // 500 ms
-static int m_dockbar_hide_time = 400;           // 500 ms
+static int dockbar_visible_time = 400;        // 400 * 10ms
+static int dockbar_show_time = 750;           // 500 ms
+static int dockbar_hide_time = 400;           // 500 ms
+
+static RECT button_rect[BUTTON_COUNT];               // area for BUTTON
+BITMAP button_bitmap[BUTTON_COUNT];
+PBITMAP p_button_bitmap[BUTTON_COUNT] = { NULL };
+
+static void load_button_bitmap(HDC hdc)
+{
+    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
+    if (webext_dir == NULL) {
+        webext_dir = WEBKIT_WEBEXT_DIR;
+    }
+
+    char path[PATH_MAX+1] = {0};
+
+    sprintf(path, "%s/%s", webext_dir, ARRAY_LEFT_IMAGE);
+    LoadBitmapFromFile(hdc, &button_bitmap[0], path);
+    p_button_bitmap[0] = &button_bitmap[0];
+
+    sprintf(path, "%s/%s", webext_dir, HOME_IMAGE);
+    LoadBitmapFromFile(hdc, &button_bitmap[1], path);
+    p_button_bitmap[1] = &button_bitmap[1];
+
+    sprintf(path, "%s/%s", webext_dir, TOGGLE_IMAGE);
+    LoadBitmapFromFile(hdc, &button_bitmap[2], path);
+    p_button_bitmap[2] = &button_bitmap[2];
+}
+
+static void unload_button_bitmap()
+{
+    for (int i = 0; i < BUTTON_COUNT; i++) {
+        if (p_button_bitmap[i]) {
+            UnloadBitmap(p_button_bitmap[i]);
+            p_button_bitmap[i] = NULL;
+        }
+    }
+}
 
 static void animated_cb(MGEFF_ANIMATION handle, HWND hWnd, int id, int *value)
 {
     float factor = 0;
-    if(m_DockBar_X != *value) {
-        m_DockBar_X = *value;
-        factor = (float)(m_DockBar_X - m_DockBar_Start_x) /
-            (float)(m_DockBar_End_x - m_DockBar_Start_x - m_DockBar_Left_Length);
-        m_Arrow_angle = -1.0 * M_PI * factor;
+    if(dockbar_x != *value) {
+        dockbar_x = *value;
+        factor = (float)(dockbar_x - dockbar_start_x) /
+            (float)(dockbar_end_x - dockbar_start_x - dockbar_left_length);
+        arrow_angle = -1.0 * M_PI * factor;
         MoveWindow(hWnd,
-                m_DockBar_X,
-                m_DockBar_Start_y,
-                m_DockBar_End_x - m_DockBar_Start_x,
-                m_DockBar_Height, TRUE);
+                dockbar_x,
+                dockbar_start_y,
+                dockbar_end_x - dockbar_start_x,
+                dockbar_height, TRUE);
     }
 }
 
@@ -416,8 +452,8 @@ static void animated_end(MGEFF_ANIMATION handle)
     mGEffAnimationDelete(m_animation);
     m_animation = NULL;
 
-    if((m_direction == DIRECTION_SHOW) && hWnd) {
-        SetTimer(hWnd, ID_SHOW_TIMER, m_dockbar_visible_time);
+    if((direction == DIRECTION_SHOW) && hWnd) {
+        SetTimer(hWnd, ID_SHOW_TIMER, dockbar_visible_time);
     }
 }
 
@@ -437,24 +473,24 @@ static void create_animation(HWND hWnd)
         int duration = 0;
         enum EffMotionType motionType = InCirc;
 
-        start = m_DockBar_X;
-        if(m_direction == DIRECTION_HIDE)
+        start = dockbar_x;
+        if(direction == DIRECTION_HIDE)
         {
-            end = g_rcScr.right - m_DockBar_Left_Length;
+            end = g_rcScr.right - dockbar_left_length;
             motionType = OutCirc;
-            duration = m_dockbar_hide_time *
-                (g_rcScr.right - m_DockBar_Left_Length - m_DockBar_X) /
-                (g_rcScr.right - m_DockBar_Left_Length - m_DockBar_Start_x);
+            duration = dockbar_hide_time *
+                (g_rcScr.right - dockbar_left_length - dockbar_x) /
+                (g_rcScr.right - dockbar_left_length - dockbar_start_x);
         }
         else {
-            end = m_DockBar_Start_x;
+            end = dockbar_start_x;
             motionType = OutCirc;
-            duration = m_dockbar_show_time * (m_DockBar_X - m_DockBar_Start_x) /
-                (g_rcScr.right -  m_DockBar_Left_Length- m_DockBar_Start_x);
+            duration = dockbar_show_time * (dockbar_x - dockbar_start_x) /
+                (g_rcScr.right -  dockbar_left_length- dockbar_start_x);
         }
 
         if(duration == 0) {
-            duration = m_dockbar_show_time;
+            duration = dockbar_show_time;
         }
 
         mGEffAnimationSetStartValue(m_animation, &start);
@@ -481,16 +517,25 @@ static void toggle_application(HWND hWnd)
 
     memset(&replyInfo, 0, sizeof(ReplyInfo));
     ClientRequest(&request, &replyInfo, sizeof(ReplyInfo));
-    if((replyInfo.id == REQ_SUBMIT_TOGGLE) && (replyInfo.iData0))
-    {
+    if((replyInfo.id == REQ_SUBMIT_TOGGLE) && (replyInfo.iData0)) {
     }
-    else
-    {
+    else {
     }
 }
 
 static void paintDockBarIcon(HDC hdc)
 {
+    if (!p_button_bitmap[0]) {
+        load_button_bitmap(hdc);
+    }
+
+    for (int i = 0; i < BUTTON_COUNT; i++) {
+        if (p_button_bitmap[i]) {
+            int x = i * button_interval + MARGIN_DOCK + (dockbar_height - DOCK_ICON_WIDTH) * factor / 2;
+            int y = (int)((dockbar_height - DOCK_ICON_HEIGHT) * factor / 2);
+            FillBoxWithBitmap(hdc, x, y, DOCK_ICON_WIDTH, DOCK_ICON_HEIGHT, p_button_bitmap[i]);
+        }
+    }
 }
 
 static LRESULT DockBarWinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -509,27 +554,27 @@ static LRESULT DockBarWinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
             return 0;
 
         case MSG_CREATE:
-            SetTimer(hWnd, ID_SHOW_TIMER, m_dockbar_visible_time);
-            m_direction = DIRECTION_HIDE;
-            m_DockBar_X = m_DockBar_Start_x;
-            m_Arrow_angle = 0;
+            SetTimer(hWnd, ID_SHOW_TIMER, dockbar_visible_time);
+            direction = DIRECTION_HIDE;
+            dockbar_x = dockbar_start_x;
+            arrow_angle = 0;
             break;
 
         case MSG_LBUTTONUP:
             x = LOSWORD (lParam);
             y = HISWORD (lParam);
             for(i = 0; i < BUTTON_COUNT; i++) {
-                if(PtInRect(m_rect + i, x, y)) {
+                if(PtInRect(button_rect + i, x, y)) {
                     break;
                 }
             }
             if(i < BUTTON_COUNT) {
                 switch(i) {
                     case ID_DISPLAY_BUTTON:
-                        if(m_direction == DIRECTION_HIDE)
-                            m_direction = DIRECTION_SHOW;
+                        if(direction == DIRECTION_HIDE)
+                            direction = DIRECTION_SHOW;
                         else
-                            m_direction = DIRECTION_HIDE;
+                            direction = DIRECTION_HIDE;
                         create_animation(hWnd);
                         break;
                     case ID_HOME_BUTTON:
@@ -543,47 +588,19 @@ static LRESULT DockBarWinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
             break;
 
         case MSG_COMMAND:
-#if 0
-            code = HIWORD (wParam);
-            id   = LOWORD (wParam);
-            switch(id)
-            {
-                case ID_DISPLAY_BUTTON:
-                    break;
-                case ID_HOME_BUTTON:
-                    break;
-                case ID_TOGGLE_BUTTON:
-                    break;
-                case ID_SETTING_BUTTON:
-                    break;
-                case ID_SHUTDOWN_BUTTON:
-                    break;
-                case ID_ABOUT_BUTTON:
-                    break;
-            }
-#endif
             break;
 
         case MSG_TIMER:
             if(wParam == ID_SHOW_TIMER)
             {
-                m_direction = DIRECTION_HIDE;
+                direction = DIRECTION_HIDE;
                 create_animation(hWnd);
                 KillTimer(hWnd, ID_SHOW_TIMER);
             }
             break;
 
         case MSG_CLOSE:
-#if 0
-            for(i = 1; i < BUTTON_COUNT; i++)
-            {
-                cairo_surface_destroy(surface[i]);
-                cairo_destroy(cr[i]);
-            }
-            if(m_arrow_svg_handle)
-                g_object_unref(m_arrow_svg_handle);
-#endif
-
+            unload_button_bitmap();
             KillTimer (hWnd, ID_SHOW_TIMER);
             DestroyAllControls (hWnd);
             DestroyMainWindow (hWnd);
@@ -599,8 +616,8 @@ HWND create_dock_bar (void)
     HWND hDockBar;
     int i = 0;
 
-    m_factor = (float)GetGDCapability(HDC_SCREEN, GDCAP_DPI) / 96.0;
-    m_DockBar_Height = HEIGHT_DOCKBAR * m_factor;
+    factor = (float)GetGDCapability(HDC_SCREEN, GDCAP_DPI) / 96.0;
+    dockbar_height = HEIGHT_DOCKBAR * factor;
 
     CreateInfo.dwStyle = WS_ABSSCRPOS | WS_VISIBLE;
     CreateInfo.dwExStyle = WS_EX_WINTYPE_DOCKER | WS_EX_TROUNDCNS | WS_EX_BROUNDCNS;
@@ -610,16 +627,18 @@ HWND create_dock_bar (void)
     CreateInfo.hIcon = 0;
     CreateInfo.MainWindowProc = DockBarWinProc;
     CreateInfo.lx = g_rcScr.right * (1 - 0.618);
-    CreateInfo.ty = g_rcScr.bottom - m_DockBar_Height;
+    CreateInfo.ty = g_rcScr.bottom - dockbar_height;
     CreateInfo.rx = g_rcScr.right;
     CreateInfo.by = g_rcScr.bottom;
 
-    m_DockBar_Start_x = CreateInfo.lx;
-    m_DockBar_Start_y = CreateInfo.ty;
-    m_DockBar_End_x = CreateInfo.rx;
-    m_DockBar_End_y = CreateInfo.by;
-    m_DockBar_Left_Length = 2 * MARGIN_DOCK + m_DockBar_Height * m_factor;
-    m_Button_Interval = (m_DockBar_End_x - m_DockBar_Start_x) / BUTTON_COUNT;
+    dockbar_start_x = CreateInfo.lx;
+    dockbar_start_y = CreateInfo.ty;
+    dockbar_end_x = CreateInfo.rx;
+    dockbar_end_y = CreateInfo.by;
+
+    //dockbar_left_length = 2 * MARGIN_DOCK + dockbar_height * factor;
+    dockbar_left_length = dockbar_height;
+    button_interval = (dockbar_end_x - dockbar_start_x) / BUTTON_COUNT;
 
     CreateInfo.iBkColor = RGBA2Pixel(HDC_SCREEN, 0xFF, 0xFF, 0xFF, 0xFF);
     CreateInfo.dwAddData = 0;
@@ -630,11 +649,11 @@ HWND create_dock_bar (void)
                                 CT_ALPHAPIXEL, 0xFF);
 
     for(i = 0; i < BUTTON_COUNT; i++) {
-        m_rect[i].left = i * m_Button_Interval + MARGIN_DOCK +
-            (m_DockBar_Height - DOCK_ICON_WIDTH) * m_factor / 2;
-        m_rect[i].top = (m_DockBar_Height - DOCK_ICON_HEIGHT) * m_factor / 2;
-        m_rect[i].right = m_rect[i].left + DOCK_ICON_WIDTH * m_factor;
-        m_rect[i].bottom = m_rect[i].top + DOCK_ICON_HEIGHT * m_factor;
+        button_rect[i].left = i * button_interval + MARGIN_DOCK +
+            (dockbar_height - DOCK_ICON_WIDTH) * factor / 2;
+        button_rect[i].top = (dockbar_height - DOCK_ICON_HEIGHT) * factor / 2;
+        button_rect[i].right = button_rect[i].left + DOCK_ICON_WIDTH * factor;
+        button_rect[i].bottom = button_rect[i].top + DOCK_ICON_HEIGHT * factor;
     }
 
     return hDockBar;
