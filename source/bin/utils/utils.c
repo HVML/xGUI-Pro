@@ -31,6 +31,7 @@
 
 #include <webkit2/webkit2.h>
 #include <purcmc/purcmc.h>
+#include <purcmc/server.h>
 #include <schema/HbdrunURISchema.h>
 
 #if PLATFORM(MINIGUI)
@@ -182,6 +183,7 @@ int xgutils_show_confirm_window(const char *app_name, const char *app_label,
             }
             else if (strcasecmp(p, CONFIRM_RESULT_ACCEPT_ALWAYS) == 0) {
                 result = CONFIRM_RESULT_ID_ACCEPT_ALWAYS;
+                xgutils_set_app_confirm(app_name);
             }
             g_object_set_data(G_OBJECT(web_view),
                 BROWSER_HBDRUN_ACTION_PARAM_RESULT, NULL);
@@ -213,3 +215,52 @@ int xguitls_shake_round_window(void)
 #endif
     return 0;
 }
+
+#define CONFIR_INFO_PATH "/app/cn.fmsoft.hybridos.xguipro/var/confirm_info.json"
+
+purc_variant_t
+xgutils_load_confirm_infos(void)
+{
+    purc_variant_t infos = purc_variant_load_from_json_file(CONFIR_INFO_PATH);
+
+    if (!infos) {
+        infos = purc_variant_make_object_0();
+    }
+
+    return infos;
+}
+
+void xgutils_save_confirm_infos(void)
+{
+    purc_variant_t infos = xgutils_get_confirm_infos();
+    purc_rwstream_t rws = purc_rwstream_new_from_file(CONFIR_INFO_PATH, "w");
+    purc_variant_serialize(infos, rws, 0, PCVRNT_SERIALIZE_OPT_PLAIN, NULL);
+    purc_rwstream_destroy(rws);
+}
+
+purc_variant_t xgutils_get_confirm_infos(void)
+{
+    struct purcmc_server *server = xguitls_get_purcmc_server();
+    if (!server->confirm_infos) {
+        server->confirm_infos = xgutils_load_confirm_infos();
+    }
+    return server->confirm_infos;
+}
+
+bool xgutils_is_app_confirm(const char *app)
+{
+    purc_variant_t infos = xgutils_get_confirm_infos();
+    purc_variant_t v = purc_variant_object_get_by_ckey(infos, app);
+    purc_clr_error();
+    return v ? true : false;
+}
+
+void xgutils_set_app_confirm(const char *app)
+{
+    purc_variant_t infos = xgutils_get_confirm_infos();
+    purc_variant_t v = purc_variant_make_boolean(true);
+    purc_variant_object_set_by_ckey(infos, app, v);
+    purc_variant_unref(v);
+    xgutils_save_confirm_infos();
+}
+

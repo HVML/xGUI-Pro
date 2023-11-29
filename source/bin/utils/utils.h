@@ -65,7 +65,6 @@ extern "C" {
 
 time_t xgutils_get_monotoic_time_ms(void);
 
-
 void xgutils_global_set_data(const char *key, void *pointer);
 void *xgutils_global_get_data(const char *key);
 
@@ -75,6 +74,20 @@ int xgutils_show_confirm_window(const char *app_name, const char *app_label,
 int xgutils_show_runners_window(void);
 
 int xguitls_shake_round_window(void);
+
+purc_variant_t
+xgutils_load_confirm_infos(void);
+
+void xgutils_save_confirm_infos(void);
+
+purc_variant_t
+xgutils_get_confirm_infos(void);
+
+bool
+xgutils_is_app_confirm(const char *app);
+
+void
+xgutils_set_app_confirm(const char *app);
 
 #ifdef __cplusplus
 }

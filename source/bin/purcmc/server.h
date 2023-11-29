@@ -209,6 +209,8 @@ struct purcmc_server
     /* the user data */
     void *user_data;
 
+    purc_variant_t confirm_infos;
+
     /* the callbacks */
     purcmc_server_callbacks cbs;
 };

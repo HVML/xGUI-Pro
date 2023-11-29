@@ -549,22 +549,24 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     /* popup auth window  */
     if ((tmp = purc_variant_object_get_by_ckey(data, "signature"))) {
+        bool confirm = xgutils_is_app_confirm(app_name);
+        if (!confirm) {
+            uint64_t ut = 0;
+            purc_variant_t timeout = purc_variant_object_get_by_ckey(data,
+                    "timeoutSeconds");
+            if (timeout) {
+                purc_variant_cast_to_ulongint(timeout, &ut, false);
+            }
 
-        uint64_t ut = 0;
-        purc_variant_t timeout = purc_variant_object_get_by_ckey(data,
-                "timeoutSeconds");
-        if (timeout) {
-            purc_variant_cast_to_ulongint(timeout, &ut, false);
-        }
+            if (ut == 0) {
+                ut = 10;
+            }
 
-        if (ut == 0) {
-            ut = 10;
-        }
-
-        int auth_ret = xgutils_show_confirm_window(app_name, s_label, s_desc,
-                s_icon, ut);
-        if (auth_ret == CONFIRM_RESULT_ID_DECLINE) {
-            return PCRDR_SC_UNAUTHORIZED;
+            int auth_ret = xgutils_show_confirm_window(app_name, s_label, s_desc,
+                    s_icon, ut);
+            if (auth_ret == CONFIRM_RESULT_ID_DECLINE) {
+                return PCRDR_SC_UNAUTHORIZED;
+            }
         }
     }
 

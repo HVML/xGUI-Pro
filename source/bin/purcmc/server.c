@@ -948,6 +948,11 @@ deinit_server(void)
         the_srvcfg->port = NULL;
     }
 
+    if (the_server.confirm_infos) {
+        purc_variant_unref(the_server.confirm_infos);
+        the_server.confirm_infos = PURC_VARIANT_INVALID;
+    }
+
 }
 
 #if PCA_ENABLE_DNSSD
@@ -1160,6 +1165,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
     }
 
     the_server.user_data = user_data;
+    the_server.confirm_infos = xgutils_load_confirm_infos();
     the_server.cbs = *cbs;
 
     return &the_server;
