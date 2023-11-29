@@ -345,8 +345,8 @@ HWND create_floating_window(HWND hostingWnd, const char *title)
     return toolWnd;
 }
 
-#define MARGIN_DOCK         15              // margin of button in dock bar
-#define HEIGHT_DOCKBAR      60              // height of dock bar
+#define MARGIN_DOCK         0              // margin of button in dock bar
+#define HEIGHT_DOCKBAR      50              // height of dock bar
 #define DOCK_ICON_WIDTH     42              // the width of icon in dock bar
 #define DOCK_ICON_HEIGHT    42              // the height of icon in dock bar
 
@@ -578,9 +578,10 @@ static LRESULT DockBarWinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
                         create_animation(hWnd);
                         break;
                     case ID_HOME_BUTTON:
+                        xgutils_show_runners_window();
                         break;
                     case ID_TOGGLE_BUTTON:
-                        toggle_application(hWnd);
+//                        toggle_application(hWnd);
                         break;
                 }
             }
@@ -626,10 +627,11 @@ HWND create_dock_bar (void)
     CreateInfo.hCursor = GetSystemCursor (0);
     CreateInfo.hIcon = 0;
     CreateInfo.MainWindowProc = DockBarWinProc;
-    CreateInfo.lx = g_rcScr.right * (1 - 0.618);
-    CreateInfo.ty = g_rcScr.bottom - dockbar_height;
+//    CreateInfo.lx = g_rcScr.right * (1 - 0.618);
+    CreateInfo.lx = g_rcScr.right * 0.618;
+    CreateInfo.ty = 0;
     CreateInfo.rx = g_rcScr.right;
-    CreateInfo.by = g_rcScr.bottom;
+    CreateInfo.by = CreateInfo.ty + dockbar_height;;
 
     dockbar_start_x = CreateInfo.lx;
     dockbar_start_y = CreateInfo.ty;
@@ -637,7 +639,7 @@ HWND create_dock_bar (void)
     dockbar_end_y = CreateInfo.by;
 
     //dockbar_left_length = 2 * MARGIN_DOCK + dockbar_height * factor;
-    dockbar_left_length = dockbar_height;
+    dockbar_left_length = dockbar_height / 2;
     button_interval = (dockbar_end_x - dockbar_start_x) / BUTTON_COUNT;
 
     CreateInfo.iBkColor = RGBA2Pixel(HDC_SCREEN, 0xFF, 0xFF, 0xFF, 0xFF);
@@ -646,7 +648,7 @@ HWND create_dock_bar (void)
 
     hDockBar = CreateMainWindowEx2 (&CreateInfo, 0L, NULL, NULL, ST_PIXEL_ARGB8888,
                                 MakeRGBA (140, 140, 140, 0xE0),
-                                CT_ALPHAPIXEL, 0xFF);
+                                CT_ALPHAPIXEL, COLOR_BLEND_PD_SRC_OVER);
 
     for(i = 0; i < BUTTON_COUNT; i++) {
         button_rect[i].left = i * button_interval + MARGIN_DOCK +
