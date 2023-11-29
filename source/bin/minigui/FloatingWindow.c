@@ -106,6 +106,7 @@ static int dockbar_left_length = 0;           // the visible dock bar length whe
 static int button_interval = 0;               // the interval length between dock buttons
 
 static int dockbar_visible_time = 500;        // 500 * 10ms
+static int dockbar_init_visible_time = 20;        // 50 * 10ms
 
 static RECT button_rect[BUTTON_COUNT];               // area for BUTTON
 BITMAP button_bitmap[BUTTON_COUNT];
@@ -312,7 +313,7 @@ static LRESULT DockBarWinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
             return 0;
 
         case MSG_CREATE:
-            SetTimer(hWnd, ID_SHOW_TIMER, dockbar_visible_time);
+            SetTimer(hWnd, ID_SHOW_TIMER, dockbar_init_visible_time);
             direction = DIRECTION_HIDE;
             dockbar_x = dockbar_start_x;
             arrow_angle = 0;
@@ -405,6 +406,7 @@ HWND create_floating_window(HWND hostingWnd, const char *title)
     //dockbar_left_length = 2 * MARGIN_DOCK + dockbar_height * factor;
     dockbar_left_length = dockbar_height / 2;
     button_interval = (dockbar_end_x - dockbar_start_x) / BUTTON_COUNT;
+
 
     CreateInfo.iBkColor = RGBA2Pixel(HDC_SCREEN, 0xFF, 0xFF, 0xFF, 0xFF);
     CreateInfo.dwAddData = 0;
