@@ -251,7 +251,7 @@ static void create_animation(HWND hWnd)
 
 static void toggle_application(HWND hWnd)
 {
-#if 0
+#if 1
     REQUEST request;
     RequestInfo requestinfo;
     ReplyInfo replyInfo;

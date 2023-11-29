@@ -40,10 +40,6 @@
 
 #include "sd/sd.h"
 
-#if PLATFORM(MINIGUI)
-#include "minigui/PopupTipWindow.h"
-#endif
-
 static purcmc_server the_server;
 static purcmc_server_config* the_srvcfg;
 
@@ -966,10 +962,6 @@ const char *xguipro_txt_records[] = {
 
 static size_t nr_xguipro_txt_records = 1;
 
-#if PLATFORM(MINIGUI)
-extern HWND g_xgui_main_window;
-#endif
-
 gboolean start_dnssd_browsing_cb(gpointer user_data)
 {
     purcmc_server *server = (purcmc_server*) user_data;
@@ -1033,6 +1025,7 @@ void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
         }
     }
 #endif
+
     {
         /* host + :(1) + port(5) */
         size_t nr_name = strlen(hostname) + 7;
@@ -1056,42 +1049,6 @@ void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
             xguitls_shake_round_window();
         }
     }
-
-#if 0
-    purcmc_endpoint* endpoint = get_curr_endpoint(server);
-    purc_log_warn("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
-            "|port=%d|txt=%s|endpoint=%p\n",
-            if_index, service_name, reg_type, hostname, port, txt_record, endpoint);
-
-    if (!endpoint) {
-        purc_log_info("Found remote service %s:%d, curr endpoint is null.\n",
-                hostname, port);
-        goto out;
-    }
-
-    if (!endpoint->allow_switching_rdr) {
-        purc_log_info("Found remote service %s:%d,"
-                " curr endpoint do not allow switching rdr.\n", hostname, port);
-        goto out;
-    }
-
-#if PLATFORM(MINIGUI)
-    struct sd_remote_service *rs = malloc(sizeof(struct sd_remote_service));
-    rs->index = if_index;
-    rs->ct = purc_get_monotoic_time();
-    rs->full_name = strdup(service_name);
-    rs->reg_type = strdup(reg_type);
-    rs->host = strdup(hostname);
-    rs->port = port;
-    rs->txt = strdup(txt_record);
-    rs->nr_txt = len_txt_record;
-    rs->server = server;
-    rs->endpoint = endpoint;
-    HWND hWnd = GetActiveWindow();
-    rs->hostingWindow = hWnd ? hWnd : g_xgui_main_window;
-    create_popup_tip_window((HWND)rs->hostingWindow, rs);
-#endif
-#endif
 
 out:
     return;
