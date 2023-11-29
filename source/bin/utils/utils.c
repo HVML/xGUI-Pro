@@ -207,8 +207,7 @@ int xgutils_show_runners_window(void)
 int xguitls_shake_round_window(void)
 {
 #if PLATFORM(MINIGUI)
-    SendNotifyMessage(g_xgui_floating_window,
-            MSG_XGUIPRO_NEW_RDR, 0, 0);
+    SendNotifyMessage(g_xgui_floating_window, MSG_XGUIPRO_NEW_RDR, 0, 0);
 #else
     g_signal_emit_by_name(g_xgui_floating_window, "shake-window");
 #endif
