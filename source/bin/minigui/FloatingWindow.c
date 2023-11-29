@@ -39,6 +39,7 @@
 #include "utils/utils.h"
 
 #define ARRAY_LEFT_IMAGE        "assets/arrow-left.png"
+#define ARRAY_RIGHT_IMAGE        "assets/arrow-right.png"
 #define HOME_IMAGE              "assets/home.png"
 #define TOGGLE_IMAGE            "assets/toggle.png"
 
@@ -110,6 +111,9 @@ static RECT button_rect[BUTTON_COUNT];               // area for BUTTON
 BITMAP button_bitmap[BUTTON_COUNT];
 PBITMAP p_button_bitmap[BUTTON_COUNT] = { NULL };
 
+BITMAP arrow_right_bitmap;
+PBITMAP p_arrow_right_bitmap = NULL;
+
 static void load_button_bitmap(HDC hdc)
 {
     const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
@@ -130,6 +134,11 @@ static void load_button_bitmap(HDC hdc)
     sprintf(path, "%s/%s", webext_dir, TOGGLE_IMAGE);
     LoadBitmapFromFile(hdc, &button_bitmap[2], path);
     p_button_bitmap[2] = &button_bitmap[2];
+
+    /* arrow right */
+    sprintf(path, "%s/%s", webext_dir, ARRAY_RIGHT_IMAGE);
+    LoadBitmapFromFile(hdc, &arrow_right_bitmap, path);
+    p_arrow_right_bitmap = &arrow_right_bitmap;
 }
 
 static void unload_button_bitmap()
@@ -270,10 +279,19 @@ static void paintDockBarIcon(HDC hdc)
     }
 
     for (int i = 0; i < BUTTON_COUNT; i++) {
-        if (p_button_bitmap[i]) {
+        PBITMAP p = p_button_bitmap[i];
+        if (i == 0) {
+            if (direction == DIRECTION_HIDE || dockbar_x == dockbar_start_x) {
+                p = p_arrow_right_bitmap;
+            }
+            if (dockbar_x == (g_rcScr.right - dockbar_left_length)) {
+                p = p_button_bitmap[i];
+            }
+        }
+        if (p) {
             int x = i * button_interval + MARGIN_DOCK + (dockbar_height - DOCK_ICON_WIDTH) * factor / 2;
             int y = (int)((dockbar_height - DOCK_ICON_HEIGHT) * factor / 2);
-            FillBoxWithBitmap(hdc, x, y, DOCK_ICON_WIDTH, DOCK_ICON_HEIGHT, p_button_bitmap[i]);
+            FillBoxWithBitmap(hdc, x, y, DOCK_ICON_WIDTH, DOCK_ICON_HEIGHT, p);
         }
     }
 }
