@@ -48,12 +48,20 @@
 #define HBDRUN_SCHEMA_TYPE_CONFIRM          "confirm"
 #define HBDRUN_SCHEMA_TYPE_ACTION           "action"
 
+#define HBDRUN_SCHEMA_TYPE_WINDOWS          "windows" /* used to switch window */
+
 #define CONFIRM_BTN_TEXT_ACCEPT_ONCE        "接受一次"
 #define CONFIRM_BTN_TEXT_ACCEPT_ALWAYS      "始终接受"
 #define CONFIRM_BTN_TEXT_DECLINE            "拒绝"
 
 typedef void (*hbdrun_handler)(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext, const char *uri);
+
+#if PLATFORM(MINIGUI)
+extern HWND g_xgui_main_window;
+extern HWND g_xgui_floating_window;
+#endif
+
 
 static const char *error_page =
     "<html><body><h1>%d : %s</h1></body></html>";
@@ -338,6 +346,66 @@ static const char *confirm_page_template = ""
 "        </div>"
 "    </body>"
 "</html>"
+"";
+
+static const char *windows_page_tmpl_prefix = ""
+"<!DOCTYPE html>"
+"<html lang='zh-CN'>"
+"    <head>"
+"        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>"
+"        <meta name='viewport' content='width=device-width, initial-scale=1'>"
+"        <!-- Bootstrap core CSS -->"
+"        <link rel='stylesheet' href='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/css/bootstrap.min.css' />"
+"        <script type='text/javascript' src='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/js/bootstrap.bundle.min.js'></script>"
+""
+"        <script>"
+"            function on_action_result() {"
+"                if (httpRequest.readyState === XMLHttpRequest.DONE) {"
+"                    window.close();"
+"                }"
+"            }"
+""
+"            function on_item_click(e) {"
+"                var handle = e.getAttribute('data-handle');"
+"                var uri = 'hbdrun://action?type=switchWindow&handle=' + handle;"
+"                httpRequest = new XMLHttpRequest();"
+"                httpRequest.onreadystatechange = on_action_result;"
+"                httpRequest.open('POST', uri);"
+"                httpRequest.send();"
+"            }"
+""
+"            function on_close_page_click() {"
+"                window.close();"
+"            }"
+"        </script>"
+""
+"    </head>"
+"    <body>"
+"        <main>"
+"            <div class='container px-4 py-5' id='custom-cards'>"
+"                <div class='d-flex justify-content-between border-bottom'>"
+"                    <h3 class='pb-2'>所有窗口</h2>"
+"                    <button type='button' class='btn-close' onclick='on_close_page_click()'></button>"
+"                </div>"
+""
+"                <div class='row row-cols-1 row-cols-lg-2 row-cols-xl-3 align-items-stretch g-4 py-5'>"
+"";
+
+static const char *windows_page_tmpl_suffix = ""
+"                </div>"
+"            </div>"
+"        </main>"
+"    </body>"
+"</html>"
+"";
+
+/* handle, title */
+static const char *windows_card_tmpl = ""
+"                    <div class='col mx-auto'>"
+"                        <div class='card card-cover h-100 overflow-hidden text-bg-light rounded-4 shadow-lg p-3' data-handle='%lx' onclick='on_item_click(this)'>"
+"                            <h3 class='fs-2 ms-2'>%s</h3>"
+"                        </div>"
+"                    </div>"
 "";
 
 static void send_response(WebKitURISchemeRequest *request, guint status_code,
@@ -672,6 +740,40 @@ error:
     }
 }
 
+static void on_hbdrun_action_switch_window(WebKitURISchemeRequest *request,
+        WebKitWebContext *webContext, const char *uri)
+{
+    char *err_info = NULL;
+    char *handle = NULL;
+    if (!hbdrun_uri_get_query_value_alloc(uri,
+                BROWSER_HBDRUN_ACTION_PARAM_HANDLE, &handle)) {
+        err_info = g_strdup_printf("invalid endpoints param (%s)", uri);
+        goto error;
+    }
+
+#if PLATFORM(MINIGUI)
+    uint64_t u64v = strtoull(handle, NULL, 16);
+    HWND hWnd = (HWND) (uintptr_t)u64v;
+    ShowWindow(hWnd, SW_SHOWNORMAL);
+#endif
+
+    send_response(request, 200, "application/json", (char *)confirm_success,
+            strlen(confirm_success), NULL);
+
+    if (handle) {
+        g_free(handle);
+    }
+    return;
+error:
+    if (err_info) {
+        send_error_response(request, 500, "text/html", err_info, strlen(err_info), g_free);
+    }
+
+    if (handle) {
+        g_free(handle);
+    }
+}
+
 static void on_hbdrun_action(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext, const char *uri)
 {
@@ -693,6 +795,9 @@ static void on_hbdrun_action(WebKitURISchemeRequest *request,
     else if (strcasecmp(type, BROWSER_HBDRUN_ACTION_TYPE_SWITCH_RDR) == 0) {
         on_hbdrun_action_switch_rdr(request, webContext, uri);
     }
+    else if (strcasecmp(type, BROWSER_HBDRUN_ACTION_TYPE_SWITCH_WINDOW) == 0) {
+        on_hbdrun_action_switch_window(request, webContext, uri);
+    }
 
     if (type) {
         g_free(type);
@@ -709,6 +814,45 @@ error:
     }
 }
 
+static void on_hbdrun_windows(WebKitURISchemeRequest *request,
+        WebKitWebContext *webContext, const char *uri)
+{
+    (void) request;
+    (void) webContext;
+    (void) uri;
+
+    GOutputStream *stream;
+    stream = g_memory_output_stream_new(NULL, 0, g_realloc, g_free);
+    g_output_stream_write(stream, windows_page_tmpl_prefix,
+            strlen(windows_page_tmpl_prefix), NULL, NULL);
+
+#if PLATFORM(MINIGUI)
+    HWND hWnd = HWND_NULL;
+    while ((hWnd = GetNextMainWindow(hWnd)) != HWND_NULL) {
+        if (hWnd != g_xgui_main_window && hWnd != g_xgui_floating_window) {
+            DWORD exStyle = GetWindowExStyle(hWnd);
+            if (exStyle & WS_EX_WINTYPE_NORMAL) {
+                g_output_stream_printf(stream, NULL, NULL, NULL, windows_card_tmpl,
+                        (uint64_t)(uintptr_t)hWnd, GetWindowCaption(hWnd));
+            }
+        }
+    }
+#endif
+
+    g_output_stream_write(stream, windows_page_tmpl_suffix,
+            strlen(windows_page_tmpl_suffix), NULL, NULL);
+
+    g_output_stream_close(stream, NULL, NULL);
+    gsize size = g_memory_output_stream_get_size(
+            G_MEMORY_OUTPUT_STREAM(stream));
+    void *data = g_memory_output_stream_steal_data(
+            G_MEMORY_OUTPUT_STREAM(stream));
+    send_response(request, 200, "text/html", (char*)data, size, g_free);
+    if (stream) {
+        g_object_unref(stream);
+    }
+}
+
 static struct hbdrun_handler {
     const char *operation;
     hbdrun_handler handler;
@@ -719,6 +863,7 @@ static struct hbdrun_handler {
     { HBDRUN_SCHEMA_TYPE_RUNNERS,           on_hbdrun_runners },
     { HBDRUN_SCHEMA_TYPE_STORE,             on_hbdrun_store },
     { HBDRUN_SCHEMA_TYPE_VERSION,           on_hbdrun_versions },
+    { HBDRUN_SCHEMA_TYPE_WINDOWS,           on_hbdrun_windows },
 };
 
 #define NOT_FOUND_HANDLER   ((hbdrun_handler)-1)

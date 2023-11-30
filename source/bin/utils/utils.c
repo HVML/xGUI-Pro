@@ -206,6 +206,13 @@ int xgutils_show_runners_window(void)
     return 0;
 }
 
+int xgutils_show_windows_window(void)
+{
+    const char *uri = "hbdrun://windows";
+    create_plainwin_with_uri("windows", "windows", uri);
+    return 0;
+}
+
 int xguitls_shake_round_window(void)
 {
 #if PLATFORM(MINIGUI)

@@ -31,9 +31,11 @@
 #define BROWSER_HBDRUN_ACTION_PARAM_RESULT              "result"
 #define BROWSER_HBDRUN_ACTION_PARAM_ENDPOINTS           "endpoints"
 #define BROWSER_HBDRUN_ACTION_PARAM_RDR                 "rdr"
+#define BROWSER_HBDRUN_ACTION_PARAM_HANDLE              "handle"
 
 #define BROWSER_HBDRUN_ACTION_TYPE_CONFIRM              "confirm"
 #define BROWSER_HBDRUN_ACTION_TYPE_SWITCH_RDR           "switchRdr"
+#define BROWSER_HBDRUN_ACTION_TYPE_SWITCH_WINDOW        "switchWindow"
 
 #define CONFIRM_RESULT_ACCEPT_ONCE                      "AcceptOnce"
 #define CONFIRM_RESULT_ACCEPT_ALWAYS                    "AcceptALWAYS"

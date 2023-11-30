@@ -73,6 +73,8 @@ int xgutils_show_confirm_window(const char *app_name, const char *app_label,
 
 int xgutils_show_runners_window(void);
 
+int xgutils_show_windows_window(void);
+
 int xguitls_shake_round_window(void);
 
 purc_variant_t

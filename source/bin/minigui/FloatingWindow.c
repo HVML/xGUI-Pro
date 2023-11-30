@@ -250,15 +250,15 @@ static void create_animation(HWND hWnd)
 }
 #endif
 
-static void toggle_application(HWND hWnd)
+static void toggle_application(HWND floating_hWnd)
 {
-#if 1
+#ifdef _MGRM_PROCESSES
     REQUEST request;
     RequestInfo requestinfo;
     ReplyInfo replyInfo;
 
     requestinfo.id = REQ_SUBMIT_TOGGLE;
-    requestinfo.hWnd = hWnd;
+    requestinfo.hWnd = floating_hWnd;
     requestinfo.iData0 = 0;
     request.id = FIXED_FORMAT_REQID;
     request.data = (void *)&requestinfo;
@@ -270,6 +270,8 @@ static void toggle_application(HWND hWnd)
     }
     else {
     }
+#else
+    xgutils_show_windows_window();
 #endif
 }
 
