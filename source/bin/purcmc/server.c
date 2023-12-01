@@ -1016,6 +1016,7 @@ void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
         goto out;
     }
     else {
+        purc_log_warn("Remote service : %s\n", hostname);
         char l_v4[SD_IP_V4_LEN];
         char h_v4[SD_IP_V4_LEN];
         l_v4[0] = 0;

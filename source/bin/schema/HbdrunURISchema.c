@@ -196,7 +196,7 @@ static const char *runners_page_tmpl_suffix = ""
 "%s"
 "                            </ul>"
 "                        </div>"
-"                        <button type='button' class='btn btn-primary m-3' id='id_switch_now_btn' data-link-id='' onclick='on_switch_now_click(this)' %s>Switch now</button>"
+"                        <button type='button' class='btn btn-primary m-3' id='id_switch_now_btn' data-link-id='' onclick='on_switch_now_click(this)' %s>立即切换</button>"
 "                    </div>"
 "                </div>"
 "            </div>"
@@ -546,6 +546,7 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
                 g_output_stream_printf(stream, NULL, NULL, NULL,
                     runners_rdr_tmpl, name, rdr->hostname);
             }
+            idx++;
         }
         gpointer *data = g_memory_output_stream_get_data(
                 G_MEMORY_OUTPUT_STREAM(stream));
