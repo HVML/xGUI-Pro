@@ -399,6 +399,7 @@ static const char *windows_page_tmpl_suffix = ""
 "</html>"
 "";
 
+#if PLATFORM(MINIGUI)
 /* handle, title */
 static const char *windows_card_tmpl = ""
 "                    <div class='col mx-auto'>"
@@ -407,6 +408,7 @@ static const char *windows_card_tmpl = ""
 "                        </div>"
 "                    </div>"
 "";
+#endif
 
 static void send_response(WebKitURISchemeRequest *request, guint status_code,
         const char *content_type, char *contents, size_t nr_contents,
