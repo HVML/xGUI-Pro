@@ -23,8 +23,11 @@
 #ifndef XGUI_PRO_BIN_UTILS_H
 #define XGUI_PRO_BIN_UTILS_H
 
-#include <stddef.h>
+#include <config.h>
 #include <purc/purc-helpers.h>
+#include <webkit2/webkit2.h>
+
+#include <stddef.h>
 
 #ifdef NDEBUG
 #define LOG_DEBUG(x, ...)
@@ -90,6 +93,9 @@ xgutils_is_app_confirm(const char *app);
 
 void
 xgutils_set_app_confirm(const char *app);
+
+void
+xgutils_webview_init_intrinsic_device_scale_factor(WebKitWebView *webview);
 
 #ifdef __cplusplus
 }

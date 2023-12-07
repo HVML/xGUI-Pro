@@ -43,6 +43,8 @@
 
 #include "utils.h"
 
+#define WEBKIT_DEVICE_SCALE_FACTOR          "1.0"
+
 #if PLATFORM(MINIGUI)
 extern HWND g_xgui_main_window;
 extern HWND g_xgui_floating_window;
@@ -269,5 +271,30 @@ void xgutils_set_app_confirm(const char *app)
     purc_variant_object_set_by_ckey(infos, app, v);
     purc_variant_unref(v);
     xgutils_save_confirm_infos();
+}
+
+void
+xgutils_webview_init_intrinsic_device_scale_factor(WebKitWebView *webview)
+{
+    const char *factor = g_getenv("WEBKIT_DEVICE_SCALE_FACTOR");
+    if (!factor) {
+        factor = WEBKIT_DEVICE_SCALE_FACTOR;
+    }
+
+    gdouble value;
+    gchar *end;
+    errno = 0;
+    value = g_ascii_strtod(factor, &end);
+    if (errno == ERANGE || value > G_MAXFLOAT || value < G_MINFLOAT) {
+        goto out;
+    }
+
+    if (errno || factor == end) {
+        goto out;
+    }
+
+    webkit_web_view_set_intrinsic_device_scale_factor(webview, value);
+out:
+    return;
 }
 
