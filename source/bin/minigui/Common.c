@@ -28,6 +28,7 @@
 
 #include <assert.h>
 #include <sys/time.h>
+#include "utils/utils.h"
 
 #define WEBVIEW_PARAM_COUNT   9
 #define XGUI_WINDOW_BG        "assets/splash.jpg"
@@ -102,8 +103,11 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
     g_value_set_pointer(&values[nr_params], param->webViewParent);
     nr_params++;
 
-    return WEBKIT_WEB_VIEW(g_object_new_with_properties(WEBKIT_TYPE_WEB_VIEW,
-                nr_params, names, values));
+    WebKitWebView *webView = WEBKIT_WEB_VIEW(g_object_new_with_properties(
+                WEBKIT_TYPE_WEB_VIEW, nr_params, names, values));
+
+    xgutils_webview_init_intrinsic_device_scale_factor(webView);
+    return webView;
 }
 
 void xgui_window_inc()
