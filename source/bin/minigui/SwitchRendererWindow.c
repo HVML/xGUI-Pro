@@ -38,7 +38,7 @@
 static DLGTEMPLATE DlgInitSwitch =
 {
     WS_BORDER,
-    WS_EX_NONE,
+    WS_EX_NONE | WS_EX_WINTYPE_TOOLTIP,
     0, 0, 10, 10,
     "",
     0, 0,

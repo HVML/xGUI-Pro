@@ -42,11 +42,54 @@
 #define LOG_INFO(x, ...)    \
     purc_log_info("%s: " x, __func__, ##__VA_ARGS__)
 
+#define APP_PROP_PURCMC_SERVER      "app-prop-purcmc-server"
+#define APP_PROP_WEB_CONTEXT        "app-prop-web-context"
+
+#define xgutils_set_purcmc_server(server) \
+    xgutils_global_set_data(APP_PROP_PURCMC_SERVER, server)
+#define xguitls_get_purcmc_server() \
+    (struct purcmc_server *)xgutils_global_get_data(APP_PROP_PURCMC_SERVER)
+
+#define xgutils_set_web_context(ctxt) \
+    xgutils_global_set_data(APP_PROP_WEB_CONTEXT, ctxt)
+#define xguitls_get_web_context() \
+    (WebKitWebContext *)xgutils_global_get_data(APP_PROP_WEB_CONTEXT)
+
+#define CONFIRM_RESULT_ID_ACCEPT_ONCE                   1
+#define CONFIRM_RESULT_ID_ACCEPT_ALWAYS                 2
+#define CONFIRM_RESULT_ID_DECLINE                       3
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 time_t xgutils_get_monotoic_time_ms(void);
+
+void xgutils_global_set_data(const char *key, void *pointer);
+void *xgutils_global_get_data(const char *key);
+
+int xgutils_show_confirm_window(const char *app_name, const char *app_label,
+        const char *app_desc, const char *app_icon, uint64_t timeout_seconds);
+
+int xgutils_show_runners_window(void);
+
+int xgutils_show_windows_window(void);
+
+int xguitls_shake_round_window(void);
+
+purc_variant_t
+xgutils_load_confirm_infos(void);
+
+void xgutils_save_confirm_infos(void);
+
+purc_variant_t
+xgutils_get_confirm_infos(void);
+
+bool
+xgutils_is_app_confirm(const char *app);
+
+void
+xgutils_set_app_confirm(const char *app);
 
 #ifdef __cplusplus
 }

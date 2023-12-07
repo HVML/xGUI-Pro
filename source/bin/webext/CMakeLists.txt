@@ -21,6 +21,10 @@ set(assets_SOURCES
     "${XGUIPRO_BIN_DIR}/webext/assets/hvml-v.svg"
     "${XGUIPRO_BIN_DIR}/webext/assets/workspace-layouter.css"
     "${XGUIPRO_BIN_DIR}/webext/assets/splash.jpg"
+    "${XGUIPRO_BIN_DIR}/webext/assets/arrow-left.png"
+    "${XGUIPRO_BIN_DIR}/webext/assets/arrow-right.png"
+    "${XGUIPRO_BIN_DIR}/webext/assets/toggle.png"
+    "${XGUIPRO_BIN_DIR}/webext/assets/home.png"
 )
 
 set(bootstrap_VERSION "5.3.1")

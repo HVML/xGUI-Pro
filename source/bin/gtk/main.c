@@ -30,11 +30,14 @@
 
 #include "main.h"
 #include "BrowserWindow.h"
+#include "FloatingWindow.h"
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "schema/HVMLURISchema.h"
+#include "schema/HbdrunURISchema.h"
 
 #include "purcmc/purcmc.h"
+#include "utils/utils.h"
 
 #include <errno.h>
 #include <gtk/gtk.h>
@@ -74,6 +77,8 @@ static gboolean enableSandbox;
 static gboolean exitAfterLoad;
 static gboolean webProcessCrashed;
 static gboolean printVersion;
+
+GtkWidget *g_xgui_floating_window;
 
 static gchar *argumentToURL(const char *filename)
 {
@@ -780,6 +785,7 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
         .destroy_widget = gtk_destroy_widget,
 
         .load = gtk_load_or_write,
+        .load_from_url = gtk_load_or_write,
         .write = gtk_load_or_write,
         .register_crtn = gtk_register_crtn,
         .revoke_crtn = gtk_revoke_crtn,
@@ -803,6 +809,7 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
         exit(EXIT_FAILURE);
     }
 
+    xgutils_set_purcmc_server(pcmc_srv);
     GMainContext *context = g_main_context_default();
 
     GSource *source;
@@ -888,6 +895,8 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
 
     // hvml schema
     webkit_web_context_register_uri_scheme(webContext, BROWSER_HVML_SCHEME, (WebKitURISchemeRequestCallback)hvmlURISchemeRequestCallback, webContext, NULL);
+    webkit_web_context_register_uri_scheme(webContext, BROWSER_HBDRUN_SCHEME, (WebKitURISchemeRequestCallback)hbdrunURISchemeRequestCallback, webContext, NULL);
+    xgutils_set_web_context(webContext);
 
     if (contentFilter) {
         GFile *contentFilterFile = g_file_new_for_commandline_arg(contentFilter);
@@ -971,6 +980,8 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
 
     gtk_widget_grab_focus(firstTab);
     gtk_widget_show(GTK_WIDGET(mainWindow));
+
+    g_xgui_floating_window = create_floating_window();
 }
 
 int main(int argc, char *argv[])

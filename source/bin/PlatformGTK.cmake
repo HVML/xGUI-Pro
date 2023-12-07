@@ -35,6 +35,8 @@ list(APPEND xguipro_SOURCES
     gtk/PurcmcCallbacks.h
     gtk/LayouterWidgets.c
     gtk/LayouterWidgets.h
+    gtk/FloatingWindow.h
+    gtk/FloatingWindow.c
     gtk/main.c
 )
 

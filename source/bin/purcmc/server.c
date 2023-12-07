@@ -31,6 +31,7 @@
 #include <glib.h>
 
 #include "utils/kvlist.h"
+#include "utils/utils.h"
 
 #include "server.h"
 #include "websocket.h"
@@ -38,10 +39,6 @@
 #include "endpoint.h"
 
 #include "sd/sd.h"
-
-#if PLATFORM(MINIGUI)
-#include "minigui/PopupTipWindow.h"
-#endif
 
 static purcmc_server the_server;
 static purcmc_server_config* the_srvcfg;
@@ -808,6 +805,7 @@ init_server(void)
     /* TODO for host name */
     the_server.server_name = strdup(sd_get_local_hostname());
     kvlist_init(&the_server.endpoint_list, NULL);
+    kvlist_init(&the_server.dnssd_rdr_list, NULL);
     avl_init(&the_server.living_avl, comp_living_time, true, NULL);
 
     return 0;
@@ -890,6 +888,17 @@ deinit_server(void)
         gslist_remove_nodes(the_server.dangling_endpoints);
     }
 
+    kvlist_for_each_safe(&the_server.dnssd_rdr_list, name, next, data) {
+        struct dnssd_rdr *rdr = *(struct dnssd_rdr **)data;
+        free(rdr->hostname);
+        if (rdr->text_record) {
+            free(rdr->text_record);
+        }
+        free(rdr);
+        kvlist_delete(&the_server.dnssd_rdr_list, name);
+    }
+    kvlist_free(&the_server.dnssd_rdr_list);
+
     us_stop(the_server.us_srv);
     if (the_server.ws_srv)
         ws_stop(the_server.ws_srv);
@@ -939,6 +948,11 @@ deinit_server(void)
         the_srvcfg->port = NULL;
     }
 
+    if (the_server.confirm_infos) {
+        purc_variant_unref(the_server.confirm_infos);
+        the_server.confirm_infos = PURC_VARIANT_INVALID;
+    }
+
 }
 
 #if PCA_ENABLE_DNSSD
@@ -952,10 +966,6 @@ const char *xguipro_txt_records[] = {
 };
 
 static size_t nr_xguipro_txt_records = 1;
-
-#if PLATFORM(MINIGUI)
-extern HWND g_xgui_main_window;
-#endif
 
 gboolean start_dnssd_browsing_cb(gpointer user_data)
 {
@@ -1006,6 +1016,7 @@ void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
         goto out;
     }
     else {
+        purc_log_warn("Remote service : %s\n", hostname);
         char l_v4[SD_IP_V4_LEN];
         char h_v4[SD_IP_V4_LEN];
         l_v4[0] = 0;
@@ -1021,41 +1032,29 @@ void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
     }
 #endif
 
-    purcmc_endpoint* endpoint = get_curr_endpoint(server);
-    purc_log_warn("Remote service : index=%d|full name=%s|reg type=%s|host=%s"
-            "|port=%d|txt=%s|endpoint=%p\n",
-            if_index, service_name, reg_type, hostname, port, txt_record, endpoint);
+    {
+        /* host + :(1) + port(5) */
+        size_t nr_name = strlen(hostname) + 7;
+        char name[nr_name];
+        sprintf(name, "%s:%d", hostname, port);
 
-    if (!endpoint) {
-        purc_log_info("Found remote service %s:%d, curr endpoint is null.\n",
-                hostname, port);
-        goto out;
+        void *p = kvlist_get(&server->dnssd_rdr_list, name);
+        if (p) {
+            struct dnssd_rdr *rdr = *(struct dnssd_rdr **)p;
+            rdr->last_update_at = xgutils_get_monotoic_time_ms();
+        }
+        else {
+            struct dnssd_rdr *rdr = malloc(sizeof(struct dnssd_rdr));
+            rdr->hostname = strdup(hostname);
+            rdr->port = port;
+            rdr->text_record = strdup(txt_record);
+            rdr->nr_text_record = len_txt_record;
+            rdr->last_update_at = xgutils_get_monotoic_time_ms();
+            kvlist_set(&server->dnssd_rdr_list, name, &rdr);
+
+            xguitls_shake_round_window();
+        }
     }
-
-    if (!endpoint->allow_switching_rdr) {
-        purc_log_info("Found remote service %s:%d,"
-                " curr endpoint do not allow switching rdr.\n", hostname, port);
-        goto out;
-    }
-
-#if PLATFORM(MINIGUI)
-    struct sd_remote_service *rs = malloc(sizeof(struct sd_remote_service));
-    rs->index = if_index;
-    rs->ct = purc_get_monotoic_time();
-    rs->full_name = strdup(service_name);
-    rs->reg_type = strdup(reg_type);
-    rs->host = strdup(hostname);
-    rs->port = port;
-    rs->txt = strdup(txt_record);
-    rs->nr_txt = len_txt_record;
-    rs->server = server;
-    rs->endpoint = endpoint;
-    HWND hWnd = GetActiveWindow();
-    rs->hostingWindow = hWnd ? hWnd : g_xgui_main_window;
-    create_popup_tip_window((HWND)rs->hostingWindow, rs);
-#else
-    /* TODO: GTK */
-#endif
 
 out:
     return;
@@ -1167,6 +1166,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
     }
 
     the_server.user_data = user_data;
+    the_server.confirm_infos = xgutils_load_confirm_infos();
     the_server.cbs = *cbs;
 
     return &the_server;

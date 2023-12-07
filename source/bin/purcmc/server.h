@@ -137,6 +137,10 @@ struct purcmc_endpoint
     char*   host_name;
     char*   app_name;
     char*   runner_name;
+    char*   app_label;
+    char*   app_desc;
+    char*   runner_label;
+    char*   app_icon;
 
     purcmc_session *session;
 
@@ -144,6 +148,14 @@ struct purcmc_endpoint
     struct avl_node avl;
 
     bool allow_switching_rdr;
+};
+
+struct dnssd_rdr {
+    char *hostname;
+    uint16_t port;
+    char *text_record;
+    uint16_t nr_text_record;
+    time_t  last_update_at; // monotoic_time_ms
 };
 
 struct WSServer_;
@@ -185,6 +197,9 @@ struct purcmc_server
     /* The KV list using endpoint name as the key, and purcmc_endpoint* as the value */
     struct kvlist endpoint_list;
 
+    /* The KV list using dnssd host:port as the key, and struct dnssd_rdr* as the value */
+    struct kvlist dnssd_rdr_list;
+
     /* The accepted endpoints but waiting for authentification */
     gs_list *dangling_endpoints;
 
@@ -193,6 +208,8 @@ struct purcmc_server
 
     /* the user data */
     void *user_data;
+
+    purc_variant_t confirm_infos;
 
     /* the callbacks */
     purcmc_server_callbacks cbs;

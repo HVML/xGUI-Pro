@@ -32,10 +32,13 @@
 #include "BuildRevision.h"
 #include "PurcmcCallbacks.h"
 #include "schema/HVMLURISchema.h"
+#include "schema/HbdrunURISchema.h"
 #include "Common.h"
 #include "BrowserPlainWindow.h"
 
 #include "purcmc/purcmc.h"
+#include "utils/utils.h"
+#include "FloatingWindow.h"
 
 #include <errno.h>
 #include <string.h>
@@ -717,6 +720,7 @@ static void startup(GApplication *application, WebKitSettings *webkitSettings)
 
     xgui_load_window_bg();
 
+    xgutils_set_purcmc_server(pcmc_srv);
     GMainContext *context = g_main_context_default();
 
     GSource *source;
@@ -818,6 +822,8 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
 
     // hvml schema
     webkit_web_context_register_uri_scheme(webContext, BROWSER_HVML_SCHEME, (WebKitURISchemeRequestCallback)hvmlURISchemeRequestCallback, webContext, NULL);
+    webkit_web_context_register_uri_scheme(webContext, BROWSER_HBDRUN_SCHEME, (WebKitURISchemeRequestCallback)hbdrunURISchemeRequestCallback, webContext, NULL);
+    xgutils_set_web_context(webContext);
 
     if (contentFilter) {
         GFile *contentFilterFile = g_file_new_for_commandline_arg(contentFilter);
@@ -861,6 +867,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     browser_plain_window_set_view(mainWindow, &param);
     browser_plain_window_load_uri(mainWindow, BROWSER_DEFAULT_URL);
     g_xgui_main_window = browser_plain_window_get_hwnd(mainWindow);
+    g_xgui_floating_window = create_floating_window(g_xgui_main_window, NULL);
 
     GMainContext *context = g_main_context_default();
 

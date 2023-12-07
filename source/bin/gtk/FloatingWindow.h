@@ -1,5 +1,5 @@
 /*
-** PopupTipWindow.h -- The declaration of PopupTipWindow.
+** FloatingWindow.h -- The declaration of FloatingWindow.
 **
 ** Copyright (C) 2023 FMSoft <http://www.fmsoft.cn>
 **
@@ -20,26 +20,21 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#ifndef PopupTipWindow_h
-#define PopupTipWindow_h
+#ifndef FloatingWindow_h
+#define FloatingWindow_h
 
-#include <minigui/common.h>
-#include <minigui/minigui.h>
-#include <minigui/gdi.h>
-#include <minigui/window.h>
+#include <gtk/gtk.h>
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-struct sd_remote_service;
-
-HWND create_popup_tip_window(HWND hosting_wnd, struct sd_remote_service *srv);
+GtkWidget *create_floating_window(void);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif  /* PopupTipWindow_h */
+#endif  /* FloatingWindow_h */
 

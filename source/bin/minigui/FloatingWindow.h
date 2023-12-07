@@ -1,5 +1,5 @@
 /*
-** AuthWindow.h -- The declaration of AuthWindow.
+** FloatingWindow.h -- The declaration of FloatingWindow.
 **
 ** Copyright (C) 2023 FMSoft <http://www.fmsoft.cn>
 **
@@ -20,26 +20,25 @@
 ** along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#ifndef AuthWindow_h
-#define AuthWindow_h
+#ifndef FloatingWindow_h
+#define FloatingWindow_h
 
 #include <minigui/common.h>
 #include <minigui/minigui.h>
 #include <minigui/gdi.h>
 #include <minigui/window.h>
-#include <minigui/control.h>
 
+#define MSG_XGUIPRO_NEW_RDR          (MSG_USER + 1)
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-int show_auth_window(HWND hWnd, const char *app_name, const char *app_label,
-        const char *app_desc, const char *host_name, uint64_t timeout_seconds);
+HWND create_floating_window(HWND hostingWnd, const char *title);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif  /* AuthWindow_h */
+#endif  /* FloatingWindow_h */
 
