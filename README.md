@@ -70,7 +70,7 @@ You can also try our tailored WebKit engine instead of the package shipped with 
 
 The tailored WebKit engine also provides support for MiniGUI, which is a mature window system for embedded system. Note that the graphics stack and window system of HybridOS is based on MiniGUI.
 
-- [Tailored WebKit Engine](https://www.hvml.org/software): to support two HVML-specific attributes `hvml-handle` and `hvml-events`. This tailored WebKit engine provides support for two ports: GTK+ and HybridOS (MiniGUI).
+- [Tailored WebKit Engine](https://files.fmsoftc.n/sources/WebKitHBD-2.34.1-20231116-075505-Source.tar.xz): to support two HVML-specific attributes `hvml-handle` and `hvml-events`. This tailored WebKit engine provides support for two ports: GTK+ and HybridOS (MiniGUI).
 
 If you are using Ubuntu Linux, you can use the following commands to build and install the tailored WebKit to your system:
 
