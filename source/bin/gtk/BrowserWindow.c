@@ -28,6 +28,7 @@
 #if defined(HAVE_CONFIG_H) && HAVE_CONFIG_H && defined(BUILDING_WITH_CMAKE)
 #include "cmakeconfig.h"
 #endif
+#include "utils/utils.h"
 #include "main.h"
 #include "BrowserWindow.h"
 
@@ -463,6 +464,7 @@ GtkWidget *browser_window_webview_create(WebKitWebView *webView,
         WEBKIT_WEB_VIEW(webkit_web_view_new_with_related_view(webView));
     webkit_web_view_set_settings(newWebView,
             webkit_web_view_get_settings(webView));
+    xgutils_webview_init_intrinsic_device_scale_factor(webView);
 
     GtkWidget *newWindow =
         browser_window_new(GTK_WINDOW(window), window->webContext);
@@ -1520,6 +1522,7 @@ void browser_window_append_view(BrowserWindow *window, WebKitWebView *webView)
         g_warning("Only one tab is allowed in editable mode");
         return;
     }
+    xgutils_webview_init_intrinsic_device_scale_factor(webView);
 
     /* We always want close to be connected even for not active tabs */
     g_signal_connect_after(webView, "close", G_CALLBACK(webViewClose), window);

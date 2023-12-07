@@ -33,6 +33,7 @@
 
 #include "purcmc/purcmc.h"
 #include "layouter/layouter.h"
+#include "utils/utils.h"
 
 #include <errno.h>
 #include <assert.h>
@@ -525,7 +526,7 @@ static WebKitWebView *create_web_view(purcmc_session *sess)
     uc_manager = g_object_get_data(G_OBJECT(sess->webkit_settings),
             "default-user-content-manager");
 
-    return WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+    WebKitWebView *webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
                 "web-context", sess->web_context,
                 "settings", sess->webkit_settings,
                 "user-content-manager", uc_manager,
@@ -534,6 +535,8 @@ static WebKitWebView *create_web_view(purcmc_session *sess)
                 "website-policies", website_policies,
 #endif
                 NULL));
+    xgutils_webview_init_intrinsic_device_scale_factor(webView);
+    return webView;
 }
 
 static void web_view_load_uri(WebKitWebView *webview,
