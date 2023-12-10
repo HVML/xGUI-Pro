@@ -148,6 +148,7 @@ struct purcmc_endpoint
     struct avl_node avl;
 
     bool allow_switching_rdr;
+    bool allow_scaling_by_denisty;
 };
 
 struct dnssd_rdr {
