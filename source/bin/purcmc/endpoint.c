@@ -580,10 +580,10 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     tmp = purc_variant_object_get_by_ckey(data, "allowScalingByDensity");
     if (tmp) {
-        endpoint->allow_scaling_by_denisty = purc_variant_booleanize(tmp);
+        endpoint->allow_scaling_by_density = purc_variant_booleanize(tmp);
     }
     else {
-        endpoint->allow_scaling_by_denisty = false;
+        endpoint->allow_scaling_by_density = false;
     }
 
     purc_name_tolower_copy (host_name, norm_host_name, PURC_LEN_HOST_NAME);

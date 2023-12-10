@@ -94,8 +94,12 @@ xgutils_is_app_confirm(const char *app);
 void
 xgutils_set_app_confirm(const char *app);
 
+float
+xgutils_get_intrinsic_device_scale_factor(void);
+
 void
 xgutils_webview_init_intrinsic_device_scale_factor(WebKitWebView *webview);
+
 
 #ifdef __cplusplus
 }

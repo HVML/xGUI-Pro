@@ -273,8 +273,8 @@ void xgutils_set_app_confirm(const char *app)
     xgutils_save_confirm_infos();
 }
 
-void
-xgutils_webview_init_intrinsic_device_scale_factor(WebKitWebView *webview)
+float
+xgutils_get_intrinsic_device_scale_factor(void)
 {
     const char *factor = g_getenv("WEBKIT_DEVICE_SCALE_FACTOR");
     if (!factor) {
@@ -286,15 +286,23 @@ xgutils_webview_init_intrinsic_device_scale_factor(WebKitWebView *webview)
     errno = 0;
     value = g_ascii_strtod(factor, &end);
     if (errno == ERANGE || value > G_MAXFLOAT || value < G_MINFLOAT) {
+        value = 1.0f;
         goto out;
     }
 
     if (errno || factor == end) {
+        value = 1.0f;
         goto out;
     }
 
-    webkit_web_view_set_intrinsic_device_scale_factor(webview, value);
 out:
-    return;
+    return value;
+}
+
+void
+xgutils_webview_init_intrinsic_device_scale_factor(WebKitWebView *webview)
+{
+    webkit_web_view_set_intrinsic_device_scale_factor(webview,
+            xgutils_get_intrinsic_device_scale_factor());
 }
 
