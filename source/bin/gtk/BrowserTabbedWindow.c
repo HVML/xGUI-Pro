@@ -1695,7 +1695,6 @@ browser_tabbed_window_append_view_tab(BrowserTabbedWindow *window,
     g_return_val_if_fail(BROWSER_IS_TABBED_WINDOW(window), NULL);
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), NULL);
 
-    xgutils_webview_init_intrinsic_device_scale_factor(webView);
     if (webkit_web_view_is_editable(webView)) {
         g_warning("Editable webView is not allowed");
         return NULL;

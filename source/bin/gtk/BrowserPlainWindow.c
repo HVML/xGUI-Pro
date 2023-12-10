@@ -479,7 +479,6 @@ static GtkWidget *webViewCreate(WebKitWebView *webView,
         WEBKIT_WEB_VIEW(webkit_web_view_new_with_related_view(webView));
     webkit_web_view_set_settings(newWebView,
             webkit_web_view_get_settings(webView));
-    xgutils_webview_init_intrinsic_device_scale_factor(webView);
 
     GtkWidget *newWindow = browser_plain_window_new(GTK_WINDOW(window),
             window->webContext, NULL, NULL);
@@ -1726,7 +1725,6 @@ void browser_plain_window_load_session(BrowserPlainWindow *window,
             webkit_web_view_get_website_policies(previousWebView),
 #endif
             NULL));
-        xgutils_webview_init_intrinsic_device_scale_factor(webView);
         browser_plain_window_set_view(window, webView);
     }
 

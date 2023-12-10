@@ -106,7 +106,6 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
     WebKitWebView *webView = WEBKIT_WEB_VIEW(g_object_new_with_properties(
                 WEBKIT_TYPE_WEB_VIEW, nr_params, names, values));
 
-    xgutils_webview_init_intrinsic_device_scale_factor(webView);
     return webView;
 }
 

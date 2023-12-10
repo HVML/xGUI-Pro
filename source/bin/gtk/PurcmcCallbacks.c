@@ -535,7 +535,6 @@ static WebKitWebView *create_web_view(purcmc_session *sess)
                 "website-policies", website_policies,
 #endif
                 NULL));
-    xgutils_webview_init_intrinsic_device_scale_factor(webView);
     return webView;
 }
 
