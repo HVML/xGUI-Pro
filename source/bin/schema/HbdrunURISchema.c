@@ -914,7 +914,7 @@ void hbdrunURISchemeRequestCallback(WebKitURISchemeRequest *request,
     }
 
     WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
-    xgutils_webview_init_intrinsic_device_scale_factor(webview);
+    xgutils_set_webview_density(webview);
     hbdrun_handler handler = find_hbdrun_handler(host);
     if (handler == NOT_FOUND_HANDLER) {
         LOG_WARN("Invalid hbdrun URI (%s): not found handle for '%s'", uri, host);

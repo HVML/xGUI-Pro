@@ -43,14 +43,19 @@
 
 #include "utils.h"
 
-#define WEBKIT_DEVICE_SCALE_FACTOR          "1.0"
+#define XGUTILS_DPI_DEFAULT                 96
 
 #if PLATFORM(MINIGUI)
+#define XGUTILS_DENSITY_DEFAULT             "1.0"
+#define LEN_ENGINE_NAME                     23
 extern HWND g_xgui_main_window;
 extern HWND g_xgui_floating_window;
+static float xgutils_density_minimal = 1.0f;
 #else
 extern GtkWidget *g_xgui_floating_window;
 #endif
+
+static float xgutils_density_default = 1.0f;
 
 time_t xgutils_get_monotoic_time_ms(void)
 {
@@ -273,36 +278,116 @@ void xgutils_set_app_confirm(const char *app)
     xgutils_save_confirm_infos();
 }
 
-float
-xgutils_get_intrinsic_device_scale_factor(void)
+static float parse_density(const char *density)
 {
-    const char *factor = g_getenv("WEBKIT_DEVICE_SCALE_FACTOR");
-    if (!factor) {
-        factor = WEBKIT_DEVICE_SCALE_FACTOR;
+    if (!density) {
+        return xgutils_density_default;
     }
 
     gdouble value;
     gchar *end;
     errno = 0;
-    value = g_ascii_strtod(factor, &end);
+    value = g_ascii_strtod(density, &end);
     if (errno == ERANGE || value > G_MAXFLOAT || value < G_MINFLOAT) {
-        value = 1.0f;
+        value = xgutils_density_default;
         goto out;
     }
 
-    if (errno || factor == end) {
-        value = 1.0f;
+    if (errno || density == end) {
+        value = xgutils_density_default;
         goto out;
+    }
+
+    if (value < xgutils_density_minimal) {
+        value = xgutils_density_minimal;
     }
 
 out:
     return value;
 }
 
+#if PLATFORM(MINIGUI)
+static void get_engine_from_etc (char* engine)
+{
+#if defined (WIN32) || !defined(__NOUNIX__)
+    char* env_value;
+
+    if ((env_value = getenv ("MG_GAL_ENGINE"))) {
+        strncpy (engine, env_value, LEN_ENGINE_NAME);
+        engine [LEN_ENGINE_NAME] = '\0';
+    }
+    else
+#endif
+#ifndef _MG_MINIMALGDI
+    if (GetMgEtcValue ("system", "gal_engine", engine, LEN_ENGINE_NAME) < 0) {
+        engine [0] = '\0';
+    }
+#else /* _MG_MINIMALGDI */
+#   ifdef _MGGAL_PCXVFB
+    strcpy(engine, "pc_xvfb");
+#   else
+    strcpy(engine, "dummy");
+#   endif
+#endif /* _MG_MINIMALGDI */
+}
+
+static int get_dpi_from_etc (const char* engine)
+{
+    int dpi;
+
+    if (GetMgEtcIntValue (engine, "density", &dpi) < 0)
+        dpi = GDCAP_DPI_DEFAULT;
+    else if (dpi < GDCAP_DPI_MINIMAL)
+        dpi = GDCAP_DPI_MINIMAL;
+
+    return dpi;
+}
+
+#define DENSITY_BUF_LEN         10
+static float get_density_from_etc (const char* engine)
+{
+    char density[DENSITY_BUF_LEN + 1] = { 0 };
+
+    if (GetMgEtcValue (engine, "density", density, DENSITY_BUF_LEN) < 0) {
+        strcpy(density, XGUTILS_DENSITY_DEFAULT);
+    }
+    return parse_density(density);
+}
+#endif
+
+float
+xgutils_get_density(void)
+{
+    const char *density = g_getenv("XGUIPRO_DENSITY");
+    if (density) {
+        return parse_density(density);
+    }
+
+#if PLATFORM(MINIGUI)
+    char engine[LEN_ENGINE_NAME + 1] = { 0 };
+    get_engine_from_etc(engine);
+    return get_density_from_etc(engine);
+#else
+    return xgutils_density_default;
+#endif
+}
+
+int
+xgutils_get_dpi(void)
+{
+#if PLATFORM(MINIGUI)
+    char engine[LEN_ENGINE_NAME + 1] = { 0 };
+    get_engine_from_etc(engine);
+    return get_dpi_from_etc(engine);
+#else
+    return XGUTILS_DPI_DEFAULT;
+#endif
+}
+
 void
-xgutils_webview_init_intrinsic_device_scale_factor(WebKitWebView *webview)
+xgutils_set_webview_density(WebKitWebView *webview)
 {
     webkit_web_view_set_intrinsic_device_scale_factor(webview,
-            xgutils_get_intrinsic_device_scale_factor());
+            xgutils_get_density());
 }
 

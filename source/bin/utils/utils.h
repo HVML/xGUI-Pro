@@ -95,10 +95,13 @@ void
 xgutils_set_app_confirm(const char *app);
 
 float
-xgutils_get_intrinsic_device_scale_factor(void);
+xgutils_get_density(void);
+
+int
+xgutils_get_dpi(void);
 
 void
-xgutils_webview_init_intrinsic_device_scale_factor(WebKitWebView *webview);
+xgutils_set_webview_density(WebKitWebView *webview);
 
 
 #ifdef __cplusplus

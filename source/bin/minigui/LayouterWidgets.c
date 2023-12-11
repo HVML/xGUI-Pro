@@ -44,10 +44,9 @@ void mg_imp_get_monitor_geometry(struct ws_metrics *ws_geometry)
     ws_geometry->width  = RECTW(rc);
     ws_geometry->height = RECTH(rc);
 
-    /* TODO: Get from MiniGUI runtime configuration. */
-    ws_geometry->dpi = 96;
-
-    ws_geometry->density = xgutils_get_intrinsic_device_scale_factor();
+    /* Get from MiniGUI runtime configuration. */
+    ws_geometry->dpi = xgutils_get_dpi();
+    ws_geometry->density = xgutils_get_density();
 }
 
 void mg_imp_convert_style(struct ws_widget_info *style,

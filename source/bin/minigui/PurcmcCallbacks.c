@@ -978,7 +978,7 @@ purcmc_page *mg_create_plainwin(purcmc_session *sess,
     if (plainwin) {
         WebKitWebView *webview = widget_get_web_view(plainwin);
         if (endpoint->allow_scaling_by_density) {
-            xgutils_webview_init_intrinsic_device_scale_factor(webview);
+            xgutils_set_webview_density(webview);
         }
 
         purc_page_ostack_t ostack =
