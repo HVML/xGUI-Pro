@@ -36,6 +36,8 @@
 #include "purcmc/purcmc.h"
 #include "layouter/layouter.h"
 #include "Common.h"
+#include <purcmc/server.h>
+#include <utils/utils.h>
 
 #include <errno.h>
 #include <assert.h>
@@ -934,6 +936,7 @@ purcmc_page *mg_create_plainwin(purcmc_session *sess,
         goto done;
     }
 
+    purcmc_endpoint *endpoint = purcmc_get_endpoint_by_session(sess);
     WebKitWebViewParam webview_param = {0};
     init_web_view_param(sess, &webview_param);
 
@@ -947,7 +950,8 @@ purcmc_page *mg_create_plainwin(purcmc_session *sess,
         style.title = title;
         mg_imp_convert_style(&style, toolkit_style);
         if (layout_style) {
-            mg_imp_evaluate_geometry(&style, layout_style);
+            mg_imp_evaluate_geometry(&style, layout_style,
+                    endpoint->allow_scaling_by_density);
         }
 
         if (transition_style) {
@@ -973,6 +977,9 @@ purcmc_page *mg_create_plainwin(purcmc_session *sess,
 
     if (plainwin) {
         WebKitWebView *webview = widget_get_web_view(plainwin);
+        if (endpoint->allow_scaling_by_density) {
+            xgutils_set_webview_density(webview);
+        }
 
         purc_page_ostack_t ostack =
             purc_page_ostack_new(workspace->page_owners, page_id, webview);
@@ -1040,8 +1047,8 @@ done:
 #define PLAINWIN_PROP_TOOLKITSTYLE          "toolkitStyle"
 #define PLAINWIN_PROP_TRANSITIONSTYLE       "transitionStyle"
 
-static int update_plainwin(BrowserPlainWindow *window, const char *property,
-        purc_variant_t value)
+static int update_plainwin(purcmc_endpoint *endpoint,
+        BrowserPlainWindow *window, const char *property, purc_variant_t value)
 {
     if (strcmp(property, PLAINWIN_PROP_NAME) == 0) {
         /* Forbid to change name of a plain window */
@@ -1063,7 +1070,8 @@ static int update_plainwin(BrowserPlainWindow *window, const char *property,
     else if (strcmp(property, PLAINWIN_PROP_LAYOUTSTYLE) == 0) {
         struct ws_widget_info style = { };
         const char *layout_style = purc_variant_get_string_const(value);
-        mg_imp_evaluate_geometry(&style, layout_style);
+        mg_imp_evaluate_geometry(&style, layout_style,
+                endpoint->allow_scaling_by_density);
 
         if (!(style.flags & WSWS_FLAG_GEOMETRY)) {
             goto out;
@@ -1109,16 +1117,19 @@ int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         return retv;
     }
 
+    purcmc_endpoint *endpoint = purcmc_get_endpoint_by_session(sess);
+
     BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(page);
     if (property != NULL) {
-        return update_plainwin(window, property, value);
+        return update_plainwin(endpoint, window, property, value);
     }
 
     /* handle transitionStyle first */
     purc_variant_t trans = purc_variant_object_get_by_ckey(value,
             PLAINWIN_PROP_TRANSITIONSTYLE);
     if (trans) {
-        retv = update_plainwin(window, PLAINWIN_PROP_TRANSITIONSTYLE, trans);
+        retv = update_plainwin(endpoint, window, PLAINWIN_PROP_TRANSITIONSTYLE,
+                trans);
         if (retv != PCRDR_SC_OK) {
             return retv;
         }
@@ -1133,7 +1144,7 @@ int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
             goto next;
         }
 
-        retv = update_plainwin(window, key, val);
+        retv = update_plainwin(endpoint, window, key, val);
         if (retv != PCRDR_SC_OK) {
             break;
         }

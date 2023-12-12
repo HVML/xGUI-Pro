@@ -822,8 +822,8 @@ error:
         if (data != NULL) {
             contents = data;
         }
-        WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
 #if PLATFORM(MINIGUI)
+        WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
         webkit_web_view_set_display_suppressed(webview, true);
 #endif
         content_length = strlen(contents);

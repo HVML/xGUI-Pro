@@ -23,6 +23,7 @@
 #if defined(HAVE_CONFIG_H) && HAVE_CONFIG_H && defined(BUILDING_WITH_CMAKE)
 #include "cmakeconfig.h"
 #endif
+#include "utils/utils.h"
 #include "main.h"
 #include "BrowserTabbedWindow.h"
 

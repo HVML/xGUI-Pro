@@ -31,6 +31,7 @@
 
 #include "purcmc/purcmc.h"
 #include "layouter/layouter.h"
+#include "utils/utils.h"
 
 #include <errno.h>
 #include <assert.h>
@@ -43,9 +44,9 @@ void mg_imp_get_monitor_geometry(struct ws_metrics *ws_geometry)
     ws_geometry->width  = RECTW(rc);
     ws_geometry->height = RECTH(rc);
 
-    /* TODO: Get from MiniGUI runtime configuration. */
-    ws_geometry->dpi = 96;
-    ws_geometry->density = 1.0;
+    /* Get from MiniGUI runtime configuration. */
+    ws_geometry->dpi = xgutils_get_dpi();
+    ws_geometry->density = xgutils_get_density();
 }
 
 void mg_imp_convert_style(struct ws_widget_info *style,
@@ -90,7 +91,7 @@ void mg_imp_convert_style(struct ws_widget_info *style,
 }
 
 void mg_imp_evaluate_geometry(struct ws_widget_info *style,
-        const char *layout_style)
+        const char *layout_style,  bool allow_scaling_by_density)
 {
     struct ws_metrics ws_geometry;
     mg_imp_get_monitor_geometry(&ws_geometry);
@@ -99,7 +100,7 @@ void mg_imp_evaluate_geometry(struct ws_widget_info *style,
     screen_info.width   = ws_geometry.width;
     screen_info.height  = ws_geometry.height;
     screen_info.dpi     = ws_geometry.dpi;
-    screen_info.density = ws_geometry.density;
+    screen_info.density = allow_scaling_by_density ? ws_geometry.density : 1.0f;
 
     struct purc_window_geometry geometry;
     if (purc_evaluate_standalone_window_geometry_from_styles(layout_style,

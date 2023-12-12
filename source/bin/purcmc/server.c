@@ -28,7 +28,6 @@
 #include <time.h>
 
 #include <purc/purc.h>
-#include <glib.h>
 
 #include "utils/kvlist.h"
 #include "utils/utils.h"
@@ -39,6 +38,8 @@
 #include "endpoint.h"
 
 #include "sd/sd.h"
+
+#include <glib.h>
 
 static purcmc_server the_server;
 static purcmc_server_config* the_srvcfg;

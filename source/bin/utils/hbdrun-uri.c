@@ -179,9 +179,6 @@ bool hbdrun_uri_split(const char *uri,
     }
 
     return true;
-
-failed:
-    return false;
 }
 
 

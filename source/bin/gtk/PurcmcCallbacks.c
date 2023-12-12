@@ -33,6 +33,7 @@
 
 #include "purcmc/purcmc.h"
 #include "layouter/layouter.h"
+#include "utils/utils.h"
 
 #include <errno.h>
 #include <assert.h>
@@ -525,7 +526,7 @@ static WebKitWebView *create_web_view(purcmc_session *sess)
     uc_manager = g_object_get_data(G_OBJECT(sess->webkit_settings),
             "default-user-content-manager");
 
-    return WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+    WebKitWebView *webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
                 "web-context", sess->web_context,
                 "settings", sess->webkit_settings,
                 "user-content-manager", uc_manager,
@@ -534,6 +535,7 @@ static WebKitWebView *create_web_view(purcmc_session *sess)
                 "website-policies", website_policies,
 #endif
                 NULL));
+    return webView;
 }
 
 static void web_view_load_uri(WebKitWebView *webview,
@@ -816,6 +818,7 @@ purcmc_page *gtk_find_page(purcmc_session *sess,
     return NULL;
 }
 
+#if 0
 static void *get_widget_from_udom(purcmc_session *sess, purcmc_udom *udom,
         int *retv)
 {
@@ -833,6 +836,7 @@ static void *get_widget_from_udom(purcmc_session *sess, purcmc_udom *udom,
     *retv = PCRDR_SC_OK;
     return g_object_get_data(G_OBJECT(udom), "purcmc-container");
 }
+#endif
 
 static inline WebKitWebView *validate_handle(purcmc_session *sess,
         purcmc_page *page, int *retv)
@@ -941,6 +945,7 @@ done:
     return (purcmc_page *)plainwin;
 }
 
+#if 0
 static void *get_plainwin_from_udom(purcmc_session *sess,
         purcmc_udom *udom, int *retv)
 {
@@ -976,6 +981,7 @@ static void *get_plainwin_from_udom(purcmc_session *sess,
 done:
     return plainwin;
 }
+#endif
 
 #define PLAINWIN_PROP_NAME                  "name"
 #define PLAINWIN_PROP_CLASS                 "class"

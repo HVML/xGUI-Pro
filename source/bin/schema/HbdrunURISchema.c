@@ -52,7 +52,7 @@
 
 #define CONFIRM_BTN_TEXT_ACCEPT_ONCE        "接受一次"
 #define CONFIRM_BTN_TEXT_ACCEPT_ALWAYS      "始终接受"
-#define CONFIRM_BTN_TEXT_DECLINE            "拒绝"
+#define CONFIRM_BTN_TEXT_DECLINE            "拒绝连接"
 
 typedef void (*hbdrun_handler)(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext, const char *uri);
@@ -106,8 +106,6 @@ static const char *runners_page_tmpl_prefix = ""
 "                    item.addEventListener('change', on_change);"
 "                });"
 ""
-"                const rdr_list = document.getElementById('id_rdr_list');"
-"                rdr_list.addEventListener('click', on_rdr_item_click);"
 "                rdr_dialog = new bootstrap.Modal('#id_rdr_dialog');"
 "            });"
 ""
@@ -139,8 +137,15 @@ static const char *runners_page_tmpl_prefix = ""
 "                        param += endpoint + ';'"
 "                    }"
 "                });"
+"                var rdrListElem = document.getElementById('id_rdr_list');"
+"                const rdrInputElems = rdrListElem.querySelectorAll('input');"
 "                var activeElem = document.getElementsByClassName('active');"
-"                var rdr = activeElem[0].getAttribute('data-rdr-name');"
+"                var rdr;"
+"                rdrInputElems.forEach((item) => {"
+"                    if (item.checked) {"
+"                        rdr = item.getAttribute('data-rdr-name');"
+"                    }"
+"                });"
 "                do_switch_rdr(param.substr(0, param.length-1), rdr);"
 "                rdr_dialog.hide();"
 "            }"
@@ -171,13 +176,18 @@ static const char *runners_page_tmpl_prefix = ""
 "    </head>"
 "    <body>"
 "        <main>"
-"            <div class='container px-4 py-5' id='custom-cards'>"
-"                <div class='d-flex justify-content-between border-bottom'>"
-"                    <h3 class='pb-2'>%s</h2>"
-"                    <button type='button' class='btn-close' onclick='on_close_page_click()'></button>"
+"            <header class='py-3 mb-4 border-bottom'>"
+"                <div class='container d-flex flex-wrap justify-content-between'>"
+"                  <div class='d-flex align-items-center mb-3 mb-lg-0 me-lg-auto link-body-emphasis text-decoration-none'>"
+"                    <img class='me-2' width='32' height='32' src='hvml://localhost/_renderer/_builtin/-/assets/favicon.ico' />"
+"                    <span class='fs-4'>所有应用</span>"
+"                  </div>"
+"                  <button type='button' class='btn-close mb-3 mb-lg-0 me-lg-auto ' onclick='on_close_page_click()'></button>"
 "                </div>"
+"            </header>"
+"            <div class='container px-4' id='custom-cards'>"
 ""
-"                <div class='row row-cols-1 row-cols-lg-2 row-cols-xl-3 align-items-stretch g-4 py-5'>"
+"                <div class='row row-cols-1 row-cols-lg-2 row-cols-xl-3 align-items-stretch g-4 py-2'>"
 "";
 
 static const char *runners_page_tmpl_suffix = ""
@@ -192,9 +202,9 @@ static const char *runners_page_tmpl_suffix = ""
 "                            <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>"
 "                        </div>"
 "                        <div class='modal-body'>"
-"                            <ul class='list-group' id='id_rdr_list'>"
+"                            <div class='list-group' id='id_rdr_list'>"
 "%s"
-"                            </ul>"
+"                            </div>"
 "                        </div>"
 "                        <button type='button' class='btn btn-primary m-3' id='id_switch_now_btn' data-link-id='' onclick='on_switch_now_click(this)' %s>立即切换</button>"
 "                    </div>"
@@ -206,11 +216,17 @@ static const char *runners_page_tmpl_suffix = ""
 "";
 
 static const char *runners_rdr_tmpl = ""
-"                                <li class='list-group-item' data-rdr-name='%s'>%s</li>"
+"                                <div class='list-group-item'>"
+"                                    <input class='form-check-input' type='radio' name='runner_rdrs' data-rdr-name='%s' id='id-radio-%d'/>"
+"                                    <label for='id-radio-%d'>%s</label>"
+"                                </div>"
 "";
 
 static const char *runners_rdr_active_tmpl = ""
-"                                <li class='list-group-item active' data-rdr-name='%s'>%s</li>"
+"                                <div class='list-group-item'>"
+"                                    <input class='form-check-input' type='radio' name='runner_rdrs' data-rdr-name='%s' id='id-radio-%d' checked/>"
+"                                    <label for='id-radio-%d'>%s</label>"
+"                                </div>"
 "";
 
 /* disabled, runner_id, app_name, endpoint, runner_id, runner label, runner endpoint */
@@ -311,7 +327,15 @@ static const char *confirm_page_template = ""
 "        </style>"
 "    </head>"
 "    <body>"
-"        <div class='px-4 text-center w-100 h-100 d-flex flex-column align-items-center justify-content-center'>"
+"        <header class='py-3 mb-4 border-bottom'>"
+"            <div class='container d-flex flex-wrap justify-content-start'>"
+"              <div class='d-flex align-items-center mb-3 mb-lg-0 me-lg-auto link-body-emphasis text-decoration-none'>"
+"                <img class='me-2' width='32' height='32' src='hvml://localhost/_renderer/_builtin/-/assets/favicon.ico' />"
+"                <span class='fs-4'>收到应用展现请求，是否允许展现远程应用？</span>"
+"              </div>"
+"            </div>"
+"        </header>"
+"        <div class='px-4 text-center w-100 d-flex flex-column align-items-center justify-content-center'>"
 "            <img class='d-block mx-auto mb-4' src='%s' alt='' width='72' height='57'>"
 "            <h1 class='display-5 fw-bold'>%s</h1>"
 "            <div class='col-lg-6 mx-auto'>"
@@ -382,13 +406,17 @@ static const char *windows_page_tmpl_prefix = ""
 "    </head>"
 "    <body>"
 "        <main>"
-"            <div class='container px-4 py-5' id='custom-cards'>"
-"                <div class='d-flex justify-content-between border-bottom'>"
-"                    <h3 class='pb-2'>所有窗口</h2>"
-"                    <button type='button' class='btn-close' onclick='on_close_page_click()'></button>"
+"            <header class='py-3 mb-4 border-bottom'>"
+"                <div class='container d-flex flex-wrap justify-content-between'>"
+"                  <div class='d-flex align-items-center mb-3 mb-lg-0 me-lg-auto link-body-emphasis text-decoration-none'>"
+"                    <img class='me-2' width='32' height='32' src='hvml://localhost/_renderer/_builtin/-/assets/favicon.ico' />"
+"                    <span class='fs-4'>所有窗口</span>"
+"                  </div>"
+"                  <button type='button' class='btn-close mb-3 mb-lg-0 me-lg-auto ' onclick='on_close_page_click()'></button>"
 "                </div>"
-""
-"                <div class='row row-cols-1 row-cols-lg-2 row-cols-xl-3 align-items-stretch g-4 py-5'>"
+"            </header>"
+"            <div class='container px-4' id='custom-cards'>"
+"                <div class='row row-cols-1 row-cols-lg-2 row-cols-xl-3 align-items-stretch g-4 py-2'>"
 "";
 
 static const char *windows_page_tmpl_suffix = ""
@@ -399,6 +427,7 @@ static const char *windows_page_tmpl_suffix = ""
 "</html>"
 "";
 
+#if PLATFORM(MINIGUI)
 /* handle, title */
 static const char *windows_card_tmpl = ""
 "                    <div class='col mx-auto'>"
@@ -407,6 +436,7 @@ static const char *windows_card_tmpl = ""
 "                        </div>"
 "                    </div>"
 "";
+#endif
 
 static void send_response(WebKitURISchemeRequest *request, guint status_code,
         const char *content_type, char *contents, size_t nr_contents,
@@ -504,9 +534,10 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
                 goto error;
             }
             kvlist_set(&app_list, endpoint->app_name, &stream);
+            const char *img = endpoint->app_icon ? endpoint->app_icon : icon;
             g_output_stream_printf(stream, NULL, NULL, NULL,
                 runners_card_tmpl_prefix,
-                endpoint->app_icon ? endpoint->app_icon : icon,
+                img,
                 endpoint->app_label, endpoint->app_desc,
                 endpoint->app_name);
         }
@@ -540,11 +571,11 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
             rdr = *(struct dnssd_rdr **)data;
             if (idx == 0) {
                 g_output_stream_printf(stream, NULL, NULL, NULL,
-                    runners_rdr_active_tmpl, name, rdr->hostname);
+                    runners_rdr_active_tmpl, name, idx, idx, rdr->hostname);
             }
             else {
                 g_output_stream_printf(stream, NULL, NULL, NULL,
-                    runners_rdr_tmpl, name, rdr->hostname);
+                    runners_rdr_tmpl, name, idx, idx, rdr->hostname);
             }
             idx++;
         }
@@ -911,6 +942,8 @@ void hbdrunURISchemeRequestCallback(WebKitURISchemeRequest *request,
         goto error;
     }
 
+    WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
+    xgutils_set_webview_density(webview);
     hbdrun_handler handler = find_hbdrun_handler(host);
     if (handler == NOT_FOUND_HANDLER) {
         LOG_WARN("Invalid hbdrun URI (%s): not found handle for '%s'", uri, host);

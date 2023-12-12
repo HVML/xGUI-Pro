@@ -578,6 +578,14 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
         endpoint->allow_switching_rdr = true;
     }
 
+    tmp = purc_variant_object_get_by_ckey(data, "allowScalingByDensity");
+    if (tmp) {
+        endpoint->allow_scaling_by_density = purc_variant_booleanize(tmp);
+    }
+    else {
+        endpoint->allow_scaling_by_density = false;
+    }
+
     purc_name_tolower_copy (host_name, norm_host_name, PURC_LEN_HOST_NAME);
     purc_name_tolower_copy (app_name, norm_app_name, PURC_LEN_APP_NAME);
     purc_name_tolower_copy (runner_name, norm_runner_name, PURC_LEN_RUNNER_NAME);

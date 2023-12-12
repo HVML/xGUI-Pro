@@ -80,7 +80,7 @@ void mg_imp_convert_style(struct ws_widget_info *style,
         purc_variant_t toolkit_style);
 
 void mg_imp_evaluate_geometry(struct ws_widget_info *style,
-        const char *layout_style);
+        const char *layout_style, bool allow_scaling_by_density);
 
 void mg_imp_evaluate_transition(struct ws_widget_info *style,
         const char *transition_style);
