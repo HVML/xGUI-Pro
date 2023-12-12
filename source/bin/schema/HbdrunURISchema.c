@@ -106,8 +106,6 @@ static const char *runners_page_tmpl_prefix = ""
 "                    item.addEventListener('change', on_change);"
 "                });"
 ""
-"                const rdr_list = document.getElementById('id_rdr_list');"
-"                rdr_list.addEventListener('click', on_rdr_item_click);"
 "                rdr_dialog = new bootstrap.Modal('#id_rdr_dialog');"
 "            });"
 ""
@@ -139,8 +137,15 @@ static const char *runners_page_tmpl_prefix = ""
 "                        param += endpoint + ';'"
 "                    }"
 "                });"
+"                var rdrListElem = document.getElementById('id_rdr_list');"
+"                const rdrInputElems = rdrListElem.querySelectorAll('input');"
 "                var activeElem = document.getElementsByClassName('active');"
-"                var rdr = activeElem[0].getAttribute('data-rdr-name');"
+"                var rdr;"
+"                rdrInputElems.forEach((item) => {"
+"                    if (item.checked) {"
+"                        rdr = item.getAttribute('data-rdr-name');"
+"                    }"
+"                });"
 "                do_switch_rdr(param.substr(0, param.length-1), rdr);"
 "                rdr_dialog.hide();"
 "            }"
@@ -192,9 +197,9 @@ static const char *runners_page_tmpl_suffix = ""
 "                            <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>"
 "                        </div>"
 "                        <div class='modal-body'>"
-"                            <ul class='list-group' id='id_rdr_list'>"
+"                            <div class='list-group' id='id_rdr_list'>"
 "%s"
-"                            </ul>"
+"                            </div>"
 "                        </div>"
 "                        <button type='button' class='btn btn-primary m-3' id='id_switch_now_btn' data-link-id='' onclick='on_switch_now_click(this)' %s>立即切换</button>"
 "                    </div>"
@@ -206,11 +211,17 @@ static const char *runners_page_tmpl_suffix = ""
 "";
 
 static const char *runners_rdr_tmpl = ""
-"                                <li class='list-group-item' data-rdr-name='%s'>%s</li>"
+"                                <div class='list-group-item'>"
+"                                    <input class='form-check-input' type='radio' name='runner_rdrs' data-rdr-name='%s' id='id-radio-%d'/>"
+"                                    <label for='id-radio-%d'>%s</label>"
+"                                </div>"
 "";
 
 static const char *runners_rdr_active_tmpl = ""
-"                                <li class='list-group-item active' data-rdr-name='%s'>%s</li>"
+"                                <div class='list-group-item'>"
+"                                    <input class='form-check-input' type='radio' name='runner_rdrs' data-rdr-name='%s' id='id-radio-%d' checked/>"
+"                                    <label for='id-radio-%d'>%s</label>"
+"                                </div>"
 "";
 
 /* disabled, runner_id, app_name, endpoint, runner_id, runner label, runner endpoint */
@@ -542,11 +553,11 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
             rdr = *(struct dnssd_rdr **)data;
             if (idx == 0) {
                 g_output_stream_printf(stream, NULL, NULL, NULL,
-                    runners_rdr_active_tmpl, name, rdr->hostname);
+                    runners_rdr_active_tmpl, name, idx, idx, rdr->hostname);
             }
             else {
                 g_output_stream_printf(stream, NULL, NULL, NULL,
-                    runners_rdr_tmpl, name, rdr->hostname);
+                    runners_rdr_tmpl, name, idx, idx, rdr->hostname);
             }
             idx++;
         }
