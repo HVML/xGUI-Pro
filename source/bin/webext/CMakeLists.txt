@@ -26,8 +26,6 @@ set(assets_SOURCES
     "${XGUIPRO_BIN_DIR}/webext/assets/toggle.png"
     "${XGUIPRO_BIN_DIR}/webext/assets/home.png"
     "${XGUIPRO_BIN_DIR}/webext/assets/favicon.ico"
-    "${XGUIPRO_BIN_DIR}/webext/assets/smart-panel.png"
-    "${XGUIPRO_BIN_DIR}/webext/assets/speaker.png"
 )
 
 set(bootstrap_VERSION "5.3.1")

@@ -534,16 +534,7 @@ static void on_hbdrun_runners(WebKitURISchemeRequest *request,
                 goto error;
             }
             kvlist_set(&app_list, endpoint->app_name, &stream);
-            const char *img = "";
-            if (strcmp(endpoint->app_name, "cn.fmsoft.hybridos.smartcontrolpanel") == 0) {
-                img = "hvml://localhost/_renderer/_builtin/-/assets/smart-panel.png";
-            }
-            else if (strcmp(endpoint->app_name, "cn.fmsoft.hybridos.settings") == 0) {
-                img = "hvml://localhost/_renderer/_builtin/-/assets/speaker.png";
-            }
-            else {
-                img =  endpoint->app_icon ? endpoint->app_icon : icon;
-            }
+            const char *img = endpoint->app_icon ? endpoint->app_icon : icon;
             g_output_stream_printf(stream, NULL, NULL, NULL,
                 runners_card_tmpl_prefix,
                 img,

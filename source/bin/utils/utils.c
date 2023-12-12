@@ -160,12 +160,6 @@ int xgutils_show_confirm_window(const char *app_name, const char *app_label,
     if (!app_icon) {
         app_icon = "hvml://localhost/_renderer/_builtin/-/assets/hvml.png";
     }
-    if (strcmp(app_name, "cn.fmsoft.hybridos.smartcontrolpanel") == 0) {
-        app_icon = "hvml://localhost/_renderer/_builtin/-/assets/smart-panel.png";
-    }
-    else if (strcmp(app_name, "cn.fmsoft.hybridos.settings") == 0) {
-        app_icon = "hvml://localhost/_renderer/_builtin/-/assets/speaker.png";
-    }
 
     char *uri = g_strdup_printf("hbdrun://confirm?%s=%s&%s=%s&%s=%s&%s=%ld",
             CONFIRM_PARAM_LABEL, app_label,
