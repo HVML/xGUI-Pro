@@ -753,12 +753,50 @@ static void shutdown(GApplication *application, WebKitSettings *webkitSettings)
     g_object_unref(webkitSettings);
 }
 
+static DWORD g_idle_tickcount = 0;
+static DWORD g_idle_second = 0;
 static gboolean minigui_msg_loop(gpointer user_data)
 {
     MSG Msg;
 
     if (g_xgui_main_window) {
         while (PeekMessageEx(&Msg, g_xgui_main_window, 0, 0, FALSE, PM_REMOVE)) {
+            switch (Msg.message) {
+            case MSG_MOUSEMOVE:
+            case MSG_LBUTTONDOWN:
+            case MSG_MBUTTONDOWN:
+            case MSG_RBUTTONDOWN:
+            case MSG_LBUTTONDBLCLK:
+            case MSG_MBUTTONDBLCLK:
+            case MSG_RBUTTONDBLCLK:
+            case MSG_LBUTTONUP:
+            case MSG_MBUTTONUP:
+            case MSG_RBUTTONUP:
+            case MSG_SYSKEYDOWN:
+            case MSG_KEYDOWN:
+            case MSG_SYSCHAR:
+            case MSG_CHAR:
+            case MSG_SYSKEYUP:
+            case MSG_KEYUP:
+                g_idle_tickcount = 0;
+                g_idle_second = 0;
+                break;
+            case MSG_IDLE:
+                {
+                    DWORD n = GetTickCount();
+                    if (g_idle_tickcount == 0) {
+                        g_idle_tickcount = n;
+                    }
+                    else {
+                        DWORD diff = (n - g_idle_tickcount) / 100;
+                        if (diff > g_idle_second) {
+                            g_idle_second = diff;
+                            BroadcastMessage(MSG_XGUIPRO_IDLE, (WPARAM)g_idle_second, 0);
+                        }
+                    }
+                }
+                break;
+            }
             TranslateMessage(&Msg);
             DispatchMessage(&Msg);
         }

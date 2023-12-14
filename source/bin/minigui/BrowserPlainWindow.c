@@ -28,6 +28,7 @@
 
 #include "BrowserPane.h"
 #include "Common.h"
+#include "utils/utils.h"
 #include <string.h>
 
 enum {
@@ -116,6 +117,10 @@ static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
                 g_object_unref(window);
                 xgui_window_dec();
             }
+            break;
+
+        case MSG_XGUIPRO_IDLE:
+            //fprintf(stderr, "#####################################################xgui idle %ld\n", wParam);
             break;
     }
 

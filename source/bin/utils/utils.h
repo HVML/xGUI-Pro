@@ -62,6 +62,10 @@
 #define CONFIRM_RESULT_ID_ACCEPT_ALWAYS                 2
 #define CONFIRM_RESULT_ID_DECLINE                       3
 
+#if PLATFORM(MINIGUI)
+#define     MSG_XGUIPRO_IDLE            (MSG_USER + 2002)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
