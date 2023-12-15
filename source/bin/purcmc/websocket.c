@@ -1149,8 +1149,10 @@ ws_respond_data (WSServer * server, WSClient * client, const char *buffer, int l
   if (bytes < len || (bytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))) {
     ws_queue_sockbuf (client, buffer, len, bytes);
 
-    if (client->status & WS_SENDING && server->on_pending)
+    if (!(client->status & WS_CLOSE) &&
+            (client->status & WS_SENDING) && server->on_pending) {
         server->on_pending (server, (SockClient *)client);
+    }
   }
 
   return bytes;
