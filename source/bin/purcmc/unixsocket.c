@@ -334,8 +334,10 @@ static ssize_t us_write_data (USServer *server, USClient *client,
             (bytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))) {
         us_queue_data (client, buffer + bytes, len - bytes);
 
-        if (client->status & US_SENDING && server->on_pending)
+        if (!(client->status & US_CLOSE) &&
+                (client->status & US_SENDING) && server->on_pending) {
             server->on_pending (server, (SockClient *)client);
+        }
     }
 
     return bytes;
@@ -418,7 +420,7 @@ static ssize_t us_write (USServer *server, USClient *client,
 }
 
 /* TODO: tune this for noblocking read */
-#if 0
+#if 1
 static inline ssize_t my_read (int fd, void* buff, size_t sz)
 {
     ssize_t bytes;
@@ -446,7 +448,7 @@ static int try_to_read_payload (USServer* server, USClient* usc)
     switch (usc->header.op) {
     case US_OPCODE_TEXT:
     case US_OPCODE_BIN:
-        if ((n = read (usc->fd, usc->packet, usc->header.sz_payload))
+        if ((n = my_read (usc->fd, usc->packet, usc->header.sz_payload))
                 < usc->header.sz_payload) {
             purc_log_error ("Failed to read payload from Unix socket: %s\n",
                     strerror (errno));
@@ -466,7 +468,7 @@ static int try_to_read_payload (USServer* server, USClient* usc)
             return PCRDR_ERROR_PROTOCOL;
         }
 
-        if ((n = read (usc->fd, usc->packet + usc->sz_read,
+        if ((n = my_read (usc->fd, usc->packet + usc->sz_read,
                 usc->header.sz_payload)) < usc->header.sz_payload) {
             purc_log_error ("Failed to read payload from Unix socket: %s\n",
                     strerror (errno));
@@ -509,7 +511,7 @@ int us_handle_reads (USServer* server, USClient* usc)
         }
     }
     else {
-        n = read (usc->fd, &usc->header, sizeof (USFrameHeader));
+        n = my_read (usc->fd, &usc->header, sizeof (USFrameHeader));
         if (n < (ssize_t)sizeof (USFrameHeader)) {
             purc_log_error ("Failed to read frame header from Unix socket.\n");
             err_code = PCRDR_ERROR_IO;

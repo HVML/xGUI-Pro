@@ -49,6 +49,8 @@
 #define APP_NAME        "cn.fmsoft.hvml.xGUIPro"
 #define RUNNER_NAME     "purcmc"
 
+#define XGUIPRO_IDLE_TIMER_ID      201
+
 static purcmc_server_config pcmc_srvcfg;
 static purcmc_server *pcmc_srv;
 
@@ -753,12 +755,51 @@ static void shutdown(GApplication *application, WebKitSettings *webkitSettings)
     g_object_unref(webkitSettings);
 }
 
+static DWORD g_idle_tickcount = 0;
+static DWORD g_idle_second = 0;
+
+static BOOL xgui_idle_timer_cb(HWND hWnd, LINT id, DWORD ticks)
+{
+    if (g_idle_tickcount == 0) {
+        g_idle_tickcount = ticks;
+    }
+    else {
+        DWORD diff = (ticks - g_idle_tickcount) / 100;
+        if (diff > g_idle_second) {
+            g_idle_second = diff;
+            BroadcastMessage(MSG_XGUIPRO_IDLE, (WPARAM)g_idle_second, 0);
+        }
+    }
+    return TRUE;
+}
+
 static gboolean minigui_msg_loop(gpointer user_data)
 {
     MSG Msg;
 
     if (g_xgui_main_window) {
         while (PeekMessageEx(&Msg, g_xgui_main_window, 0, 0, FALSE, PM_REMOVE)) {
+            switch (Msg.message) {
+            case MSG_MOUSEMOVE:
+            case MSG_LBUTTONDOWN:
+            case MSG_MBUTTONDOWN:
+            case MSG_RBUTTONDOWN:
+            case MSG_LBUTTONDBLCLK:
+            case MSG_MBUTTONDBLCLK:
+            case MSG_RBUTTONDBLCLK:
+            case MSG_LBUTTONUP:
+            case MSG_MBUTTONUP:
+            case MSG_RBUTTONUP:
+            case MSG_SYSKEYDOWN:
+            case MSG_KEYDOWN:
+            case MSG_SYSCHAR:
+            case MSG_CHAR:
+            case MSG_SYSKEYUP:
+            case MSG_KEYUP:
+                g_idle_tickcount = 0;
+                g_idle_second = 0;
+                break;
+            }
             TranslateMessage(&Msg);
             DispatchMessage(&Msg);
         }
@@ -868,6 +909,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
     browser_plain_window_load_uri(mainWindow, BROWSER_DEFAULT_URL);
     g_xgui_main_window = browser_plain_window_get_hwnd(mainWindow);
     g_xgui_floating_window = create_floating_window(g_xgui_main_window, NULL);
+    SetTimerEx(g_xgui_main_window, XGUIPRO_IDLE_TIMER_ID, 100, xgui_idle_timer_cb);
 
     GMainContext *context = g_main_context_default();
 

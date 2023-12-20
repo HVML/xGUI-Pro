@@ -26,8 +26,11 @@
 #include "BrowserPlainWindow.h"
 #include "FloatingToolWindow.h"
 
+#include "PurcmcCallbacks.h"
 #include "BrowserPane.h"
 #include "Common.h"
+#include "utils/utils.h"
+#include "purcmc/purcmc.h"
 #include <string.h>
 
 enum {
@@ -91,6 +94,25 @@ static guint signals[LAST_SIGNAL] = { 0, };
 G_DEFINE_TYPE(BrowserPlainWindow, browser_plain_window,
         G_TYPE_OBJECT)
 
+static void post_rdr_idle_event(struct purcmc_server *server,
+        purcmc_endpoint *endpoint, uint64_t idle_time)
+{
+    pcrdr_msg event = { };
+    event.type = PCRDR_MSG_TYPE_EVENT;
+    event.target = PCRDR_MSG_TARGET_SESSION;
+    event.targetValue = 0;
+    event.eventName =
+        purc_variant_make_string_static("rdrState:idle", false);
+    /* TODO: use real URI for the sourceURI */
+    event.sourceURI = purc_variant_make_string_static(PCRDR_APP_RENDERER,
+            false);
+    event.elementType = PCRDR_MSG_ELEMENT_TYPE_VOID;
+    event.property = PURC_VARIANT_INVALID;
+    event.dataType = PCRDR_MSG_DATA_TYPE_JSON;
+    event.data = purc_variant_make_ulongint(idle_time);
+
+    purcmc_endpoint_post_event(server, endpoint, &event);
+}
 static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
@@ -115,6 +137,26 @@ static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
                 g_signal_emit(window, signals[DESTROY], 0, NULL);
                 g_object_unref(window);
                 xgui_window_dec();
+            }
+            break;
+
+        case MSG_XGUIPRO_IDLE:
+            {
+                BrowserPlainWindow *window = (BrowserPlainWindow *)
+                    GetWindowAdditionalData(hWnd);
+                WebKitWebView *webview = browser_pane_get_web_view(
+                        window->browserPane);
+                purcmc_session *sess = g_object_get_data(
+                        G_OBJECT(webview), "purcmc-session");
+                if (!sess) {
+                    break;
+                }
+                purcmc_endpoint *endpoint;
+                endpoint = purcmc_get_endpoint_by_session(sess);
+
+                struct purcmc_server *server;
+                server = xguitls_get_purcmc_server();
+                post_rdr_idle_event(server, endpoint, wParam);
             }
             break;
     }

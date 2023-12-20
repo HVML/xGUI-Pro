@@ -406,7 +406,7 @@ HWND create_floating_window(HWND hostingWnd, const char *title)
     dockbar_end_y = CreateInfo.by;
 
     //dockbar_left_length = 2 * MARGIN_DOCK + dockbar_height * factor;
-    dockbar_left_length = dockbar_height / 2;
+    dockbar_left_length = dockbar_height / 2 + DOCK_ICON_WIDTH / 4;
     button_interval = (dockbar_end_x - dockbar_start_x) / BUTTON_COUNT;
 
 
