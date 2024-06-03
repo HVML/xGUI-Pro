@@ -52,6 +52,7 @@ extern HWND g_xgui_main_window;
 extern HWND g_xgui_floating_window;
 static float xgutils_density_minimal = 1.0f;
 #else
+static float xgutils_density_minimal = 1.0f;
 extern GtkWidget *g_xgui_floating_window;
 #endif
 
