@@ -1135,6 +1135,7 @@ int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         }
     }
 
+    bool having;
     struct pcvrnt_object_iterator* it;
     it = pcvrnt_object_iterator_create_begin(value);
     while (it) {
@@ -1150,7 +1151,7 @@ int mg_update_plainwin(purcmc_session *sess, purcmc_workspace *workspace,
         }
 
 next:
-        bool having = pcvrnt_object_iterator_next(it);
+        having = pcvrnt_object_iterator_next(it);
         if (!having) {
             break;
         }

@@ -804,7 +804,13 @@ init_server(void)
     the_server.running = true;
 
     /* TODO for host name */
-    the_server.server_name = strdup(sd_get_local_hostname());
+    const char *local_hostname = sd_get_local_hostname();
+    if (local_hostname) {
+        the_server.server_name = strdup(local_hostname);
+    }
+    else {
+        the_server.server_name = NULL;
+    }
     kvlist_init(&the_server.endpoint_list, NULL);
     kvlist_init(&the_server.dnssd_rdr_list, NULL);
     avl_init(&the_server.living_avl, comp_living_time, true, NULL);
@@ -924,7 +930,9 @@ deinit_server(void)
     }
 #endif /* PCA_ENABLE_DNSSD */
 
-    free(the_server.server_name);
+    if (the_server.server_name) {
+        free(the_server.server_name);
+    }
 
     if (the_server.features) {
         free(the_server.features);
@@ -1012,7 +1020,7 @@ void xguipro_dnssd_on_service_discovered(struct purc_dnssd_conn *dnssd,
 
 #if 1
     /* TODO: change to appropriate method to filter self */
-    if (strcmp(hostname, server->server_name) == 0) {
+    if (server->server_name && strcmp(hostname, server->server_name) == 0) {
         purc_log_warn("Remote service same as local service: %s\n", hostname);
         goto out;
     }
