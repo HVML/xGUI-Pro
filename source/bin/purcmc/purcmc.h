@@ -63,6 +63,7 @@ typedef struct purcmc_server_config {
     char *port;
     char *sslcert;
     char *sslkey;
+    char *name;
     int max_frm_size;
     int backlog;
 } purcmc_server_config;

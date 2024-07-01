@@ -210,6 +210,8 @@ struct purcmc_server
     /* the user data */
     void *user_data;
 
+    purcmc_server_config *srvcfg;
+
     purc_variant_t confirm_infos;
 
     /* the callbacks */

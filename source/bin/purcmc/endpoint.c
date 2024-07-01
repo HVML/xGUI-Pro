@@ -657,7 +657,18 @@ static int on_start_session(purcmc_server* srv, purcmc_endpoint* endpoint,
     response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)info;
-    response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+    if (info && srv->srvcfg) {
+        response.dataType = PCRDR_MSG_DATA_TYPE_JSON;
+        response.data = purc_variant_make_object_0();
+        purc_variant_t name = purc_variant_make_string(srv->srvcfg->name, true);
+        if (name) {
+            purc_variant_object_set_by_ckey(response.data, "name", name);
+            purc_variant_unref(name);
+        }
+    }
+    else {
+        response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+    }
 
     return purcmc_endpoint_send_response(srv, endpoint, &response);
 }

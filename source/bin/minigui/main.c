@@ -150,6 +150,7 @@ static const GOptionEntry commandLineOptions[] =
 #endif
     { "pcmc-maxfrmsize", 0, 0, G_OPTION_ARG_INT, &pcmc_srvcfg.max_frm_size, "The maximum size of a socket frame", "BYTES" },
     { "pcmc-backlog", 0, 0, G_OPTION_ARG_INT, &pcmc_srvcfg.backlog, "The maximum length to which the queue of pending connections.", "NUMBER" },
+    { "name", 'n', 0, G_OPTION_ARG_STRING, &pcmc_srvcfg.name, "The name of the current renderer", "xGUI Pro" },
 
 #if WEBKIT_CHECK_VERSION(2, 30, 0)
     { "autoplay-policy", 0, 0, G_OPTION_ARG_CALLBACK, parseAutoplayPolicy, "Autoplay policy. Valid options are: allow, allow-without-sound, and deny", NULL },

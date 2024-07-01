@@ -48,6 +48,7 @@ static purcmc_server_config* the_srvcfg;
 #define PTR_FOR_WS_LISTENER ((void *)2)
 #define PTR_FOR_DNSSD_LISTENER ((void *)3)
 
+#define DEFAULT_NAME        "xGUI Pro"
 #define DEFAULT_LOCALE      "zh_CN"
 #define DEFAULT_DPI_NAME    "hdpi"
 
@@ -800,6 +801,10 @@ init_server(void)
         the_srvcfg->backlog = SOMAXCONN;
     }
 
+    if (the_srvcfg->name == NULL) {
+        the_srvcfg->name = g_strdup(DEFAULT_NAME);
+    }
+
     the_server.nr_endpoints = 0;
     the_server.running = true;
 
@@ -955,6 +960,11 @@ deinit_server(void)
     if (the_srvcfg->port) {
         free(the_srvcfg->port);
         the_srvcfg->port = NULL;
+    }
+
+    if (the_srvcfg->name) {
+        free(the_srvcfg->name);
+        the_srvcfg->name = NULL;
     }
 
     if (the_server.confirm_infos) {
@@ -1174,6 +1184,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
         goto error;
     }
 
+    the_server.srvcfg = the_srvcfg;
     the_server.user_data = user_data;
     the_server.confirm_infos = xgutils_load_confirm_infos();
     the_server.cbs = *cbs;
