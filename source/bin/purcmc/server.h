@@ -133,6 +133,7 @@ struct purcmc_endpoint
 
     time_t  t_created;
     time_t  t_living;
+    uint64_t timeout_seconds;
 
     char*   host_name;
     char*   app_name;
@@ -141,6 +142,8 @@ struct purcmc_endpoint
     char*   app_desc;
     char*   runner_label;
     char*   app_icon;
+    char*   signature;
+    char*   endpoint_name;
 
     purcmc_session *session;
 
@@ -149,6 +152,7 @@ struct purcmc_endpoint
 
     bool allow_switching_rdr;
     bool allow_scaling_by_density;
+    bool is_duplicate;
 };
 
 struct dnssd_rdr {

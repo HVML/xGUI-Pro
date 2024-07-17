@@ -260,6 +260,7 @@ int del_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint, int cause)
         strcpy (endpoint_name, "@endpoint/not/authenticated");
     }
 
+    if (endpoint->endpoint_name) free (endpoint->endpoint_name);
     if (endpoint->host_name) free (endpoint->host_name);
     if (endpoint->app_name) free (endpoint->app_name);
     if (endpoint->runner_name) free (endpoint->runner_name);
@@ -267,6 +268,7 @@ int del_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint, int cause)
     if (endpoint->app_desc) free (endpoint->app_desc);
     if (endpoint->runner_label) free (endpoint->runner_label);
     if (endpoint->app_icon) free (endpoint->app_icon);
+    if (endpoint->signature) free (endpoint->signature);
 
     free (endpoint);
     purc_log_warn ("purcmc_endpoint (%s) removed\n", endpoint_name);
@@ -633,11 +635,210 @@ static int authenticate_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint,
     return PCRDR_SC_OK;
 }
 
+static int parse_session_data(purcmc_server* srv, purcmc_endpoint* endpoint,
+        purc_variant_t data)
+{
+    const char* prot_name = NULL;
+    const char *host_name = NULL, *app_name = NULL, *runner_name = NULL;
+    uint64_t prot_ver = 0;
+    char norm_host_name [PURC_LEN_HOST_NAME + 1];
+    char norm_app_name [PURC_LEN_APP_NAME + 1];
+    char norm_runner_name [PURC_LEN_RUNNER_NAME + 1];
+    char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
+    purc_variant_t tmp;
+
+    if ((tmp = purc_variant_object_get_by_ckey(data, "protocolName"))) {
+        prot_name = purc_variant_get_string_const(tmp);
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(data, "protocolVersion"))) {
+        purc_variant_cast_to_ulongint(tmp, &prot_ver, true);
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(data, "hostName"))) {
+        host_name = purc_variant_get_string_const(tmp);
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(data, "appName"))) {
+        app_name = purc_variant_get_string_const(tmp);
+    }
+
+    if ((tmp = purc_variant_object_get_by_ckey(data, "runnerName"))) {
+        runner_name = purc_variant_get_string_const(tmp);
+    }
+
+    if (prot_name == NULL || prot_ver > PCRDR_PURCMC_PROTOCOL_VERSION ||
+            host_name == NULL || app_name == NULL || runner_name == NULL ||
+            strcasecmp (prot_name, PCRDR_PURCMC_PROTOCOL_NAME)) {
+        purc_log_warn ("Bad packet data for authentication: %s, %s, %s, %s\n",
+                prot_name, host_name, app_name, runner_name);
+        return PCRDR_SC_BAD_REQUEST;
+    }
+
+    if (prot_ver < PCRDR_PURCMC_MINIMAL_PROTOCOL_VERSION)
+        return PCRDR_SC_UPGRADE_REQUIRED;
+
+    if (!purc_is_valid_host_name (host_name) ||
+            !purc_is_valid_app_name (app_name) ||
+            !purc_is_valid_token (runner_name, PURC_LEN_RUNNER_NAME)) {
+        purc_log_warn ("Bad endpoint name: @%s/%s/%s\n",
+                host_name, app_name, runner_name);
+        return PCRDR_SC_NOT_ACCEPTABLE;
+    }
+
+    purc_variant_t icon = purc_variant_object_get_by_ckey(data, "appIcon");
+    purc_variant_t label = purc_variant_object_get_by_ckey(data, "appLabel");
+    purc_variant_t desc = purc_variant_object_get_by_ckey(data, "appDesc");
+    purc_variant_t runner_label = purc_variant_object_get_by_ckey(data, "runnerLabel");
+    if (!label || !desc) {
+        return PCRDR_SC_UNAUTHORIZED;
+    }
+
+    purc_name_tolower_copy (host_name, norm_host_name, PURC_LEN_HOST_NAME);
+    purc_name_tolower_copy (app_name, norm_app_name, PURC_LEN_APP_NAME);
+    purc_name_tolower_copy (runner_name, norm_runner_name, PURC_LEN_RUNNER_NAME);
+    host_name = norm_host_name;
+    app_name = norm_app_name;
+    runner_name = norm_runner_name;
+
+    /* make endpoint ready here */
+    if (endpoint->type == CT_UNIX_SOCKET) {
+        /* override the host name */
+        host_name = PCRDR_LOCALHOST;
+    }
+    else {
+        /* TODO: handle hostname for web socket connections here */
+        host_name = norm_host_name;
+    }
+
+    purc_assemble_endpoint_name (host_name,
+                    app_name, runner_name, endpoint_name);
+
+    purc_log_info ("New endpoint: %s (%p)\n", endpoint_name, endpoint);
+
+    if (kvlist_get (&srv->endpoint_list, endpoint_name)) {
+        purc_log_warn ("Duplicated endpoint: %s\n", endpoint_name);
+        return PCRDR_SC_CONFLICT;
+    }
+
+    tmp = purc_variant_object_get_by_ckey(data, "signature");
+    if (tmp) {
+        const char *signature = purc_variant_get_string_const(tmp);
+        if (signature && signature[0]) {
+            endpoint->signature = strdup(signature);
+        }
+    }
+
+    tmp = purc_variant_object_get_by_ckey(data, "timeoutSeconds");
+    if (tmp) {
+        purc_variant_cast_to_ulongint(tmp, &endpoint->timeout_seconds, false);
+    }
+    else {
+        endpoint->timeout_seconds = 10;
+    }
+
+    tmp = purc_variant_object_get_by_ckey(data, "allowSwitchingRdr");
+    if (tmp) {
+        endpoint->allow_switching_rdr = purc_variant_booleanize(tmp);
+    }
+    else {
+        endpoint->allow_switching_rdr = true;
+    }
+
+    tmp = purc_variant_object_get_by_ckey(data, "allowScalingByDensity");
+    if (tmp) {
+        endpoint->allow_scaling_by_density = purc_variant_booleanize(tmp);
+    }
+    else {
+        endpoint->allow_scaling_by_density = false;
+    }
+
+    const char *s_label = purc_variant_get_string_const(label);
+    const char *s_desc = purc_variant_get_string_const(desc);
+    const char *s_icon = purc_variant_get_string_const(icon);
+    const char *s_runner_label = purc_variant_get_string_const(runner_label);
+
+    endpoint->endpoint_name = strdup (endpoint_name);
+    endpoint->host_name = strdup (host_name);
+    endpoint->app_name = strdup (app_name);
+    endpoint->runner_name = strdup (runner_name);
+    endpoint->app_label = s_label ? strdup(s_label) : NULL;
+    endpoint->app_desc = s_desc ? strdup(s_desc) : NULL;
+    endpoint->runner_label = s_runner_label ? strdup(s_runner_label) : NULL;
+    endpoint->app_icon = s_icon ? strdup(s_icon) : NULL;
+    endpoint->status = ES_AUTHING;
+
+    return PCRDR_SC_OK;
+}
+
+static int on_start_session_duplicate(purcmc_server* srv,
+        purcmc_endpoint* endpoint, const pcrdr_msg *msg)
+{
+    int retv;
+    pcrdr_msg response = { };
+    purcmc_session *info = NULL;
+
+    retv = parse_session_data(srv, endpoint, msg->data);
+    if (retv != PCRDR_SC_OK) {
+        goto failed;
+    }
+
+    if (!make_endpoint_ready (srv, endpoint->endpoint_name, endpoint)) {
+        purc_log_error ("Failed to store the endpoint: %s\n",
+                endpoint->endpoint_name);
+        retv = PCRDR_SC_INSUFFICIENT_STORAGE;
+        goto failed;
+    }
+
+    endpoint->session = NULL;
+    info = srv->cbs.create_session(srv, endpoint);
+    if (info == NULL) {
+        retv = PCRDR_SC_INSUFFICIENT_STORAGE;
+    }
+    else {
+        endpoint->session = info;
+    }
+
+failed:
+    response.type = PCRDR_MSG_TYPE_RESPONSE;
+    response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
+    response.retCode = retv;
+    response.resultValue = (uint64_t)info;
+    if (info && srv->srvcfg) {
+        response.dataType = PCRDR_MSG_DATA_TYPE_JSON;
+        response.data = purc_variant_make_object_0();
+        purc_variant_t name = purc_variant_make_string(srv->srvcfg->name, true);
+        if (name) {
+            purc_variant_object_set_by_ckey(response.data, "name", name);
+            purc_variant_unref(name);
+        }
+    }
+    else {
+        response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+    }
+
+    return purcmc_endpoint_send_response(srv, endpoint, &response);
+}
+
 static int on_start_session(purcmc_server* srv, purcmc_endpoint* endpoint,
         const pcrdr_msg *msg)
 {
     pcrdr_msg response = { };
     purcmc_session *info = NULL;
+
+    purc_variant_t tmp = purc_variant_object_get_by_ckey(msg->data,
+            "duplicate");
+    if (tmp) {
+        endpoint->is_duplicate = purc_variant_booleanize(tmp);
+    }
+    else {
+        endpoint->is_duplicate = false;
+    }
+
+    if (endpoint->is_duplicate) {
+        return on_start_session_duplicate(srv, endpoint, msg);
+    }
 
     int retv = authenticate_endpoint(srv, endpoint, msg->data);
 
