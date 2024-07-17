@@ -784,13 +784,16 @@ static int on_start_session_duplicate(purcmc_server* srv,
         goto failed;
     }
 
+#if 0
     if (kvlist_is_empty(&srv->endpoint_list)) {
         goto auto_accept;
     }
+#endif
 
     /* wait for user accept */
     /* 1. save request id */
     endpoint->request_id = strdup(purc_variant_get_string_const(msg->requestId));
+    xgutils_show_dup_confirm_window(endpoint);
 
 #if 0
     return PCRDR_SC_OK;

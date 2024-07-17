@@ -427,6 +427,78 @@ static const char *windows_page_tmpl_suffix = ""
 "</html>"
 "";
 
+static const char *dup_confirm_page_template = ""
+"<!DOCTYPE html>"
+"<html lang='zh-CN'>"
+"    <head>"
+"        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>"
+"        <meta name='viewport' content='width=device-width, initial-scale=1'>"
+"        <!-- Bootstrap core CSS -->"
+"        <link rel='stylesheet' href='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/css/bootstrap.min.css' />"
+"        <script type='text/javascript' src='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/js/bootstrap.bundle.min.js'></script>"
+"        <script>"
+"            let httpRequest;"
+"            function on_radio_change(elem) {"
+"                const btn = document.getElementById('id_accept');"
+"                btn.textContent = elem.value;"
+"                var result = elem.getAttribute('data-result');"
+"                btn.setAttribute('data-result', result);"
+"            }"
+"            function on_action_result() {"
+"                if (httpRequest.readyState === XMLHttpRequest.DONE) {"
+"                    window.close();"
+"                }"
+"            }"
+"            function on_result(elem) {"
+"                var result = elem.getAttribute('data-result');"
+"                var uri = 'hbdrun://action?type=dupConfirm&result=' + result;"
+"                httpRequest = new XMLHttpRequest();"
+"                httpRequest.onreadystatechange = on_action_result;"
+"                httpRequest.open('POST', uri);"
+"                httpRequest.send();"
+"            }"
+"        </script>"
+"        <style>"
+"            html,body{ height:100%; padding:0; margin:0; background-color:#B3B3B3; color:white; }"
+"            .btn-be {"
+"              --bs-btn-color: var(--bs-white);"
+"              --bs-btn-bg: #B3B3B3;"
+"              --bs-btn-border-color: var(--bs-white);"
+"              --bs-btn-hover-color: var(--bs-white);"
+"              --bs-btn-hover-bg: #B3B3B3;"
+"              --bs-btn-hover-border-color: var(--bs-white);"
+"              --bs-btn-focus-shadow-rgb: var(--bs-white);"
+"              --bs-btn-active-color: var(--bs-white);"
+"              --bs-btn-active-bg: #C0C0C0;"
+"              --bs-btn-active-border-color: var(--bs-white);"
+"            }"
+"        </style>"
+"    </head>"
+"    <body>"
+"        <header class='py-3 mb-1'>"
+"        </header>"
+"        <div class='px-4 text-center w-100 d-flex flex-column align-items-center justify-content-center'>"
+"            <h1 class='fs-4'>"
+"                是否获取"
+"            </h1>"
+"            <div class='col-lg-6 mx-auto'>"
+"                <p class='mb-4 fs-4'>"
+"                    一楼干洗机投屏 ？"
+"                </p>"
+"                <div class='d-grid gap-2 d-flex justify-content-between'>"
+"                    <button type='button' class='btn btn-sm btn-be px-4 fs-4' id='id_accept' data-result='Accept' onclick='on_result(this)'>"
+"                        是"
+"                    </button>"
+"                    <button type='button' class='btn btn-sm btn-be px-4 fs-4' data-result='Decline' id='id_decline' onclick='on_result(this)'>"
+"                        否"
+"                    </button>"
+"                </div>"
+"            </div>"
+"        </div>"
+"    </body>"
+"</html>"
+"";
+
 #if PLATFORM(MINIGUI)
 /* handle, title */
 static const char *windows_card_tmpl = ""
@@ -610,6 +682,29 @@ error:
     }
 }
 
+static void on_hbdrun_dup_confirm(WebKitURISchemeRequest *request,
+        WebKitWebContext *webContext, const char *uri)
+{
+    char *err_info = NULL;
+    char *contents = g_strdup(dup_confirm_page_template);
+
+    if (!contents) {
+        err_info = g_strdup_printf("Can not allocate memory for confirm page (%s)", uri);
+        LOG_WARN("Can not allocate memory for confirm page (%s)", uri);
+        goto error;
+    }
+    send_response(request, 200, "text/html", contents, strlen(contents), g_free);
+    return;
+
+error:
+    if (err_info) {
+        send_error_response(request, 500, "text/html", err_info, strlen(err_info), g_free);
+    }
+    if (contents) {
+        g_free(contents);
+    }
+}
+
 static void on_hbdrun_confirm(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext, const char *uri)
 {
@@ -617,6 +712,16 @@ static void on_hbdrun_confirm(WebKitURISchemeRequest *request,
     (void) webContext;
     (void) uri;
     size_t nr_uri = strlen(uri) + 1;
+
+    char *type = NULL;
+    if (hbdrun_uri_get_query_value_alloc(uri, "type", &type)) {
+        if (strcasecmp(type, CONFIRM_TYPE_DUP) == 0) {
+            on_hbdrun_dup_confirm(request, webContext, uri);
+            free(type);
+            return;
+        }
+        free(type);
+    }
 
     char label[nr_uri];
     hbdrun_uri_get_query_value(uri, CONFIRM_PARAM_LABEL, label);
@@ -806,6 +911,36 @@ error:
     }
 }
 
+static void on_hbdrun_action_dup_confirm(WebKitURISchemeRequest *request,
+        WebKitWebContext *webContext, const char *uri)
+{
+    char *err_info = NULL;
+    char *result = NULL;
+    if (!hbdrun_uri_get_query_value_alloc(uri,
+                BROWSER_HBDRUN_ACTION_PARAM_RESULT, &result)) {
+        err_info = g_strdup_printf("invalid result param (%s)", uri);
+        goto error;
+    }
+
+    WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
+    /* result will free at: xgutils_show_confirm_window */
+    g_object_set_data(G_OBJECT(webview), BROWSER_HBDRUN_ACTION_PARAM_RESULT,
+            result);
+
+    send_response(request, 200, "application/json", (char *)confirm_success,
+            strlen(confirm_success), NULL);
+    return;
+
+error:
+    if (err_info) {
+        send_error_response(request, 500, "text/html", err_info, strlen(err_info), g_free);
+    }
+
+    if (result) {
+        g_free(result);
+    }
+}
+
 static void on_hbdrun_action(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext, const char *uri)
 {
@@ -829,6 +964,9 @@ static void on_hbdrun_action(WebKitURISchemeRequest *request,
     }
     else if (strcasecmp(type, BROWSER_HBDRUN_ACTION_TYPE_SWITCH_WINDOW) == 0) {
         on_hbdrun_action_switch_window(request, webContext, uri);
+    }
+    else if (strcasecmp(type, BROWSER_HBDRUN_ACTION_TYPE_DUP_CONFIRM) == 0) {
+        on_hbdrun_action_dup_confirm(request, webContext, uri);
     }
 
     if (type) {

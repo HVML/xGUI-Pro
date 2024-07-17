@@ -84,7 +84,7 @@ void *xgutils_global_get_data(const char *key)
 }
 
 static BrowserPlainWindow *create_plainwin_with_uri(const char *name,
-        const char *title, const char *uri)
+        const char *title, const char *uri, int x, int y, int w, int h)
 {
     BrowserPlainWindow *plainwin = NULL;
     WebKitWebContext *web_context = xguitls_get_web_context();
@@ -109,6 +109,9 @@ static BrowserPlainWindow *create_plainwin_with_uri(const char *name,
     plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(hWnd,
                 web_context, name, title,
                 WINDOW_LEVEL_TOOLTIP, NULL, TRUE));
+    if (w > 0 && h > 0) {
+        browser_plain_window_layout(plainwin, x, y, w, h, false);
+    }
 
     WebKitWebViewParam param = {
         .webContext = web_context,
@@ -169,7 +172,77 @@ int xgutils_show_confirm_window(const char *app_name, const char *app_label,
             CONFIRM_PARAM_TIMEOUT, timeout_seconds);
 
     BrowserPlainWindow *plainwin;
-    plainwin = create_plainwin_with_uri(app_label, app_label, uri);
+    plainwin = create_plainwin_with_uri(app_label, app_label, uri, 0, 0, 0, 0);
+    if (!plainwin) {
+        goto out;
+    }
+
+    WebKitWebView *web_view = browser_plain_window_get_view(plainwin);
+
+    GMainContext *context = g_main_context_default();
+    while (true) {
+        g_main_context_iteration(context, FALSE);
+        char *p = g_object_get_data(G_OBJECT(web_view),
+                BROWSER_HBDRUN_ACTION_PARAM_RESULT);
+        if (p != NULL) {
+            /* TODO : keep result */
+            if (strcasecmp(p, CONFIRM_RESULT_DECLINE) == 0) {
+                result = CONFIRM_RESULT_ID_DECLINE;
+            }
+            else if (strcasecmp(p, CONFIRM_RESULT_ACCEPT_ONCE) == 0) {
+                result = CONFIRM_RESULT_ID_ACCEPT_ONCE;
+            }
+            else if (strcasecmp(p, CONFIRM_RESULT_ACCEPT_ALWAYS) == 0) {
+                result = CONFIRM_RESULT_ID_ACCEPT_ALWAYS;
+                xgutils_set_app_confirm(app_name);
+            }
+            g_object_set_data(G_OBJECT(web_view),
+                BROWSER_HBDRUN_ACTION_PARAM_RESULT, NULL);
+            g_free(p);
+            break;
+        }
+    }
+
+out:
+    if (uri) {
+        g_free(uri);
+    }
+    return result;
+}
+
+int xgutils_show_dup_confirm_window(purcmc_endpoint *endpoint)
+{
+    const char *app_name = endpoint->app_name;
+    const char *app_label = endpoint->app_label;
+    const char *app_desc = endpoint->app_desc;
+    const char *app_icon = endpoint->app_icon;
+    uint64_t timeout_seconds = endpoint->timeout_seconds;
+
+    int result = CONFIRM_RESULT_ID_DECLINE;
+    if (!app_icon) {
+        app_icon = "hvml://localhost/_renderer/_builtin/-/assets/hvml.png";
+    }
+
+    char *uri = g_strdup_printf("hbdrun://confirm?type=dup&%s=%s&%s=%s&%s=%s&%s=%ld",
+            CONFIRM_PARAM_LABEL, app_label,
+            CONFIRM_PARAM_DESC, app_desc,
+            CONFIRM_PARAM_ICON, app_icon,
+            CONFIRM_PARAM_TIMEOUT, timeout_seconds);
+
+    int x = 0;
+    int y = 0;
+    int w = 0;
+    int h = 0;
+#if PLATFORM(MINIGUI)
+    HWND hWnd = g_xgui_main_window;
+    RECT rc;
+    GetWindowRect(hWnd, &rc);
+    w = RECTW(rc) * 0.3;
+    h = RECTH(rc) * 0.3;
+    x = rc.right - w;
+#endif
+    BrowserPlainWindow *plainwin;
+    plainwin = create_plainwin_with_uri(app_label, app_label, uri, x, y, w, h);
     if (!plainwin) {
         goto out;
     }
@@ -210,14 +283,14 @@ out:
 int xgutils_show_runners_window(void)
 {
     const char *uri = "hbdrun://runners";
-    create_plainwin_with_uri("runners", "runners", uri);
+    create_plainwin_with_uri("runners", "runners", uri, 0, 0, 0, 0);
     return 0;
 }
 
 int xgutils_show_windows_window(void)
 {
     const char *uri = "hbdrun://windows";
-    create_plainwin_with_uri("windows", "windows", uri);
+    create_plainwin_with_uri("windows", "windows", uri, 0, 0, 0, 0);
     return 0;
 }
 

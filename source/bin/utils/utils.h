@@ -29,6 +29,8 @@
 
 #include <stddef.h>
 
+#include <purcmc/server.h>
+
 #ifdef NDEBUG
 #define LOG_DEBUG(x, ...)
 #else
@@ -77,6 +79,8 @@ void *xgutils_global_get_data(const char *key);
 
 int xgutils_show_confirm_window(const char *app_name, const char *app_label,
         const char *app_desc, const char *app_icon, uint64_t timeout_seconds);
+
+int xgutils_show_dup_confirm_window(purcmc_endpoint *endpoint);
 
 int xgutils_show_runners_window(void);
 

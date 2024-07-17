@@ -36,6 +36,7 @@
 #define BROWSER_HBDRUN_ACTION_TYPE_CONFIRM              "confirm"
 #define BROWSER_HBDRUN_ACTION_TYPE_SWITCH_RDR           "switchRdr"
 #define BROWSER_HBDRUN_ACTION_TYPE_SWITCH_WINDOW        "switchWindow"
+#define BROWSER_HBDRUN_ACTION_TYPE_DUP_CONFIRM          "dupConfirm"
 
 #define CONFIRM_RESULT_ACCEPT_ONCE                      "AcceptOnce"
 #define CONFIRM_RESULT_ACCEPT_ALWAYS                    "AcceptALWAYS"
@@ -45,6 +46,8 @@
 #define CONFIRM_PARAM_DESC                              "desc"
 #define CONFIRM_PARAM_ICON                              "icon"
 #define CONFIRM_PARAM_TIMEOUT                           "timeout"
+
+#define CONFIRM_TYPE_DUP                                "dup"
 
 #ifdef __cplusplus
 extern "C" {
