@@ -48,6 +48,7 @@
 #define CONFIRM_PARAM_TIMEOUT                           "timeout"
 
 #define CONFIRM_TYPE_DUP                                "dup"
+#define CONFIRM_TYPE_DUP_CLOSE                          "dupClose"
 
 #ifdef __cplusplus
 extern "C" {
