@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include "endpoint.h"
 #include "unixsocket.h"
@@ -260,7 +261,6 @@ int del_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint, int cause)
         strcpy (endpoint_name, "@endpoint/not/authenticated");
     }
 
-    if (endpoint->endpoint_name) free (endpoint->endpoint_name);
     if (endpoint->host_name) free (endpoint->host_name);
     if (endpoint->app_name) free (endpoint->app_name);
     if (endpoint->runner_name) free (endpoint->runner_name);
@@ -269,6 +269,7 @@ int del_endpoint(purcmc_server* srv, purcmc_endpoint* endpoint, int cause)
     if (endpoint->runner_label) free (endpoint->runner_label);
     if (endpoint->app_icon) free (endpoint->app_icon);
     if (endpoint->signature) free (endpoint->signature);
+    if (endpoint->request_id) free (endpoint->request_id);
 
     free (endpoint);
     purc_log_warn ("purcmc_endpoint (%s) removed\n", endpoint_name);
@@ -758,7 +759,6 @@ static int parse_session_data(purcmc_server* srv, purcmc_endpoint* endpoint,
     const char *s_icon = purc_variant_get_string_const(icon);
     const char *s_runner_label = purc_variant_get_string_const(runner_label);
 
-    endpoint->endpoint_name = strdup (endpoint_name);
     endpoint->host_name = strdup (host_name);
     endpoint->app_name = strdup (app_name);
     endpoint->runner_name = strdup (runner_name);
@@ -775,6 +775,7 @@ static int on_start_session_duplicate(purcmc_server* srv,
         purcmc_endpoint* endpoint, const pcrdr_msg *msg)
 {
     int retv;
+    char endpoint_name[PURC_LEN_ENDPOINT_NAME + 1];
     pcrdr_msg response = { };
     purcmc_session *info = NULL;
 
@@ -783,9 +784,23 @@ static int on_start_session_duplicate(purcmc_server* srv,
         goto failed;
     }
 
-    if (!make_endpoint_ready (srv, endpoint->endpoint_name, endpoint)) {
-        purc_log_error ("Failed to store the endpoint: %s\n",
-                endpoint->endpoint_name);
+    if (kvlist_is_empty(&srv->endpoint_list)) {
+        goto auto_accept;
+    }
+
+    /* wait for user accept */
+    /* 1. save request id */
+    endpoint->request_id = strdup(purc_variant_get_string_const(msg->requestId));
+
+#if 0
+    return PCRDR_SC_OK;
+#endif
+
+
+auto_accept:
+    assemble_endpoint_name(endpoint, endpoint_name);
+    if (!make_endpoint_ready (srv, endpoint_name, endpoint)) {
+        purc_log_error ("Failed to store the endpoint: %s\n", endpoint_name);
         retv = PCRDR_SC_INSUFFICIENT_STORAGE;
         goto failed;
     }

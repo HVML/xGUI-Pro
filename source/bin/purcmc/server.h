@@ -143,7 +143,9 @@ struct purcmc_endpoint
     char*   runner_label;
     char*   app_icon;
     char*   signature;
-    char*   endpoint_name;
+
+    /* start session request id , used for duplicate renderer*/
+    char*   request_id;
 
     purcmc_session *session;
 
