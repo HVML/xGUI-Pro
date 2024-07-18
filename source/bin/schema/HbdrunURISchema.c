@@ -483,7 +483,7 @@ static const char *dup_confirm_page_template = ""
 "            </h1>"
 "            <div class='col-lg-6 mx-auto'>"
 "                <p class='mb-4 fs-4'>"
-"                    一楼干洗机投屏 ？"
+"                    %s 投屏 ？"
 "                </p>"
 "                <div class='d-grid gap-2 d-flex justify-content-between'>"
 "                    <button type='button' class='btn btn-sm btn-be px-4 fs-4' id='id_accept' data-result='Accept' onclick='on_result(this)'>"
@@ -757,7 +757,13 @@ static void on_hbdrun_dup_confirm(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext, const char *uri)
 {
     char *err_info = NULL;
-    char *contents = g_strdup(dup_confirm_page_template);
+
+    size_t nr_uri = strlen(uri) + 1;
+    char label[nr_uri];
+    hbdrun_uri_get_query_value(uri, CONFIRM_PARAM_LABEL, label);
+    char *app_label = g_uri_unescape_string(label, NULL);
+
+    char *contents = g_strdup_printf(dup_confirm_page_template, app_label);
 
     if (!contents) {
         err_info = g_strdup_printf("Can not allocate memory for confirm page (%s)", uri);

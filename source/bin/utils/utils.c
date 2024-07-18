@@ -210,6 +210,7 @@ out:
     return result;
 }
 
+#define LEN_BUFF_LONGLONGINT 128
 int xgutils_show_dup_confirm_window(purcmc_endpoint *endpoint)
 {
     const char *app_name = endpoint->app_name;
@@ -223,7 +224,8 @@ int xgutils_show_dup_confirm_window(purcmc_endpoint *endpoint)
         app_icon = "hvml://localhost/_renderer/_builtin/-/assets/hvml.png";
     }
 
-    char *uri = g_strdup_printf("hbdrun://confirm?type=dup&%s=%s&%s=%s&%s=%s&%s=%ld",
+    char *uri = g_strdup_printf(
+            "hbdrun://confirm?type=dup&%s=%s&%s=%s&%s=%s&%s=%ld",
             CONFIRM_PARAM_LABEL, app_label,
             CONFIRM_PARAM_DESC, app_desc,
             CONFIRM_PARAM_ICON, app_icon,
