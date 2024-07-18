@@ -209,6 +209,12 @@ avl_is_empty(struct avl_tree *tree) {
   return tree->count == 0;
 }
 
+static inline unsigned int
+avl_count(struct avl_tree *tree) {
+  return tree->count;
+}
+
+
 /**
  * Internal function to support returning the element from a avl tree query
  * @param tree pointer to avl tree

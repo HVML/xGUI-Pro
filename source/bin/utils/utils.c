@@ -359,8 +359,37 @@ int xguitls_shake_round_window(void)
     return 0;
 }
 
+int remove_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint);
+static gboolean show_dup_close_confirm_window_callback(gpointer data)
+{
+    purcmc_endpoint *endpoint = (purcmc_endpoint *)data;
+    int ret = xgutils_show_dup_close_confirm_window(endpoint);
+    if (ret != CONFIRM_RESULT_ID_DECLINE) {
+        struct purcmc_server *server = xguitls_get_purcmc_server();
+        remove_endpoint(server, endpoint);
+    }
+    return G_SOURCE_REMOVE;
+}
+
 int xgutils_show_screen_cast_window(void)
 {
+    struct purcmc_server *server = xguitls_get_purcmc_server();
+    unsigned int count = kvlist_count(&server->endpoint_list);
+    if (count > 0) {
+        const char *name;
+        void *next, *data;
+        purcmc_endpoint *endpoint;
+        kvlist_for_each_safe(&server->endpoint_list, name, next, data) {
+            purcmc_endpoint *ept = *(purcmc_endpoint **)data;
+            if (endpoint == NULL || ept->t_created > endpoint->t_created) {
+                endpoint = ept;
+            }
+        }
+
+        g_timeout_add(200, show_dup_close_confirm_window_callback, endpoint);
+        return 0;
+    }
+
     int x = 0;
     int y = 0;
     int w = 0;

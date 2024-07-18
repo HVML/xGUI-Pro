@@ -349,6 +349,17 @@ static void cleanup_endpoint_client(purcmc_server *srv, purcmc_endpoint* endpoin
             endpoint->host_name, endpoint->app_name, endpoint->runner_name);
 }
 
+int remove_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint)
+{
+    char name [PURC_LEN_ENDPOINT_NAME + 1];
+    assemble_endpoint_name(endpoint, name);
+    kvlist_delete(&srv->endpoint_list, name);
+    cleanup_endpoint_client(srv, endpoint);
+    del_endpoint(srv, endpoint, CDE_NO_RESPONDING);
+    srv->nr_endpoints--;
+    return 0;
+}
+
 int check_no_responding_endpoints(purcmc_server *srv)
 {
     int n = 0;
@@ -771,7 +782,7 @@ static int parse_session_data(purcmc_server* srv, purcmc_endpoint* endpoint,
     return PCRDR_SC_OK;
 }
 
-#define  AUTO_ACCEPT_FIRST_CONN
+//#define  AUTO_ACCEPT_FIRST_CONN
 static int on_start_session_duplicate(purcmc_server* srv,
         purcmc_endpoint* endpoint, const pcrdr_msg *msg)
 {

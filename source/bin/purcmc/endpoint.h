@@ -52,6 +52,7 @@ bool make_endpoint_ready (purcmc_server* srv,
         const char* endpoint_name, purcmc_endpoint* endpoint);
 
 int accept_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint);
+int remove_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint);
 
 int check_no_responding_endpoints (purcmc_server *srv);
 int check_dangling_endpoints (purcmc_server *srv);

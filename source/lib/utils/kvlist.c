@@ -100,3 +100,8 @@ bool kvlist_is_empty(struct kvlist *kv)
 {
     return avl_is_empty(&kv->avl);
 }
+
+unsigned int kvlist_count(struct kvlist *kv)
+{
+    return avl_count(&kv->avl);
+}

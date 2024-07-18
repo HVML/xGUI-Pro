@@ -87,6 +87,8 @@ int kvlist_strlen(struct kvlist *kv, const void *data);
 
 bool kvlist_is_empty(struct kvlist *kv);
 
+unsigned int kvlist_count(struct kvlist *k);
+
 #ifdef __cplusplus
 }
 #endif
