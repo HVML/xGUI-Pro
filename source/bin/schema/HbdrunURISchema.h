@@ -38,6 +38,7 @@
 #define BROWSER_HBDRUN_ACTION_TYPE_SWITCH_WINDOW        "switchWindow"
 #define BROWSER_HBDRUN_ACTION_TYPE_DUP_CONFIRM          "dupConfirm"
 
+#define CONFIRM_RESULT_ACCEPT                           "Accept"
 #define CONFIRM_RESULT_ACCEPT_ONCE                      "AcceptOnce"
 #define CONFIRM_RESULT_ACCEPT_ALWAYS                    "AcceptALWAYS"
 #define CONFIRM_RESULT_DECLINE                          "Decline"

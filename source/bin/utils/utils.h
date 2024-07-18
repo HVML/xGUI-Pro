@@ -60,6 +60,7 @@
 #define xguitls_get_web_context() \
     (WebKitWebContext *)xgutils_global_get_data(APP_PROP_WEB_CONTEXT)
 
+#define CONFIRM_RESULT_ID_ACCEPT                        0
 #define CONFIRM_RESULT_ID_ACCEPT_ONCE                   1
 #define CONFIRM_RESULT_ID_ACCEPT_ALWAYS                 2
 #define CONFIRM_RESULT_ID_DECLINE                       3
@@ -81,6 +82,7 @@ int xgutils_show_confirm_window(const char *app_name, const char *app_label,
         const char *app_desc, const char *app_icon, uint64_t timeout_seconds);
 
 int xgutils_show_dup_confirm_window(purcmc_endpoint *endpoint);
+int xgutils_show_dup_close_confirm_window(purcmc_endpoint *endpoint);
 
 int xgutils_show_runners_window(void);
 
