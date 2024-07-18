@@ -37,6 +37,8 @@
 #define BROWSER_HBDRUN_ACTION_TYPE_SWITCH_RDR           "switchRdr"
 #define BROWSER_HBDRUN_ACTION_TYPE_SWITCH_WINDOW        "switchWindow"
 #define BROWSER_HBDRUN_ACTION_TYPE_DUP_CONFIRM          "dupConfirm"
+#define BROWSER_HBDRUN_ACTION_TYPE_DUP_CHOOSE           "dupChoose"
+
 
 #define CONFIRM_RESULT_ACCEPT                           "Accept"
 #define CONFIRM_RESULT_ACCEPT_ONCE                      "AcceptOnce"

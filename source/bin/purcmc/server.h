@@ -133,6 +133,7 @@ struct purcmc_endpoint
 
     time_t  t_created;
     time_t  t_living;
+    time_t  t_start_session;
     uint64_t timeout_seconds;
 
     char*   host_name;

@@ -50,9 +50,15 @@
 
 #define HBDRUN_SCHEMA_TYPE_WINDOWS          "windows" /* used to switch window */
 
+/* used to dup choose (duplicate renderer) */
+#define HBDRUN_SCHEMA_TYPE_DUP_CHOOSE       "dupchoose"
+
 #define CONFIRM_BTN_TEXT_ACCEPT_ONCE        "接受一次"
 #define CONFIRM_BTN_TEXT_ACCEPT_ALWAYS      "始终接受"
 #define CONFIRM_BTN_TEXT_DECLINE            "拒绝连接"
+
+
+#define LEN_BUFF_LONGLONGINT                128
 
 typedef void (*hbdrun_handler)(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext, const char *uri);
@@ -581,6 +587,74 @@ static const char *windows_card_tmpl = ""
 "";
 #endif
 
+static const char *dup_choose_page_tmpl_prefix = ""
+"<!DOCTYPE html>"
+"<html lang='zh-CN'>"
+"    <head>"
+"        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>"
+"        <meta name='viewport' content='width=device-width, initial-scale=1'>"
+"        <!-- Bootstrap core CSS -->"
+"        <link rel='stylesheet' href='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/css/bootstrap.min.css' />"
+"        <script type='text/javascript' src='hvml://localhost/_renderer/_builtin/-/assets/bootstrap-5.3.1-dist/js/bootstrap.bundle.min.js'></script>"
+"        <script>"
+"            function on_close_page_click() {"
+"                window.close();"
+"            }"
+"            function on_action_result() {"
+"                if (httpRequest.readyState === XMLHttpRequest.DONE) {"
+"                    window.close();"
+"                }"
+"            }"
+"            function on_result(elem) {"
+"                var result = elem.getAttribute('data-result');"
+"                var uri = 'hbdrun://action?type=dupChoose&result=' + result;"
+"                httpRequest = new XMLHttpRequest();"
+"                httpRequest.onreadystatechange = on_action_result;"
+"                httpRequest.open('POST', uri);"
+"                httpRequest.send();"
+"            }"
+"        </script>"
+"        <style>"
+"            html,body{ height:100%; padding:0; margin:0; background-color:#B3B3B3; color:white; }"
+"            .w-95 { width: 95%!important; }"
+"            .w-80 { width: 80%!important; }"
+"            .sticky-top { position: -webkit-sticky; position: sticky; top: 0; z-index: 1020; }"
+"            .bg { background-color:#B3B3B3; }"
+"        </style>"
+"    </head>"
+"    <body>"
+"        <main>"
+"            <header class='py-2 border-bottom sticky-top bg'>"
+"                <div class='container d-flex flex-wrap justify-content-between my-2' data-bs-theme='dark'>"
+"                    <div> </div>"
+"                    <div class='d-flex align-items-center mb-lg-0 me-lg-auto text-decoration-none'>"
+"                        <img class='me-2' width='32' height='32' src='hvml://localhost/_renderer/_builtin/-/assets/screen-cast.png' />"
+"                        <span class='fs-4'>"
+"                            图面获取"
+"                        </span>"
+"                    </div>"
+"                    <button type='button' class='btn-close mb-lg-0 me-lg-auto ' onclick='on_close_page_click()'></button>"
+"                </div>"
+"            </header>"
+"            <div id='id_dup_conns'>"
+"";
+
+static const char *dup_choose_page_tmpl_row = ""
+"                <div class='d-flex flex-column align-items-end my-2 py-2' id='id_%s' data-result='%s' onclick='on_result(this)'>"
+"                    <span class='fs-4 mb-2 align-self-center'>"
+"                        %s"
+"                    </span>"
+"                    <div class='w-80 border-bottom'></div>"
+"                </div>"
+"";
+
+static const char *dup_choose_page_tmpl_suffix= ""
+"            </div>"
+"        </main>"
+"    </body>"
+"</html>"
+"";
+
 static void send_response(WebKitURISchemeRequest *request, guint status_code,
         const char *content_type, char *contents, size_t nr_contents,
         GDestroyNotify notify)
@@ -1046,6 +1120,41 @@ error:
     }
 }
 
+int accept_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint);
+static void on_hbdrun_action_dup_choose(WebKitURISchemeRequest *request,
+        WebKitWebContext *webContext, const char *uri)
+{
+    char *err_info = NULL;
+    char *result = NULL;
+    if (!hbdrun_uri_get_query_value_alloc(uri,
+                BROWSER_HBDRUN_ACTION_PARAM_RESULT, &result)) {
+        err_info = g_strdup_printf("invalid result param (%s)", uri);
+        goto error;
+    }
+
+    send_response(request, 200, "application/json", (char *)confirm_success,
+            strlen(confirm_success), NULL);
+
+
+    uintptr_t handle = (uintptr_t)strtoull(result, NULL, 16);
+    purcmc_endpoint *endpoint = (purcmc_endpoint *) handle;
+    int ret = xgutils_show_dup_confirm_window(endpoint);
+    if (ret != CONFIRM_RESULT_ID_DECLINE) {
+        struct purcmc_server *srv = xguitls_get_purcmc_server();
+        accept_endpoint(srv, endpoint);
+    }
+    return;
+
+error:
+    if (err_info) {
+        send_error_response(request, 500, "text/html", err_info, strlen(err_info), g_free);
+    }
+
+    if (result) {
+        g_free(result);
+    }
+}
+
 static void on_hbdrun_action(WebKitURISchemeRequest *request,
         WebKitWebContext *webContext, const char *uri)
 {
@@ -1072,6 +1181,9 @@ static void on_hbdrun_action(WebKitURISchemeRequest *request,
     }
     else if (strcasecmp(type, BROWSER_HBDRUN_ACTION_TYPE_DUP_CONFIRM) == 0) {
         on_hbdrun_action_dup_confirm(request, webContext, uri);
+    }
+    else if (strcasecmp(type, BROWSER_HBDRUN_ACTION_TYPE_DUP_CHOOSE) == 0) {
+        on_hbdrun_action_dup_choose(request, webContext, uri);
     }
 
     if (type) {
@@ -1128,6 +1240,47 @@ static void on_hbdrun_windows(WebKitURISchemeRequest *request,
     }
 }
 
+static void on_hbdrun_dup_choose(WebKitURISchemeRequest *request,
+        WebKitWebContext *webContext, const char *uri)
+{
+    char buff[LEN_BUFF_LONGLONGINT];
+    struct purcmc_server *srv = xguitls_get_purcmc_server();
+
+    GOutputStream *page_stream = NULL;
+    page_stream = g_memory_output_stream_new(NULL, 0, g_realloc, g_free);
+    g_output_stream_write(page_stream, dup_choose_page_tmpl_prefix,
+            strlen(dup_choose_page_tmpl_prefix), NULL, NULL);
+
+    gs_list* node = srv->dangling_endpoints;
+
+    while (node) {
+        gs_list *next = node->next;
+        purcmc_endpoint *endpoint = (purcmc_endpoint *)node->data;
+
+        snprintf(buff, sizeof(buff), "%llx", (unsigned long long int)endpoint);
+
+        g_output_stream_printf(page_stream, NULL, NULL, NULL,
+                dup_choose_page_tmpl_row, buff, buff, endpoint->app_label);
+
+        node = next;
+    }
+
+    g_output_stream_write(page_stream, dup_choose_page_tmpl_suffix,
+            strlen(dup_choose_page_tmpl_suffix), NULL, NULL);
+
+    g_output_stream_close(page_stream, NULL, NULL);
+    gsize size = g_memory_output_stream_get_size(
+            G_MEMORY_OUTPUT_STREAM(page_stream));
+    void *data = g_memory_output_stream_steal_data(
+            G_MEMORY_OUTPUT_STREAM(page_stream));
+    send_response(request, 200, "text/html", (char*)data, size, g_free);
+
+    if (page_stream) {
+        g_object_unref(page_stream);
+    }
+}
+
+
 static struct hbdrun_handler {
     const char *operation;
     hbdrun_handler handler;
@@ -1135,6 +1288,7 @@ static struct hbdrun_handler {
     { HBDRUN_SCHEMA_TYPE_ACTION,            on_hbdrun_action },
     { HBDRUN_SCHEMA_TYPE_APPS,              on_hbdrun_apps },
     { HBDRUN_SCHEMA_TYPE_CONFIRM,           on_hbdrun_confirm },
+    { HBDRUN_SCHEMA_TYPE_DUP_CHOOSE,        on_hbdrun_dup_choose},
     { HBDRUN_SCHEMA_TYPE_RUNNERS,           on_hbdrun_runners },
     { HBDRUN_SCHEMA_TYPE_STORE,             on_hbdrun_store },
     { HBDRUN_SCHEMA_TYPE_VERSION,           on_hbdrun_versions },

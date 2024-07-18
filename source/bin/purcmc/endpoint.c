@@ -771,6 +771,7 @@ static int parse_session_data(purcmc_server* srv, purcmc_endpoint* endpoint,
     return PCRDR_SC_OK;
 }
 
+#define  AUTO_ACCEPT_FIRST_CONN
 static int on_start_session_duplicate(purcmc_server* srv,
         purcmc_endpoint* endpoint, const pcrdr_msg *msg)
 {
@@ -784,7 +785,7 @@ static int on_start_session_duplicate(purcmc_server* srv,
         goto failed;
     }
 
-#if 0
+#ifdef AUTO_ACCEPT_FIRST_CONN
     if (kvlist_is_empty(&srv->endpoint_list)) {
         goto auto_accept;
     }
@@ -793,14 +794,14 @@ static int on_start_session_duplicate(purcmc_server* srv,
     /* wait for user accept */
     /* 1. save request id */
     endpoint->request_id = strdup(purc_variant_get_string_const(msg->requestId));
-    xgutils_show_dup_confirm_window(endpoint);
+    endpoint->t_start_session = purc_get_monotoic_time();
 
-#if 0
     return PCRDR_SC_OK;
-#endif
 
 
+#ifdef AUTO_ACCEPT_FIRST_CONN
 auto_accept:
+#endif
     assemble_endpoint_name(endpoint, endpoint_name);
     if (!make_endpoint_ready (srv, endpoint_name, endpoint)) {
         purc_log_error ("Failed to store the endpoint: %s\n", endpoint_name);
@@ -820,6 +821,51 @@ auto_accept:
 failed:
     response.type = PCRDR_MSG_TYPE_RESPONSE;
     response.requestId = purc_variant_ref(msg->requestId);
+    response.sourceURI = PURC_VARIANT_INVALID;
+    response.retCode = retv;
+    response.resultValue = (uint64_t)info;
+    if (info && srv->srvcfg) {
+        response.dataType = PCRDR_MSG_DATA_TYPE_JSON;
+        response.data = purc_variant_make_object_0();
+        purc_variant_t name = purc_variant_make_string(srv->srvcfg->name, true);
+        if (name) {
+            purc_variant_object_set_by_ckey(response.data, "name", name);
+            purc_variant_unref(name);
+        }
+    }
+    else {
+        response.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+    }
+
+    return purcmc_endpoint_send_response(srv, endpoint, &response);
+}
+
+int accept_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint)
+{
+    int retv = PCRDR_SC_OK;
+    char endpoint_name[PURC_LEN_ENDPOINT_NAME + 1];
+    pcrdr_msg response = { };
+    purcmc_session *info = NULL;
+
+    assemble_endpoint_name(endpoint, endpoint_name);
+    if (!make_endpoint_ready (srv, endpoint_name, endpoint)) {
+        purc_log_error ("Failed to store the endpoint: %s\n", endpoint_name);
+        retv = PCRDR_SC_INSUFFICIENT_STORAGE;
+        goto failed;
+    }
+
+    endpoint->session = NULL;
+    info = srv->cbs.create_session(srv, endpoint);
+    if (info == NULL) {
+        retv = PCRDR_SC_INSUFFICIENT_STORAGE;
+    }
+    else {
+        endpoint->session = info;
+    }
+
+failed:
+    response.type = PCRDR_MSG_TYPE_RESPONSE;
+    response.requestId = purc_variant_make_string(endpoint->request_id, false);
     response.sourceURI = PURC_VARIANT_INVALID;
     response.retCode = retv;
     response.resultValue = (uint64_t)info;
