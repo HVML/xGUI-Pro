@@ -213,7 +213,7 @@ out:
 #define LEN_BUFF_LONGLONGINT 128
 int xgutils_show_dup_confirm_window(purcmc_endpoint *endpoint)
 {
-    const char *app_name = endpoint->app_name;
+//    const char *app_name = endpoint->app_name;
     const char *app_label = endpoint->app_label;
     const char *app_desc = endpoint->app_desc;
     const char *app_icon = endpoint->app_icon;
@@ -359,6 +359,12 @@ int xguitls_shake_round_window(void)
 #else
     g_signal_emit_by_name(g_xgui_floating_window, "shake-window");
 #endif
+    return 0;
+}
+
+int xgutils_show_screen_cast_window(void)
+{
+    fprintf(stderr, "#############################################> show screen cast window\n");
     return 0;
 }
 

@@ -23,6 +23,7 @@ set(assets_SOURCES
     "${XGUIPRO_BIN_DIR}/webext/assets/splash.jpg"
     "${XGUIPRO_BIN_DIR}/webext/assets/arrow-left.png"
     "${XGUIPRO_BIN_DIR}/webext/assets/arrow-right.png"
+    "${XGUIPRO_BIN_DIR}/webext/assets/screen-cast.png"
     "${XGUIPRO_BIN_DIR}/webext/assets/toggle.png"
     "${XGUIPRO_BIN_DIR}/webext/assets/home.png"
     "${XGUIPRO_BIN_DIR}/webext/assets/favicon.ico"

@@ -38,8 +38,12 @@
 #include "FloatingWindow.h"
 #include "utils/utils.h"
 
+#define USE_SCREEN_CAST     1
+
+#if !USE(SCREEN_CAST)
+
 #define ARRAY_LEFT_IMAGE        "assets/arrow-left.png"
-#define ARRAY_RIGHT_IMAGE        "assets/arrow-right.png"
+#define ARRAY_RIGHT_IMAGE       "assets/arrow-right.png"
 #define HOME_IMAGE              "assets/home.png"
 #define TOGGLE_IMAGE            "assets/toggle.png"
 
@@ -428,3 +432,115 @@ HWND create_floating_window(HWND hostingWnd, const char *title)
 
     return hDockBar;
 }
+
+#else  /* USE(SCREEN_CAST) */
+
+#define SCREEN_CAST_IMAGE       "assets/screen-cast.png"
+
+static int dockbar_width = 0;                 // width of dock bar
+static int dockbar_height = 0;                // height of dock bar
+static int dockbar_icon_x = 0;
+static int dockbar_icon_y = 0;
+static int dockbar_icon_w = 0;
+static int dockbar_icon_h = 0;
+
+BITMAP screen_cast_bitmap;
+PBITMAP p_screen_cast_bitmap = NULL;
+
+static void load_button_bitmap(HDC hdc)
+{
+    const char *webext_dir = g_getenv("WEBKIT_WEBEXT_DIR");
+    if (webext_dir == NULL) {
+        webext_dir = WEBKIT_WEBEXT_DIR;
+    }
+
+    char path[PATH_MAX+1] = {0};
+
+    sprintf(path, "%s/%s", webext_dir, SCREEN_CAST_IMAGE);
+    LoadBitmapFromFile(hdc, &screen_cast_bitmap, path);
+    p_screen_cast_bitmap = &screen_cast_bitmap;
+}
+
+static void unload_button_bitmap()
+{
+    if (p_screen_cast_bitmap) {
+        UnloadBitmap(p_screen_cast_bitmap);
+        p_screen_cast_bitmap = NULL;
+    }
+}
+
+static void paintDockBarIcon(HDC hdc)
+{
+    if (!p_screen_cast_bitmap) {
+        load_button_bitmap(hdc);
+    }
+
+    PBITMAP p = p_screen_cast_bitmap;
+    FillBoxWithBitmap(hdc, dockbar_icon_x, dockbar_icon_y,
+            dockbar_icon_w, dockbar_icon_h, p);
+}
+
+static LRESULT DockBarWinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    HDC hdc;
+
+    switch (message)
+    {
+        case MSG_PAINT:
+            hdc = BeginPaint (hWnd);
+            paintDockBarIcon(hdc);
+            EndPaint (hWnd, hdc);
+            return 0;
+
+        case MSG_LBUTTONUP:
+            xgutils_show_screen_cast_window();
+            break;
+
+        case MSG_CLOSE:
+            unload_button_bitmap();
+            DestroyAllControls (hWnd);
+            DestroyMainWindow (hWnd);
+            PostQuitMessage (hWnd);
+            return 0;
+    }
+    return DefaultMainWinProc (hWnd, message, wParam, lParam);
+}
+
+HWND create_floating_window(HWND hostingWnd, const char *title)
+{
+    (void) hostingWnd;
+    MAINWINCREATE CreateInfo;
+    HWND hDockBar;
+
+    dockbar_width = RECTH(g_rcScr) * 0.1;
+    dockbar_height = dockbar_width;
+    dockbar_icon_w = dockbar_width * 0.7;
+    dockbar_icon_h = dockbar_icon_w;
+    dockbar_icon_x = (dockbar_width - dockbar_icon_w) / 2;
+    dockbar_icon_y = (dockbar_height - dockbar_icon_h) / 2;
+
+    CreateInfo.dwStyle = WS_ABSSCRPOS | WS_VISIBLE;
+    CreateInfo.dwExStyle = WS_EX_WINTYPE_DOCKER | WS_EX_TROUNDCNS | WS_EX_BROUNDCNS;
+    CreateInfo.spCaption = "DockBar" ;
+    CreateInfo.hMenu = 0;
+    CreateInfo.hCursor = GetSystemCursor (0);
+    CreateInfo.hIcon = 0;
+    CreateInfo.MainWindowProc = DockBarWinProc;
+    CreateInfo.lx = g_rcScr.right - dockbar_width;
+    CreateInfo.ty = 0;
+    CreateInfo.rx = g_rcScr.right;
+    CreateInfo.by = CreateInfo.ty + dockbar_height;;
+
+    CreateInfo.iBkColor = RGBA2Pixel(HDC_SCREEN, 0xB3, 0xB3, 0xB3, 0xFF);
+    CreateInfo.dwAddData = 0;
+    CreateInfo.hHosting = HWND_DESKTOP;
+
+    hDockBar = CreateMainWindowEx2 (&CreateInfo, 0L, NULL, NULL, ST_PIXEL_ARGB8888,
+                                MakeRGBA (0xB3, 0xB3, 0xB3, 0xFF),
+                                CT_ALPHAPIXEL, COLOR_BLEND_PD_SRC_OVER);
+
+    return hDockBar;
+}
+
+#endif  /* USE(SCREEN_CAST) */
+

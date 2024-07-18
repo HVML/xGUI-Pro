@@ -90,6 +90,8 @@ int xgutils_show_windows_window(void);
 
 int xguitls_shake_round_window(void);
 
+int xgutils_show_screen_cast_window(void);
+
 purc_variant_t
 xgutils_load_confirm_infos(void);
 
