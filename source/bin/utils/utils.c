@@ -236,12 +236,9 @@ int xgutils_show_dup_confirm_window(purcmc_endpoint *endpoint)
     int w = 0;
     int h = 0;
 #if PLATFORM(MINIGUI)
-    HWND hWnd = g_xgui_main_window;
-    RECT rc;
-    GetWindowRect(hWnd, &rc);
-    w = RECTW(rc) * 0.3;
-    h = RECTH(rc) * 0.3;
-    x = rc.right - w;
+    w = RECTW(g_rcScr) * 0.3;
+    h = RECTH(g_rcScr) * 0.3;
+    x = g_rcScr.right - w;
 #endif
     BrowserPlainWindow *plainwin;
     plainwin = create_plainwin_with_uri(app_label, app_label, uri, x, y, w, h);
@@ -364,7 +361,18 @@ int xguitls_shake_round_window(void)
 
 int xgutils_show_screen_cast_window(void)
 {
-    fprintf(stderr, "#############################################> show screen cast window\n");
+    int x = 0;
+    int y = 0;
+    int w = 0;
+    int h = 0;
+#if PLATFORM(MINIGUI)
+    w = RECTW(g_rcScr) * 0.3;
+    h = RECTH(g_rcScr) * 0.6;
+    x = g_rcScr.right - w;
+#endif
+
+    const char *uri = "hbdrun://dupchoose";
+    create_plainwin_with_uri("dupchoose", "dupchoose", uri, x, y, w, h);
     return 0;
 }
 
