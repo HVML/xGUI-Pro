@@ -69,7 +69,10 @@ static void browserPaneConstructed(GObject *gObject)
 
 static void browserPaneFinalize(GObject *gObject)
 {
-//    BrowserPane *pane = BROWSER_PANE(gObject);
+    BrowserPane *pane = BROWSER_PANE(gObject);
+    if (pane->webView) {
+        g_object_unref(G_OBJECT(pane->webView));
+    }
 
     G_OBJECT_CLASS(browser_pane_parent_class)->finalize(gObject);
 }

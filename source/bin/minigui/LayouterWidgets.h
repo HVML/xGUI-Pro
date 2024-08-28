@@ -95,8 +95,11 @@ int  mg_imp_destroy_widget(void *workspace, void *session,
 void mg_imp_update_widget(void *workspace, void *session, void *widget,
         ws_widget_type_t type, const struct ws_widget_info *style);
 
+uint64_t mg_imp_get_last_widget(void *session);
 
 bool mg_find_handle(void *session, uint64_t handle, void **data);
+
+
 
 #ifdef __cplusplus
 }

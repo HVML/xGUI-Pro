@@ -90,7 +90,13 @@ int xgutils_show_windows_window(void);
 
 int xguitls_shake_round_window(void);
 
-int xgutils_show_screen_cast_window(void);
+int xgutils_on_floating_button_click(void);
+
+int xgutils_close_screen_cast(void);
+
+int xgutils_pull_screen_cast(void);
+
+int xgutils_split_screen(void);
 
 purc_variant_t
 xgutils_load_confirm_infos(void);

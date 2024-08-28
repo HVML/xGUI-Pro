@@ -56,6 +56,7 @@ int remove_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint);
 
 int check_no_responding_endpoints (purcmc_server *srv);
 int check_dangling_endpoints (purcmc_server *srv);
+int check_timeout_dangling_endpoints (purcmc_server *srv);
 
 int send_packet_to_endpoint (purcmc_server* srv,
         purcmc_endpoint* endpoint, const char* body, int len_body);

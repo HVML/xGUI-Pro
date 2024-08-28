@@ -105,6 +105,11 @@ WebKitWebView *xgui_create_webview(WebKitWebViewParam *param)
 
     WebKitWebView *webView = WEBKIT_WEB_VIEW(g_object_new_with_properties(
                 WEBKIT_TYPE_WEB_VIEW, nr_params, names, values));
+    for (int i = 0; i < nr_params; i++) {
+        if (values[i].g_type == G_TYPE_OBJECT) {
+            g_object_unref(g_value_get_object(&values[i]));
+        }
+    }
 
     return webView;
 }
@@ -227,6 +232,7 @@ static void calc_pos(int w, int h, int cw, int ch, int *ox, int *oy, int *ow, in
 
 void xgui_webview_draw_background_callback(HWND hWnd, HDC hdc, RECT rect)
 {
+#if 1
     int rw = RECTW(rect);
     int rh = RECTH(rect);
 
@@ -239,6 +245,12 @@ void xgui_webview_draw_background_callback(HWND hWnd, HDC hdc, RECT rect)
     int dh = 0;
     calc_pos(bw, bh, rw, rh, &x, &y, &dw, &dh);
     FillBoxWithBitmap(hdc, x, y, dw, dh, g_xgui_window_bg);
+#else
+    RECT client_rc;
+    GetClientRect(hWnd, &client_rc);
+    SetBrushColor(hdc, RGB2Pixel (hdc, 0xB3, 0xB3, 0xB3));
+    FillBox(hdc, 0, 0, client_rc.right, client_rc.bottom);
+#endif
 }
 
 enum EffMotionType xgui_get_motion_type(purc_window_transition_function func)

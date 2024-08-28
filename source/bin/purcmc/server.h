@@ -45,6 +45,8 @@
 #include "purcmc.h"
 #include "xguipro-version.h"
 
+#define ENABLE_DNSSD_BROWSING       0
+
 #define SERVER_APP_NAME     "cn.fmsoft.hvml.renderer"
 #define SERVER_RUNNER_NAME  "purcmc"
 #define XGUIPRO_APP_NAME    "cn.fmsoft.hvml.xGUIPro"
@@ -134,6 +136,7 @@ struct purcmc_endpoint
     time_t  t_created;
     time_t  t_living;
     time_t  t_start_session;
+    time_t  t_created_session;
     uint64_t timeout_seconds;
 
     char*   host_name;
@@ -198,8 +201,10 @@ struct purcmc_server
 #if PCA_ENABLE_DNSSD
     struct purc_dnssd_conn *dnssd;
     void                   *registed_handle;
+#if ENABLE(DNSSD_BROWSING)
     void                   *browsing_handle;
     unsigned int            browsing_timer_id;
+#endif /* ENABLE(DNSSD_BROWSING) */
 #endif /* PCA_ENABLE_DNSSD */
 
     /* The KV list using endpoint name as the key, and purcmc_endpoint* as the value */
@@ -213,6 +218,9 @@ struct purcmc_server
 
     /* the AVL tree of endpoints sorted by living time */
     struct avl_tree living_avl;
+
+    /* The session list */
+    gs_list *sess_list;
 
     /* the user data */
     void *user_data;

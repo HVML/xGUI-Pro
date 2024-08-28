@@ -42,6 +42,10 @@ enum {
     PROP_WINDOW_LEVEL,
     PROP_WINDOW_TRANSITION,
     PROP_FOR_HVML,
+    PROP_X,
+    PROP_Y,
+    PROP_W,
+    PROP_H,
 
     N_PROPERTIES
 };
@@ -57,6 +61,8 @@ struct _BrowserPlainWindow {
     gchar *title;
     gchar *level;
     gboolean forHVML;
+
+    int x,y,w,h;
 
     HWND parentWindow;
     HWND hwnd;
@@ -113,6 +119,7 @@ static void post_rdr_idle_event(struct purcmc_server *server,
 
     purcmc_endpoint_post_event(server, endpoint, &event);
 }
+
 static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
@@ -217,6 +224,13 @@ static void browserPlainWindowConstructed(GObject *gObject)
     int w = RECTW(rc);
     int h = RECTH(rc);
 
+    if (window->w > 0 && window->h > 0) {
+        x = window->x;
+        y = window->y;
+        w = window->w;
+        h = window->h;
+    }
+
     DWORD window_level;
     if (window->level) {
         window_level = find_window_level(window->level);
@@ -298,6 +312,26 @@ static void browserPlainWindowSetProperty(GObject *object, guint propId,
             window->forHVML = g_value_get_boolean(value);
         }
         break;
+    case PROP_X:
+        {
+            window->x = g_value_get_int(value);
+        }
+        break;
+    case PROP_Y:
+        {
+            window->y = g_value_get_int(value);
+        }
+        break;
+    case PROP_W:
+        {
+            window->w = g_value_get_int(value);
+        }
+        break;
+    case PROP_H:
+        {
+            window->h = g_value_get_int(value);
+        }
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, pspec);
     }
@@ -318,15 +352,15 @@ static void browserPlainWindowFinalize(GObject *gObject)
 {
     BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(gObject);
 
+    if (window->browserPane) {
+        g_object_unref(window->browserPane);
+        window->browserPane = NULL;
+    }
+
     if (window->webContext) {
         g_signal_handlers_disconnect_matched(window->webContext,
                 G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, window);
         g_object_unref(window->webContext);
-    }
-
-    if (window->browserPane) {
-        g_object_unref(window->browserPane);
-        window->browserPane = NULL;
     }
 
     if (window->name) {
@@ -405,6 +439,38 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
                 "for HVML",
                 "Boolean for HVML or not",
                 FALSE, G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+    g_object_class_install_property(
+            gobjectClass,
+            PROP_X,
+            g_param_spec_int(
+                "x",
+                "x pos",
+                "x pos",
+                0, INT_MAX, 0, G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+    g_object_class_install_property(
+            gobjectClass,
+            PROP_Y,
+            g_param_spec_int(
+                "y",
+                "y pos",
+                "y pos",
+                0, INT_MAX, 0, G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+    g_object_class_install_property(
+            gobjectClass,
+            PROP_W,
+            g_param_spec_int(
+                "w",
+                "w pos",
+                "w pos",
+                0, INT_MAX, 0, G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+    g_object_class_install_property(
+            gobjectClass,
+            PROP_H,
+            g_param_spec_int(
+                "h",
+                "h pos",
+                "h pos",
+                0, INT_MAX, 0, G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
       signals[DESTROY] =
           g_signal_new("destroy",
@@ -431,6 +497,33 @@ browser_plain_window_new(HWND parent, WebKitWebContext *webContext,
                       "window-level", window_level,
                       "transition", transition,
                       "for-hvml", forHVML,
+                      NULL));
+
+    if (webContext) {
+        window->webContext = g_object_ref(webContext);
+    }
+
+    return window;
+}
+
+BrowserPlainWindow *
+browser_plain_window_new_ex(HWND parent, WebKitWebContext *webContext,
+        const char *name, const char *title, const char *window_level,
+        const struct purc_window_transition *transition,
+        BOOL forHVML, int x, int y, int w, int h)
+{
+    BrowserPlainWindow *window =
+          BROWSER_PLAIN_WINDOW(g_object_new(BROWSER_TYPE_PLAIN_WINDOW,
+                      "name", name,
+                      "title", title,
+                      "parent-window", parent,
+                      "window-level", window_level,
+                      "transition", transition,
+                      "for-hvml", forHVML,
+                      "x", x,
+                      "y", y,
+                      "w", w,
+                      "h", h,
                       NULL));
 
     if (webContext) {
@@ -766,3 +859,19 @@ void browser_plain_window_layout(BrowserPlainWindow *window, int x, int y, int w
     MoveWindow(hwnd, x, y, w, h, false);
 }
 #endif /* USE(ANIMATION) */
+
+
+void browser_plain_window_move(BrowserPlainWindow *window, int x, int y, int w,
+        int h, bool sync_webview)
+{
+    HWND hWnd = window->hwnd;
+    MoveWindow(hWnd, x, y, w, h, FALSE);
+
+    if (sync_webview && window->browserPane) {
+        WebKitWebView *webView = browser_pane_get_web_view(
+                window->browserPane);
+        HWND webHwnd = webkit_web_view_get_hwnd(webView);
+        MoveWindow(webHwnd, 0, 0, w, h, FALSE);
+    }
+}
+

@@ -198,6 +198,9 @@ on_close(void* sock_srv, SockClient* client)
                 purc_log_info("An authenticated endpoint removed: %s (%p), %d endpoints left.\n",
                         endpoint_name, endpoint, the_server.nr_endpoints);
             }
+            else {
+                remove_dangling_endpoint(&the_server, endpoint);
+            }
         }
         else {
             remove_dangling_endpoint(&the_server, endpoint);
@@ -459,6 +462,8 @@ again:
             else if (the_server.t_elapsed % 5 == 0) {
                 check_dangling_endpoints(&the_server);
             }
+            /* startSession timeout */
+            check_timeout_dangling_endpoints(&the_server);
 
             the_server.t_elapsed_last = the_server.t_elapsed;
         }
@@ -613,6 +618,8 @@ again:
             else if (the_server.t_elapsed % 5 == 0) {
                 check_dangling_endpoints(&the_server);
             }
+            /* startSession timeout */
+            check_timeout_dangling_endpoints(&the_server);
 
             the_server.t_elapsed_last = the_server.t_elapsed;
         }
@@ -917,12 +924,14 @@ deinit_server(void)
 
 #if PCA_ENABLE_DNSSD
     if (the_server.dnssd) {
+#if ENABLE(DNSSD_BROWSING)
         g_source_remove(the_server.browsing_timer_id);
         if (the_server.browsing_handle) {
             purc_dnssd_stop_browsing(the_server.dnssd,
                     the_server.browsing_handle);
             the_server.browsing_handle = NULL;
         }
+#endif /* ENABLE(DNSSD_BROWSING) */
 
         if (the_server.registed_handle) {
             purc_dnssd_revoke_service(the_server.dnssd,
@@ -986,6 +995,7 @@ const char *xguipro_txt_records[] = {
 
 static size_t nr_xguipro_txt_records = 1;
 
+#if ENABLE(DNSSD_BROWSING)
 gboolean start_dnssd_browsing_cb(gpointer user_data)
 {
     purcmc_server *server = (purcmc_server*) user_data;
@@ -994,6 +1004,7 @@ gboolean start_dnssd_browsing_cb(gpointer user_data)
             PCRDR_PURCMC_DNSSD_TYPE_WS, XGUIPRO_DNSSD_DOMAIN);
     return G_SOURCE_CONTINUE;
 }
+#endif /* ENABLE(DNSSD_BROWSING) */
 
 void xguipro_dnssd_on_register_reply(struct purc_dnssd_conn *dnssd,
         void *reg_handle, unsigned int flags, int err_code,
@@ -1159,11 +1170,16 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
                 the_server.dnssd, XGUIPRO_DNSSD_NAME, PCRDR_PURCMC_DNSSD_TYPE_WS,
                 XGUIPRO_DNSSD_DOMAIN, NULL, atoi(the_srvcfg->port),
                 xguipro_txt_records, nr_xguipro_txt_records);
+        purc_log_warn("Regist dnssd %s|%s|%s|%s  result : %s\n",
+                XGUIPRO_DNSSD_NAME, PCRDR_PURCMC_DNSSD_TYPE_WS,
+                XGUIPRO_DNSSD_DOMAIN, the_srvcfg->port,
+                the_server.registed_handle ? "Success" : "Failed");
         if (!the_server.registed_handle) {
             purc_log_error("Error during regist dnssd\n");
             goto error;
         }
 
+#if ENABLE(DNSSD_BROWSING)
         the_server.browsing_handle = purc_dnssd_start_browsing(the_server.dnssd,
                 PCRDR_PURCMC_DNSSD_TYPE_WS, XGUIPRO_DNSSD_DOMAIN);
         if (!the_server.browsing_handle) {
@@ -1172,6 +1188,7 @@ purcmc_rdrsrv_init(purcmc_server_config* srvcfg,
         }
         the_server.browsing_timer_id = g_timeout_add(XGUIPRO_BROWSING_INTERVAL,
                 start_dnssd_browsing_cb, &the_server);
+#endif /* ENABLE(DNSSD_BROWSING) */
 #endif /* PCA_ENABLE_DNSSD */
     }
     else {

@@ -53,6 +53,10 @@ BrowserPlainWindow* browser_plain_window_new(HWND, WebKitWebContext*,
         const char *name, const char *title, const char *window_level,
         const struct purc_window_transition *transition,
         gboolean forHVML);
+BrowserPlainWindow* browser_plain_window_new_ex(HWND, WebKitWebContext*,
+        const char *name, const char *title, const char *window_level,
+        const struct purc_window_transition *transition,
+        gboolean forHVML, int x, int y, int w, int h);
 HWND browser_plain_window_get_hwnd(BrowserPlainWindow*);
 WebKitWebContext* browser_plain_window_get_web_context(BrowserPlainWindow*);
 void browser_plain_window_set_view(BrowserPlainWindow*, WebKitWebViewParam*);
@@ -73,6 +77,9 @@ browser_plain_window_get_transition(BrowserPlainWindow*);
 
 void browser_plain_window_layout(BrowserPlainWindow*, int x, int y, int w,
         int h, bool enable_transition);
+
+void browser_plain_window_move(BrowserPlainWindow*, int x, int y, int w,
+        int h, bool sync_webview);
 
 G_END_DECLS
 

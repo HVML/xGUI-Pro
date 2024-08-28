@@ -355,6 +355,7 @@ int remove_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint)
     assemble_endpoint_name(endpoint, name);
     kvlist_delete(&srv->endpoint_list, name);
     cleanup_endpoint_client(srv, endpoint);
+    purc_log_warn("------------remove_endpoint----------------\n");
     del_endpoint(srv, endpoint, CDE_NO_RESPONDING);
     srv->nr_endpoints--;
     return 0;
@@ -378,6 +379,7 @@ int check_no_responding_endpoints(purcmc_server *srv)
 
             kvlist_delete(&srv->endpoint_list, name);
             cleanup_endpoint_client(srv, endpoint);
+            purc_log_warn("------------check_no_responding_endpoints----------------\n");
             del_endpoint(srv, endpoint, CDE_NO_RESPONDING);
             srv->nr_endpoints--;
             n++;
@@ -411,6 +413,7 @@ int check_dangling_endpoints(purcmc_server *srv)
     time_t t_curr = purc_get_monotoic_time();
     gs_list* node = srv->dangling_endpoints;
 
+    char name [PURC_LEN_ENDPOINT_NAME + 1];
     while (node) {
         gs_list *next = node->next;
         purcmc_endpoint* endpoint = (purcmc_endpoint *)node->data;
@@ -418,9 +421,39 @@ int check_dangling_endpoints(purcmc_server *srv)
         if (t_curr > endpoint->t_created + PCRDR_MAX_NO_RESPONDING_TIME) {
             gslist_remove_node(&srv->dangling_endpoints, node);
             cleanup_endpoint_client(srv, endpoint);
+            assemble_endpoint_name(endpoint, name);
+            purc_log_warn("------------check_dangling_endpoints----------------\n");
             del_endpoint(srv, endpoint, CDE_NO_RESPONDING);
             n++;
         }
+
+        node = next;
+    }
+
+    return n;
+}
+
+int check_timeout_dangling_endpoints (purcmc_server *srv)
+{
+    int n = 0;
+    time_t t_curr = purc_get_monotoic_time();
+    gs_list* node = srv->dangling_endpoints;
+
+    char name [PURC_LEN_ENDPOINT_NAME + 1];
+    while (node) {
+        gs_list *next = node->next;
+        purcmc_endpoint* endpoint = (purcmc_endpoint *)node->data;
+
+        if (t_curr > endpoint->t_start_session + endpoint->timeout_seconds) {
+            assemble_endpoint_name(endpoint, name);
+            purc_log_warn ("The endpoint (%s) startSession timeout (%lds)\n", name, endpoint->timeout_seconds);
+            gslist_remove_node(&srv->dangling_endpoints, node);
+            cleanup_endpoint_client(srv, endpoint);
+            purc_log_warn("------------check_timeout_dangling_endpoints----------------\n");
+            del_endpoint(srv, endpoint, CDE_NO_RESPONDING);
+            n++;
+        }
+
 
         node = next;
     }
@@ -657,6 +690,7 @@ static int parse_session_data(purcmc_server* srv, purcmc_endpoint* endpoint,
     char norm_app_name [PURC_LEN_APP_NAME + 1];
     char norm_runner_name [PURC_LEN_RUNNER_NAME + 1];
     char endpoint_name [PURC_LEN_ENDPOINT_NAME + 1];
+    char edp_name [PURC_LEN_ENDPOINT_NAME + 1];
     purc_variant_t tmp;
 
     if ((tmp = purc_variant_object_get_by_ckey(data, "protocolName"))) {
@@ -733,6 +767,17 @@ static int parse_session_data(purcmc_server* srv, purcmc_endpoint* endpoint,
         return PCRDR_SC_CONFLICT;
     }
 
+    gs_list* node = srv->dangling_endpoints;
+    while (node) {
+        purcmc_endpoint* edp = (purcmc_endpoint *)node->data;
+        assemble_endpoint_name(edp, edp_name);
+        if (strcasecmp(endpoint_name, edp_name) == 0) {
+            purc_log_warn ("Duplicated endpoint: %s\n", endpoint_name);
+            return PCRDR_SC_CONFLICT;
+        }
+        node = node->next;
+    }
+
     tmp = purc_variant_object_get_by_ckey(data, "signature");
     if (tmp) {
         const char *signature = purc_variant_get_string_const(tmp);
@@ -782,7 +827,7 @@ static int parse_session_data(purcmc_server* srv, purcmc_endpoint* endpoint,
     return PCRDR_SC_OK;
 }
 
-//#define  AUTO_ACCEPT_FIRST_CONN
+#define  AUTO_ACCEPT_FIRST_CONN
 static int on_start_session_duplicate(purcmc_server* srv,
         purcmc_endpoint* endpoint, const pcrdr_msg *msg)
 {
@@ -797,7 +842,7 @@ static int on_start_session_duplicate(purcmc_server* srv,
     }
 
 #ifdef AUTO_ACCEPT_FIRST_CONN
-    if (kvlist_is_empty(&srv->endpoint_list)) {
+    if (kvlist_is_empty(&srv->endpoint_list) && endpoint->type == ET_UNIX_SOCKET) {
         goto auto_accept;
     }
 #endif
@@ -827,6 +872,7 @@ auto_accept:
     }
     else {
         endpoint->session = info;
+        endpoint->t_created_session = purc_get_monotoic_time();
     }
 
 failed:
@@ -858,6 +904,20 @@ int accept_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint)
     pcrdr_msg response = { };
     purcmc_session *info = NULL;
 
+    bool live = false;
+    gs_list* node = srv->dangling_endpoints;
+    while (node) {
+        if (node->data == endpoint) {
+            live = true;
+        }
+        node = node->next;
+    }
+
+    if (!live) {
+        purc_log_error ("The endpoint: %p not exists\n", endpoint);
+        return 0;
+    }
+
     assemble_endpoint_name(endpoint, endpoint_name);
     if (!make_endpoint_ready (srv, endpoint_name, endpoint)) {
         purc_log_error ("Failed to store the endpoint: %s\n", endpoint_name);
@@ -872,6 +932,7 @@ int accept_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint)
     }
     else {
         endpoint->session = info;
+        endpoint->t_created_session = purc_get_monotoic_time();
     }
 
 failed:

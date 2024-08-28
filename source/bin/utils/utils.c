@@ -106,12 +106,9 @@ static BrowserPlainWindow *create_plainwin_with_uri(const char *name,
 
 #if PLATFORM(MINIGUI)
     HWND hWnd = g_xgui_main_window;
-    plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(hWnd,
+    plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new_ex(hWnd,
                 web_context, name, title,
-                WINDOW_LEVEL_TOOLTIP, NULL, TRUE));
-    if (w > 0 && h > 0) {
-        browser_plain_window_layout(plainwin, x, y, w, h, false);
-    }
+                WINDOW_LEVEL_TOOLTIP, NULL, TRUE, x, y, w, h));
 
     WebKitWebViewParam param = {
         .webContext = web_context,
@@ -213,6 +210,21 @@ out:
 #define LEN_BUFF_LONGLONGINT 128
 int xgutils_show_dup_confirm_window(purcmc_endpoint *endpoint)
 {
+    bool live = false;
+    struct purcmc_server *srv = xguitls_get_purcmc_server();
+    gs_list* node = srv->dangling_endpoints;
+    while (node) {
+        if (node->data == endpoint) {
+            live = true;
+        }
+        node = node->next;
+    }
+
+    if (!live) {
+        purc_log_error ("The endpoint: %p not exists\n", endpoint);
+        return CONFIRM_RESULT_ID_DECLINE;
+    }
+
 //    const char *app_name = endpoint->app_name;
     const char *app_label = endpoint->app_label;
     const char *app_desc = endpoint->app_desc;
@@ -237,7 +249,7 @@ int xgutils_show_dup_confirm_window(purcmc_endpoint *endpoint)
     int h = 0;
 #if PLATFORM(MINIGUI)
     w = RECTW(g_rcScr) * 0.3;
-    h = RECTH(g_rcScr) * 0.3;
+    h = RECTH(g_rcScr) * 0.5;
     x = g_rcScr.right - w;
 #endif
     BrowserPlainWindow *plainwin;
@@ -279,14 +291,11 @@ out:
 int xgutils_show_dup_close_confirm_window(purcmc_endpoint *endpoint)
 {
     const char *app_label = endpoint->app_label;
-    const char *app_desc = endpoint->app_desc;
 
     int result = CONFIRM_RESULT_ID_DECLINE;
 
-    char *uri = g_strdup_printf(
-            "hbdrun://confirm?type=dupClose&%s=%s&%s=%s",
-            CONFIRM_PARAM_LABEL, app_label,
-            CONFIRM_PARAM_DESC, app_desc);
+    char *uri = g_strdup("hbdrun://confirm?type=dupClose");
+    purc_log_warn("------------xgutils_show_dup_close_confirm_window----------------\n");
 
     int x = 0;
     int y = 0;
@@ -297,7 +306,7 @@ int xgutils_show_dup_close_confirm_window(purcmc_endpoint *endpoint)
     RECT rc;
     GetWindowRect(hWnd, &rc);
     w = RECTW(rc) * 0.3;
-    h = RECTH(rc) * 0.3;
+    h = RECTH(rc) * 0.5;
     x = rc.right - w;
 #endif
     BrowserPlainWindow *plainwin;
@@ -366,30 +375,72 @@ static gboolean show_dup_close_confirm_window_callback(gpointer data)
     int ret = xgutils_show_dup_close_confirm_window(endpoint);
     if (ret != CONFIRM_RESULT_ID_DECLINE) {
         struct purcmc_server *server = xguitls_get_purcmc_server();
-        remove_endpoint(server, endpoint);
+
+        const char *name;
+        void *next, *data;
+        kvlist_for_each_safe(&server->endpoint_list, name, next, data) {
+            purcmc_endpoint *ept = *(purcmc_endpoint **)data;
+            if (ept == endpoint) {
+                remove_endpoint(server, endpoint);
+            }
+        }
     }
     return G_SOURCE_REMOVE;
 }
 
-int xgutils_show_screen_cast_window(void)
+static gboolean show_dup_close_confirm_window_cast_callback(gpointer data)
 {
-    struct purcmc_server *server = xguitls_get_purcmc_server();
-    unsigned int count = kvlist_count(&server->endpoint_list);
-    if (count > 0) {
+    purcmc_endpoint *endpoint = (purcmc_endpoint *)data;
+    int ret = CONFIRM_RESULT_ACCEPT;
+    if (ret != CONFIRM_RESULT_ID_DECLINE) {
+        struct purcmc_server *server = xguitls_get_purcmc_server();
+
         const char *name;
         void *next, *data;
-        purcmc_endpoint *endpoint;
         kvlist_for_each_safe(&server->endpoint_list, name, next, data) {
             purcmc_endpoint *ept = *(purcmc_endpoint **)data;
-            if (endpoint == NULL || ept->t_created > endpoint->t_created) {
-                endpoint = ept;
+            if (ept == endpoint) {
+                remove_endpoint(server, endpoint);
             }
         }
+    }
+    return G_SOURCE_REMOVE;
+}
 
-        g_timeout_add(200, show_dup_close_confirm_window_callback, endpoint);
-        return 0;
+static int show_dup_close_confirm_window(struct purcmc_server *server)
+{
+    const char *name;
+    void *next, *data;
+    purcmc_endpoint *endpoint = NULL;
+    kvlist_for_each_safe(&server->endpoint_list, name, next, data) {
+        purcmc_endpoint *ept = *(purcmc_endpoint **)data;
+        if (endpoint == NULL || ept->t_created_session > endpoint->t_created_session) {
+            endpoint = ept;
+        }
     }
 
+    g_timeout_add(200, show_dup_close_confirm_window_callback, endpoint);
+    return 0;
+}
+
+static int show_dup_close_confirm_window_cast(struct purcmc_server *server)
+{
+    const char *name;
+    void *next, *data;
+    purcmc_endpoint *endpoint = NULL;
+    kvlist_for_each_safe(&server->endpoint_list, name, next, data) {
+        purcmc_endpoint *ept = *(purcmc_endpoint **)data;
+        if (endpoint == NULL || ept->t_created_session > endpoint->t_created_session) {
+            endpoint = ept;
+        }
+    }
+
+    show_dup_close_confirm_window_cast_callback(endpoint);
+    return 0;
+}
+
+static int show_dup_choose_window(struct purcmc_server *server)
+{
     int x = 0;
     int y = 0;
     int w = 0;
@@ -403,6 +454,103 @@ int xgutils_show_screen_cast_window(void)
     const char *uri = "hbdrun://dupchoose";
     create_plainwin_with_uri("dupchoose", "dupchoose", uri, x, y, w, h);
     return 0;
+}
+
+int xgutils_on_floating_button_click(void)
+{
+    struct purcmc_server *server = xguitls_get_purcmc_server();
+    unsigned int count = kvlist_count(&server->endpoint_list);
+    if (count > 0) {
+        return show_dup_close_confirm_window(server);
+    }
+    return show_dup_choose_window(server);
+}
+
+int xgutils_close_screen_cast(void)
+{
+    struct purcmc_server *server = xguitls_get_purcmc_server();
+    unsigned int count = kvlist_count(&server->endpoint_list);
+    if (count > 1) {
+        return show_dup_close_confirm_window_cast(server);
+    }
+    return -1;
+}
+
+uint64_t mg_imp_get_last_widget(void *session);
+int xgutils_split_screen(void)
+{
+    struct purcmc_server *server = xguitls_get_purcmc_server();
+    unsigned int count = kvlist_count(&server->endpoint_list);
+    if (count != 2) {
+        return -1;
+    }
+
+    purcmc_endpoint *first = NULL;
+    purcmc_endpoint *last = NULL;
+
+    const char *name;
+    void *next, *data;
+    kvlist_for_each_safe(&server->endpoint_list, name, next, data) {
+        purcmc_endpoint *ept = *(purcmc_endpoint **)data;
+        if (first == NULL) {
+            first = ept;
+        }
+        else if (ept->t_start_session < first->t_start_session) {
+            last = first;
+            first = ept;
+        }
+        else {
+            last = ept;
+        }
+    }
+
+    uint64_t firstHandle = mg_imp_get_last_widget(first->session);
+    if (!firstHandle) {
+        return -1;
+    }
+
+    uint64_t lastHandle = mg_imp_get_last_widget(last->session);
+    if (!lastHandle) {
+        return -1;
+    }
+
+    BrowserPlainWindow *firstWindow = (BrowserPlainWindow *) firstHandle;
+    BrowserPlainWindow *lastWindow = (BrowserPlainWindow *) lastHandle;
+
+    int w = RECTW(g_rcScr) / 2;
+    int h = RECTH(g_rcScr);
+
+    browser_plain_window_move(firstWindow, 0, 0, w, h, true);
+    browser_plain_window_move(lastWindow, w, 0, w, h, true);
+    return 0;
+}
+
+int accept_endpoint (purcmc_server* srv, purcmc_endpoint* endpoint);
+
+
+int xgutils_pull_screen_cast(void)
+{
+    struct purcmc_server *server = xguitls_get_purcmc_server();
+    gs_list* node = server->dangling_endpoints;
+    purcmc_endpoint *endpoint;
+
+    if (!node) {
+        /* not found app */
+        purc_log_warn ("There are no dangling endpoints.\n");
+        return 0;
+    }
+
+    endpoint = (purcmc_endpoint *)node->data;
+    if (node->next) {
+        return show_dup_choose_window(server);
+    }
+
+    if (endpoint->t_start_session == 0) {
+        purc_log_warn ("The dangling endpoints not start session.\n");
+        return 0;
+    }
+
+    return accept_endpoint(server, endpoint);
 }
 
 #define CONFIR_INFO_PATH "/app/cn.fmsoft.hybridos.xguipro/var/confirm_info.json"

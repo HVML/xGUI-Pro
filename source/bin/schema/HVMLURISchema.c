@@ -103,8 +103,8 @@ static const char *blank_page_tmpl = ""
     "  <head>"
     "    <style>"
     "body {"
-    "  background: url('data:image/jpg;base64,%s');"
-    "  background-position: center center;"
+    "  background: black url('data:image/jpg;base64,%s') no-repeat;"
+    "  background-position: center;"
     "}"
     "    </style>"
     "  </head>"
@@ -822,9 +822,11 @@ error:
         if (data != NULL) {
             contents = data;
         }
+#if 0
 #if PLATFORM(MINIGUI)
         WebKitWebView *webview = webkit_uri_scheme_request_get_web_view(request);
         webkit_web_view_set_display_suppressed(webview, true);
+#endif
 #endif
         content_length = strlen(contents);
         content_type = g_strdup("text/html");

@@ -122,7 +122,7 @@ void mg_imp_evaluate_transition(struct ws_widget_info *style,
     }
 }
 
-#if 0
+#if 1
 static void
 on_destroy_plain_window(BrowserPlainWindow *window, purcmc_session *sess)
 {
@@ -147,7 +147,7 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
         transition = &style->transition;
     }
 
-    plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(g_xgui_main_window,
+    plainwin = BROWSER_PLAIN_WINDOW(browser_plain_window_new(NULL,
                 sess->web_context, style->name, style->title,
                 style->level, transition, TRUE));
 
@@ -193,7 +193,7 @@ create_plainwin(purcmc_workspace *workspace, purcmc_session *sess,
 #endif
 
     g_object_set_data(G_OBJECT(web_view), "purcmc-container", plainwin);
-#if 0
+#if 1
     sorted_array_add(sess->all_handles, PTR2U64(plainwin), INT2PTR(HT_PLAINWIN));
     g_signal_connect(plainwin, "destroy",
             G_CALLBACK(on_destroy_plain_window), sess);
@@ -519,6 +519,26 @@ mg_imp_update_widget(void *workspace, void *session, void *widget,
 {
 }
 
+/* FIXME */
+uint64_t mg_imp_get_last_widget(void *session)
+{
+    if (!session) {
+        return 0;
+    }
+
+    purcmc_session *sess = (purcmc_session *)session;
+    size_t count = sorted_array_count(sess->all_handles);
+    for (size_t i = 0; i < count; i++) {
+        void *data;
+        uint64_t handle = sorted_array_get(sess->all_handles, i, &data);
+        if (HT_PLAINWIN == PTR2U64(data)) {
+            return handle;
+        }
+    }
+
+    return 0;
+}
+
 bool mg_find_handle(void *session, uint64_t handle, void **data)
 {
     if (!session || !handle) {
@@ -527,3 +547,4 @@ bool mg_find_handle(void *session, uint64_t handle, void **data)
     return sorted_array_find(((purcmc_session *)session)->all_handles,
             handle, data);
 }
+

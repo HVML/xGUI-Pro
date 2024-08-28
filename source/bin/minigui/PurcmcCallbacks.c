@@ -260,9 +260,58 @@ static int state_string_to_value(const char *state)
     return PCRDR_SC_INTERNAL_SERVER_ERROR;
 }
 
+static bool store_to_sess_list(purcmc_server *srv, purcmc_session *sess)
+{
+    if (srv->sess_list == NULL) {
+        srv->sess_list = gslist_create(sess);
+    }
+    else {
+        srv->sess_list =
+            gslist_insert_append(srv->sess_list, sess);
+    }
+
+    if (srv->sess_list) {
+        return true;
+    }
+    return false;
+}
+
+static bool remove_from_sess_list(purcmc_server *srv, purcmc_session *sess)
+{
+    gs_list* node = srv->sess_list;
+
+    while (node) {
+        if (node->data == sess) {
+            gslist_remove_node(&srv->sess_list, node);
+            return true;
+        }
+
+        node = node->next;
+    }
+    return false;
+}
+
+static bool is_in_sess_list(purcmc_server *srv, purcmc_session *sess)
+{
+    gs_list* node = srv->sess_list;
+
+    while (node) {
+        if (node->data == sess) {
+            return true;
+        }
+
+        node = node->next;
+    }
+    return false;
+}
+
 static void handle_response_from_webpage(purcmc_session *sess,
         const char * str, size_t len)
 {
+    if (!is_in_sess_list(xguitls_get_purcmc_server(), sess)) {
+        return;
+    }
+
     purc_variant_t result;
     result = purc_variant_make_from_json_string(str, len);
 
@@ -402,6 +451,7 @@ purcmc_session *mg_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
 
     sess->srv = srv;
     WebKitSettings *webkit_settings = purcmc_rdrsrv_get_user_data(srv);
+#if 0
     WebKitWebsiteDataManager *manager;
     manager = g_object_get_data(G_OBJECT(webkit_settings),
             "default-website-data-manager");
@@ -427,12 +477,16 @@ purcmc_session *mg_create_session(purcmc_server *srv, purcmc_endpoint *endpt)
             BROWSER_HBDRUN_SCHEME,
             (WebKitURISchemeRequestCallback)hbdrunURISchemeRequestCallback,
             web_context, NULL);
+#else
+    WebKitWebContext *web_context = g_object_ref(xguitls_get_web_context());
+#endif
 
     sess->webkit_settings = webkit_settings;
     sess->web_context = web_context;
     sess->allow_switching_rdr = purcmc_endpoint_allow_switching_rdr(endpt);
 
     kvlist_init(&sess->pending_responses, NULL);
+    store_to_sess_list(srv, sess);
     return sess;
 
 failed:
@@ -465,6 +519,9 @@ static int on_each_ostack(void *ctxt, const char *name, void *data)
     WebKitWebView *webview = purc_page_ostack_get_page(ostack);
     if (sorted_array_find(sess->all_handles, PTR2U64(webview), &data)) {
         assert((uintptr_t)data == HT_WEBVIEW);
+        g_object_disconnect(webview, "any_signal::user-message-received",
+            G_CALLBACK(user_message_received_callback),
+            sess, NULL);
         webkit_web_view_try_close(webview);
     }
 
@@ -475,6 +532,7 @@ int mg_remove_session(purcmc_session *sess)
 {
     LOG_DEBUG("removing session (%p)...\n", sess);
     sess->is_removing = true;
+    remove_from_sess_list(xguitls_get_purcmc_server(), sess);
 
     LOG_DEBUG("destroy all windows/widgets created by this session...\n");
     pcutils_kvlist_for_each_safe(sess->workspace->page_owners, sess,
@@ -501,6 +559,10 @@ int mg_remove_session(purcmc_session *sess)
 
     if (sess->uri_prefix) {
         free(sess->uri_prefix);
+    }
+
+    if (sess->web_context) {
+        g_object_unref(G_OBJECT(sess->web_context));
     }
 
     LOG_DEBUG("free session...\n");

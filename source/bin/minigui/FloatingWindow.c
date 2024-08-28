@@ -493,7 +493,7 @@ static LRESULT DockBarWinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
             return 0;
 
         case MSG_LBUTTONUP:
-            xgutils_show_screen_cast_window();
+            xgutils_on_floating_button_click();
             break;
 
         case MSG_CLOSE:
