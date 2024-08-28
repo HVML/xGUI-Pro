@@ -95,6 +95,8 @@ int  gtk_imp_destroy_widget(void *workspace, void *session,
 void gtk_imp_update_widget(void *workspace, void *session, void *widget,
         ws_widget_type_t type, const struct ws_widget_info *style);
 
+uint64_t gtk_imp_get_last_widget(void *session);
+
 #ifdef __cplusplus
 }
 #endif

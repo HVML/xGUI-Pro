@@ -518,3 +518,21 @@ gtk_imp_update_widget(void *workspace, void *session, void *widget,
 {
 }
 
+uint64_t gtk_imp_get_last_widget(void *session)
+{
+    if (!session) {
+        return 0;
+    }
+
+    purcmc_session *sess = (purcmc_session *)session;
+    size_t count = sorted_array_count(sess->all_handles);
+    for (size_t i = 0; i < count; i++) {
+        void *data;
+        uint64_t handle = sorted_array_get(sess->all_handles, i, &data);
+        if (HT_PLAINWIN == PTR2U64(data)) {
+            return handle;
+        }
+    }
+
+    return 0;
+}

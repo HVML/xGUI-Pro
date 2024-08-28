@@ -1802,3 +1802,15 @@ void browser_plain_window_set_background_color(BrowserPlainWindow *window,
 #endif
 }
 
+void browser_plain_window_move(BrowserPlainWindow *window, int x, int y, int w,
+        int h, bool sync_webview)
+{
+    (void) sync_webview;
+    if (x >= 0 && y >= 0) {
+        gtk_window_move(GTK_WINDOW(window), x, y);
+    }
+    if (w > 0 && h > 0) {
+        gtk_window_resize(GTK_WINDOW(window), w, h);
+    }
+}
+

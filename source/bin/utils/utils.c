@@ -41,6 +41,8 @@
 #include <gtk/BrowserPlainWindow.h>
 #endif
 
+#include "layouter/layouter.h"
+
 #include "utils.h"
 
 #define XGUTILS_DPI_DEFAULT                 96
@@ -251,6 +253,12 @@ int xgutils_show_dup_confirm_window(purcmc_endpoint *endpoint)
     w = RECTW(g_rcScr) * 0.3;
     h = RECTH(g_rcScr) * 0.5;
     x = g_rcScr.right - w;
+#else
+    struct ws_metrics metrics;
+    gtk_imp_get_monitor_geometry(&metrics);
+    w = metrics.width * 0.3;
+    h = metrics.height * 0.5;
+    x = metrics.width - w;
 #endif
     BrowserPlainWindow *plainwin;
     plainwin = create_plainwin_with_uri(app_label, app_label, uri, x, y, w, h);
@@ -449,6 +457,12 @@ static int show_dup_choose_window(struct purcmc_server *server)
     w = RECTW(g_rcScr) * 0.3;
     h = RECTH(g_rcScr) * 0.6;
     x = g_rcScr.right - w;
+#else
+    struct ws_metrics metrics;
+    gtk_imp_get_monitor_geometry(&metrics);
+    w = metrics.width * 0.3;
+    h = metrics.height * 0.6;
+    x = metrics.width - w;
 #endif
 
     const char *uri = "hbdrun://dupchoose";
@@ -476,7 +490,21 @@ int xgutils_close_screen_cast(void)
     return -1;
 }
 
+#if PLATFORM(MINIGUI)
 uint64_t mg_imp_get_last_widget(void *session);
+#else
+uint64_t gtk_imp_get_last_widget(void *session);
+#endif
+
+static uint64_t session_get_last_widget(void *session)
+{
+#if PLATFORM(MINIGUI)
+    return mg_imp_get_last_widget(session);
+#else
+    return gtk_imp_get_last_widget(session);
+#endif
+}
+
 int xgutils_split_screen(void)
 {
     struct purcmc_server *server = xguitls_get_purcmc_server();
@@ -504,12 +532,12 @@ int xgutils_split_screen(void)
         }
     }
 
-    uint64_t firstHandle = mg_imp_get_last_widget(first->session);
+    uint64_t firstHandle = session_get_last_widget(first->session);
     if (!firstHandle) {
         return -1;
     }
 
-    uint64_t lastHandle = mg_imp_get_last_widget(last->session);
+    uint64_t lastHandle = session_get_last_widget(last->session);
     if (!lastHandle) {
         return -1;
     }
@@ -517,8 +545,15 @@ int xgutils_split_screen(void)
     BrowserPlainWindow *firstWindow = (BrowserPlainWindow *) firstHandle;
     BrowserPlainWindow *lastWindow = (BrowserPlainWindow *) lastHandle;
 
+#if PLATFORM(MINIGUI)
     int w = RECTW(g_rcScr) / 2;
     int h = RECTH(g_rcScr);
+#else
+    struct ws_metrics metrics;
+    gtk_imp_get_monitor_geometry(&metrics);
+    int w = metrics.width;
+    int h = metrics.width;
+#endif
 
     browser_plain_window_move(firstWindow, 0, 0, w, h, true);
     browser_plain_window_move(lastWindow, w, 0, w, h, true);
