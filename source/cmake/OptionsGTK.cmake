@@ -32,6 +32,7 @@ endif (OpenSSL_FOUND)
 XGUIPRO_OPTION_DEFINE(USE_GTK4 "Whether to enable usage of GTK4 instead of GTK3." PUBLIC OFF)
 XGUIPRO_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC ON)
 #XGUIPRO_OPTION_DEFINE(USE_SYSTEMD "Whether to enable journald logging" PUBLIC ON)
+XGUIPRO_OPTION_DEFINE(ENABLE_COVER_PAGE "Whether to enable cover page." PUBLIC ON)
 
 XGUIPRO_OPTION_CONFLICT(USE_GTK4 USE_SOUP2)
 
@@ -41,6 +42,7 @@ XGUIPRO_OPTION_CONFLICT(USE_GTK4 USE_SOUP2)
 #XGUIPRO_OPTION_DEPEND(ENABLE_WEBGL ENABLE_GRAPHICS_CONTEXT_GL)
 
 XGUIPRO_OPTION_DEFAULT_PORT_VALUE(ENABLE_DEVELOPER_MODE PUBLIC OFF)
+XGUIPRO_OPTION_DEFAULT_PORT_VALUE(ENABLE_COVER_PAGE PUBLIC ON)
 
 # Finalize the value for all options. Do not attempt to use an option before
 # this point, and do not attempt to change any option after this point.

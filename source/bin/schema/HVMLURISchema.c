@@ -634,7 +634,11 @@ void hvmlURISchemeRequestCallback(WebKitURISchemeRequest *request,
 
     ssize_t max_to_load = 1024 * 4;
     int fd = -1;
+#if ENABLE(COVER_PAGE)
     gchar *contents = (gchar *)cover_page, *content_type = NULL;
+#else
+    gchar *contents = (gchar *)blank_page, *content_type = NULL;
+#endif
     gsize content_length;
 
     GError *error = NULL;
