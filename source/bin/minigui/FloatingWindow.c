@@ -38,8 +38,6 @@
 #include "FloatingWindow.h"
 #include "utils/utils.h"
 
-#define USE_SCREEN_CAST     1
-
 #if !USE(SCREEN_CAST)
 
 #define ARRAY_LEFT_IMAGE        "assets/arrow-left.png"

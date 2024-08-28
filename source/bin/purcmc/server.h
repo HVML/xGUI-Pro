@@ -45,8 +45,6 @@
 #include "purcmc.h"
 #include "xguipro-version.h"
 
-#define ENABLE_DNSSD_BROWSING       0
-
 #define SERVER_APP_NAME     "cn.fmsoft.hvml.renderer"
 #define SERVER_RUNNER_NAME  "purcmc"
 #define XGUIPRO_APP_NAME    "cn.fmsoft.hvml.xGUIPro"
