@@ -1485,6 +1485,9 @@ mg_call_method_in_dom(purcmc_session *sess, const char *request_id,
     return PURC_VARIANT_INVALID;
 }
 
+#define STYLE_PREFIX        "style."
+#define NR_STYLE_PREFIX     6
+
 #define DOM_MESSAGE_FORMAT_GETPROPERTY  "{"     \
         "\"operation\":\"getProperty\","        \
         "\"requestId\":\"%s\","                 \
@@ -1503,9 +1506,33 @@ mg_get_property_in_dom(purcmc_session *sess, const char *request_id,
         return PURC_VARIANT_INVALID;
     }
 
+    size_t nr_prop = strlen(property) + 1;
+    char prop[nr_prop];
+    size_t j = 0;
+    for (size_t i = 0; i < nr_prop; i++) {
+        if (property[i] == '[') {
+            prop[j++] = '.';
+        }
+        else if (property[i] == ']') {
+            continue;
+        }
+        else {
+            prop[j++] = property[i];
+        }
+    }
+    prop[j] = 0;
+    property = prop;
+
     if (!purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME)) {
-        *retv = PCRDR_SC_BAD_REQUEST;
-        return PURC_VARIANT_INVALID;
+        if (strncmp(property, STYLE_PREFIX, NR_STYLE_PREFIX) != 0) {
+            *retv = PCRDR_SC_BAD_REQUEST;
+            return PURC_VARIANT_INVALID;
+        }
+        if (!purc_is_valid_loose_token(property + NR_STYLE_PREFIX,
+                    PURC_LEN_PROPERTY_NAME)) {
+            *retv = PCRDR_SC_BAD_REQUEST;
+            return PURC_VARIANT_INVALID;
+        }
     }
 
     char *element_escaped = NULL;
@@ -1548,9 +1575,33 @@ mg_set_property_in_dom(purcmc_session *sess, const char *request_id,
         return PURC_VARIANT_INVALID;
     }
 
+    size_t nr_prop = strlen(property) + 1;
+    char prop[nr_prop];
+    size_t j = 0;
+    for (size_t i = 0; i < nr_prop; i++) {
+        if (property[i] == '[') {
+            prop[j++] = '.';
+        }
+        else if (property[i] == ']') {
+            continue;
+        }
+        else {
+            prop[j++] = property[i];
+        }
+    }
+    prop[j] = 0;
+    property = prop;
+
     if (!purc_is_valid_token(property, PURC_LEN_PROPERTY_NAME)) {
-        *retv = PCRDR_SC_BAD_REQUEST;
-        return PURC_VARIANT_INVALID;
+        if (strncmp(property, STYLE_PREFIX, NR_STYLE_PREFIX) != 0) {
+            *retv = PCRDR_SC_BAD_REQUEST;
+            return PURC_VARIANT_INVALID;
+        }
+        if (!purc_is_valid_loose_token(property + NR_STYLE_PREFIX,
+                    PURC_LEN_PROPERTY_NAME)) {
+            *retv = PCRDR_SC_BAD_REQUEST;
+            return PURC_VARIANT_INVALID;
+        }
     }
 
     char *element_escaped = NULL;

@@ -2530,11 +2530,6 @@ static int on_get_property(purcmc_server* srv, purcmc_endpoint* endpoint,
 
     const char *request_id = purc_variant_get_string_const(msg->requestId);
 
-    if (msg->dataType != PCRDR_MSG_DATA_TYPE_JSON) {
-        retv = PCRDR_SC_BAD_REQUEST;
-        goto failed;
-    }
-
     const char *element_type = NULL;
     switch (msg->elementType) {
         case PCRDR_MSG_ELEMENT_TYPE_HANDLE:
