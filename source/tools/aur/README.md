@@ -27,7 +27,7 @@ $ yay -U xguipro-gtk4*.tar.zst
 # Compile, package and install
 $ makepkg -sfi
 
-# Online installation via AUR: [xguipro](https://aur.archlinux.org/pkgbase/xguipro)
+# Online installation via AUR: [xguipro](https://aur.archlinux.org/pkgbase/xguipro) or [Self-built software source](https://github.com/taotieren/aur-repo)
 $ yay -S xguipro-gtk3
 
 # or
@@ -58,7 +58,7 @@ $ yay -U xguipro-gtk4-git-*.tar.zst
 # Compile, package and install
 $ makepkg -sfi
 
-# Online installation via AUR: [xguipro-git](https://aur.archlinux.org/pkgbase/xguipro-git)
+# Online installation via AUR: [xguipro-git](https://aur.archlinux.org/pkgbase/xguipro-git) or [Self-built software source](https://github.com/taotieren/aur-repo)
 $ yay -S xguipro-gtk3-git
 
 # or
