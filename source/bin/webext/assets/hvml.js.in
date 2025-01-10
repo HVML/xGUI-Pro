@@ -62,6 +62,11 @@ if (checkHVML()) {
         const interestedElements = document.querySelectorAll("[hvml-events]");
         if (interestedElements.length > 0)
             registerEventsListener(interestedElements);
+
+        const forms = document.querySelectorAll("form");
+        if (forms.length > 0) {
+            registerSubmitEventsListener(forms);
+        }
     });
     HVML.onrequest = function (json) {
         const dom_update_ops = ['append', 'prepend', 'insertAfter',
@@ -97,6 +102,11 @@ if (checkHVML()) {
                     const interestedElements = document.querySelectorAll("[hvml-events]");
                     if (interestedElements.length > 0)
                         registerEventsListener(interestedElements);
+
+                    const forms = document.querySelectorAll("form");
+                    if (forms.length > 0) {
+                        registerSubmitEventsListener(forms);
+                    }
             });
 
             document.write(msg.data);
@@ -116,6 +126,11 @@ if (checkHVML()) {
                 const interestedElements = document.querySelectorAll("[hvml-events]");
                 if (interestedElements.length > 0)
                     registerEventsListener(interestedElements);
+
+                const forms = document.querySelectorAll("form");
+                if (forms.length > 0) {
+                    registerSubmitEventsListener(forms);
+                }
             });
             document.write(msg.data);
             return { requestId: msg.requestId, state: "Ok" };
@@ -398,6 +413,46 @@ if (checkHVML()) {
 
 }
 
+function registerSubmitEventsListener(elems)
+{
+    elems.forEach (function (elem) {
+        elem.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            var object = {};
+            const formData = new FormData(elem);
+            formData.forEach(function(value, key){
+                object[key] = value;
+            });
+            let data = {
+                originTag: event.currentTarget.tagName,
+                originHandle: event.currentTarget.hvmlHandleText ? event.currentTarget.hvmlHandleText : event.currentTarget.getAttribute('hvml-handle'),
+                originId: event.currentTarget.id,
+                originClass: event.currentTarget.className,
+                originName: event.currentTarget.getAttribute('name'),
+                originValue: (typeof(event.currentTarget.value) === 'undefined') ? event.currentTarget.getAttribute('value') : event.currentTarget.value,
+                targetDiffersOrigin: (event.currentTarget == event.target) ? false : true,
+                targetTag: event.target.tagName,
+                targetHandle: event.target.hvmlHandleText ? event.target.hvmlHandleText : event.target.getAttribute('hvml-handle'),
+                targetId: event.target.id,
+                targetClass: event.target.className,
+                targetName: event.target.getAttribute('name'),
+                targetValue: (typeof(event.target.value) === 'undefined') ? event.target.getAttribute('value') : event.target.value,
+                timeStamp: event.timeStamp,
+                details: {
+                    plain:JSON.stringify(object),
+                    data:object
+                }
+            };
+
+            HVML.post(event.type, "id",
+                event.target.id,
+                JSON.stringify(data));
+
+        });
+    });
+}
+
 function registerEventsListener(elems)
 {
     elems.forEach (function (elem) {
@@ -537,6 +592,11 @@ function updateDocumentWithHTML(elem, op, msg)
         const interestedElements = container.querySelectorAll("[hvml-events]");
         if (interestedElements.length > 0)
             registerEventsListener(interestedElements);
+
+        const forms = container.querySelectorAll("form");
+        if (forms.length > 0) {
+            registerSubmitEventsListener(forms);
+        }
 
         /* have child elements, discard any Text node out all children. */
         while (container.firstChild) {
