@@ -58,7 +58,7 @@ For documents and other open source software around HVML, you can visit the foll
 xGUI Pro depends on the following software:
 
 - [WebKit2GTK 2.28.0+](https://webkitgtk.org): Use the package `libwebkit2gtk-4.0-dev` on popular Linux distributions; Use the package [webkit2-gtk-devel](https://ports.macports.org/port/webkit2-gtk-devel/) on macOS.
-- [PurC 0.9.16+](https://github.com/HVML/PurC): the HVML interpreter for C language. This repository also includes two libraries to maintain a DOM tree, lay out and stylize the DOM elements by using CSS. xGUI Pro needs these libraries.
+- [PurC 0.9.22+](https://github.com/HVML/PurC): the HVML interpreter for C language. This repository also includes two libraries to maintain a DOM tree, lay out and stylize the DOM elements by using CSS. xGUI Pro needs these libraries.
 
 Currently, xGUI Pro can run on Linux and macOS.
 
@@ -116,7 +116,7 @@ To build xGUI Pro from source code, please make sure that the following tools or
 1. Glib 2.44.0 or later (the package `libglib2.0-dev` on most Linux distributions)
 1. WebKit2GTK 2.28.0+ (the package `libwebkit2gtk-4.0-dev` on popular Linux distributions; the package `webkit2-gtk-devel` of macPorts on macOS).
 1. WebKit2HBD 2.34.1+ as an alternative WebKit engine instead of WebKit2GTK.
-1. The HVML interpterter PurC 0.9.16+.
+1. The HVML interpterter PurC 0.9.22+.
 
 After building and installing the dependency libraries,
       you can change to the root directory of the source tree of xGUI Pro and run the following commands:
@@ -202,6 +202,7 @@ and WebKit. So please wait patiently.
 
 ## Current Status
 
+- Apr. 2025: Version 0.9.22. (PurC 0.9.22+)
 - Otc. 2023: Version 0.8.4. (PurC 0.9.16+)
 - Sept. 2023: Version 0.8.3. (PurC 0.9.15+)
 - July 2023: Version 0.8.2. (PurC 0.9.14+)
@@ -224,7 +225,7 @@ and WebKit. So please wait patiently.
 
 ## Copying
 
-Copyright (C) 2022, 2023 [FMSoft Technologies]
+Copyright (C) 2022, 2025 [FMSoft Technologies]
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
