@@ -173,7 +173,7 @@ new_wsclient (void)
 
     ws_client = calloc (1, sizeof (WSClient));
 
-    ws_client->ct = CT_WEB_SOCKET;
+    ws_client->ct = CT_INET_SOCKET;
     ws_client->status = WS_OK;
 
     return ws_client;

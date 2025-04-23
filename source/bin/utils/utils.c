@@ -39,6 +39,7 @@
 #include <minigui/FloatingWindow.h>
 #else
 #include <gtk/BrowserPlainWindow.h>
+#include <gtk/LayouterWidgets.h>
 #endif
 
 #include "layouter/layouter.h"
@@ -396,7 +397,7 @@ static gboolean show_dup_close_confirm_window_callback(gpointer data)
 static gboolean show_dup_close_confirm_window_cast_callback(gpointer data)
 {
     purcmc_endpoint *endpoint = (purcmc_endpoint *)data;
-    int ret = CONFIRM_RESULT_ACCEPT;
+    int ret = CONFIRM_RESULT_ID_ACCEPT; /* XXX */
     if (ret != CONFIRM_RESULT_ID_DECLINE) {
         struct purcmc_server *server = xguitls_get_purcmc_server();
 

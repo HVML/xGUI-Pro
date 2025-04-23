@@ -64,7 +64,7 @@ on_accepted(void* sock_srv, SockClient* client)
 
     (void)sock_srv;
     endpoint = new_endpoint(&the_server,
-            (client->ct == CT_WEB_SOCKET) ? ET_WEB_SOCKET : ET_UNIX_SOCKET,
+            (client->ct == CT_INET_SOCKET) ? ET_WEB_SOCKET : ET_UNIX_SOCKET,
             client);
 
     if (endpoint == NULL)
@@ -538,7 +538,7 @@ again:
                     }
                 }
             }
-            else if (usc->ct == CT_WEB_SOCKET) {
+            else if (usc->ct == CT_INET_SOCKET) {
                 WSClient *wsc = (WSClient *)events[n].data.ptr;
 
                 if (events[n].events & EPOLLIN) {
@@ -676,7 +676,7 @@ again:
 
                         us_handle_reads(the_server.us_srv, usc);
                     }
-                    else if (usc->ct == CT_WEB_SOCKET) {
+                    else if (usc->ct == CT_INET_SOCKET) {
                         WSClient *wsc = (WSClient *)cli_node;
                         if (wsc->entity) {
                             purcmc_endpoint *endpoint = container_of(usc->entity,
@@ -709,7 +709,7 @@ again:
                             FD_CLR(fd, &the_server.wfdset);
                         }
                     }
-                    else if (usc->ct == CT_WEB_SOCKET) {
+                    else if (usc->ct == CT_INET_SOCKET) {
                         WSClient *wsc = (WSClient *)cli_node;
                         ws_handle_writes(the_server.ws_srv, wsc);
 
