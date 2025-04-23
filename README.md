@@ -122,7 +122,7 @@ After building and installing the dependency libraries,
       you can change to the root directory of the source tree of xGUI Pro and run the following commands:
 
 ```
-$ rm -rf build && cmake -DCMAKE_BUILD_TYPE=Debug -DPORT=GTK -B build && cmake --build build
+$ rm -rf build && cmake -DCMAKE_BUILD_TYPE=Debug -DPORT=GTK -DUSE_SOUP2=OFF -B build && cmake --build build
 ```
 
 __NOTE__  
