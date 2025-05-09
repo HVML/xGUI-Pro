@@ -6,7 +6,7 @@
 
 # xGUI Pro
 
-xGUI Pro is a modern, cross-platform, and advanced [HVML] renderer which is based on tailored [WebKit].
+xGUI Pro is a modern, cross-platform, and advanced [HVML] renderer which is based on [WebKit].
 
 **Table of Contents**
 
@@ -83,7 +83,7 @@ $ ninja -j2
 $ sudo ninja install
 ```
 
-2) When using Gtk4 and Soup3 (Ubuntu 22.04):
+2) When using Gtk4 and Soup3 (Ubuntu 22.04 or 24.04):
 
 ```bash
 $ mkdir -p WebKitBuild/Release && cd WebKitBuild/Release
@@ -114,7 +114,7 @@ To build xGUI Pro from source code, please make sure that the following tools or
 1. The cross-platform build system generator: CMake 3.18 or later
 1. A C11 and CXX17 compliant compiler: GCC 8+ or Clang 6+
 1. Glib 2.44.0 or later (the package `libglib2.0-dev` on most Linux distributions)
-1. WebKit2GTK 2.28.0+ (the package `libwebkit2gtk-4.0-dev` on popular Linux distributions; the package `webkit2-gtk-devel` of macPorts on macOS).
+1. WebKit2GTK 2.28.0+ (the package `libwebkit2gtk-4.0-dev` or `libwebkit2gtk-4.1-dev` on popular Linux distributions; the package `webkit2-gtk-devel` of macPorts on macOS).
 1. WebKit2HBD 2.34.1+ as an alternative WebKit engine instead of WebKit2GTK.
 1. The HVML interpterter PurC 0.9.22+.
 
@@ -202,7 +202,7 @@ and WebKit. So please wait patiently.
 
 ## Current Status
 
-- Apr. 2025: Version 0.9.22. (PurC 0.9.22+)
+- May 2025: Version 0.9.22. (PurC 0.9.22+)
 - Otc. 2023: Version 0.8.4. (PurC 0.9.16+)
 - Sept. 2023: Version 0.8.3. (PurC 0.9.15+)
 - July 2023: Version 0.8.2. (PurC 0.9.14+)
