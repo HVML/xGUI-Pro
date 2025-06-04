@@ -25,6 +25,7 @@
 #endif
 #include "utils/utils.h"
 #include "main.h"
+#include "PurcmcCallbacks.h"
 #include "BrowserPlainWindow.h"
 
 #include "BrowserDownloadsBar.h"
@@ -1581,6 +1582,55 @@ static void browser_plain_window_class_init(BrowserPlainWindowClass *klass)
 #endif
 }
 
+static void post_rdr_page_activate_event(struct purcmc_server *server,
+        purcmc_endpoint *endpoint, BrowserPlainWindow *window,
+        const char *type)
+{
+    pcrdr_msg event = { };
+    event.type = PCRDR_MSG_TYPE_EVENT;
+    event.target = PCRDR_MSG_TARGET_PLAINWINDOW;
+    event.targetValue = PTR2U64(window);
+    event.eventName = purc_variant_make_string_static(type, false);
+    /* TODO: use real URI for the sourceURI */
+    event.sourceURI = purc_variant_make_string_static(PCRDR_APP_RENDERER,
+            false);
+    event.elementType = PCRDR_MSG_ELEMENT_TYPE_VOID;
+    event.elementValue = PURC_VARIANT_INVALID;
+    event.property = PURC_VARIANT_INVALID;
+    event.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+
+    purcmc_endpoint_post_event(server, endpoint, &event);
+}
+
+static gboolean on_window_state_event(GtkWidget *widget,
+        GdkEventWindowState *event, gpointer user_data) {
+    if (event->changed_mask & GDK_WINDOW_STATE_FOCUSED) {
+        BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(widget);
+        WebKitWebView *webview = browser_plain_window_get_view(window);
+        purcmc_session *sess = g_object_get_data(
+                G_OBJECT(webview), "purcmc-session");
+        if (!sess) {
+            goto out;
+        }
+        purcmc_endpoint *endpoint;
+        endpoint = purcmc_get_endpoint_by_session(sess);
+
+        struct purcmc_server *server;
+        server = xguitls_get_purcmc_server();
+
+        if (event->new_window_state & GDK_WINDOW_STATE_FOCUSED) {
+            post_rdr_page_activate_event(server, endpoint, window,
+                    "pageActivated");
+        } else {
+            post_rdr_page_activate_event(server, endpoint, window,
+                    "pageDeactivated");
+        }
+    }
+
+out:
+    return FALSE;
+}
+
 /* Public API. */
 GtkWidget *
 browser_plain_window_new(GtkWindow *parent, WebKitWebContext *webContext,
@@ -1603,6 +1653,10 @@ browser_plain_window_new(GtkWindow *parent, WebKitWebContext *webContext,
         g_object_add_weak_pointer(G_OBJECT(parent),
                 (gpointer *)&window->parentWindow);
     }
+
+    g_signal_connect(GTK_WINDOW(window), "window-state-event",
+                    G_CALLBACK(on_window_state_event),
+                    window->webContext);
 
     if (name)
         window->name = g_strdup(name);
