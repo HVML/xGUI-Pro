@@ -58,6 +58,8 @@ struct _BrowserPlainWindow {
     gchar *title;
 
     gboolean fullScreenIsEnabled;
+    gboolean activated;
+
 #if GTK_CHECK_VERSION(3, 98, 0)
     GdkTexture *favicon;
 #else
@@ -1602,32 +1604,40 @@ static void post_rdr_page_activate_event(struct purcmc_server *server,
     purcmc_endpoint_post_event(server, endpoint, &event);
 }
 
+int browser_plain_window_post_activate_event(BrowserPlainWindow *window)
+{
+    WebKitWebView *webview = browser_plain_window_get_view(window);
+    purcmc_session *sess = g_object_get_data(G_OBJECT(webview),
+            "purcmc-session");
+    if (!sess) {
+        goto out;
+    }
+    purcmc_endpoint *endpoint;
+    endpoint = purcmc_get_endpoint_by_session(sess);
+
+    struct purcmc_server *server;
+    server = xguitls_get_purcmc_server();
+
+    const char *type = window->activated ? "pageActivated" : "pageDeactivated";
+    post_rdr_page_activate_event(server, endpoint, window, type);
+
+out:
+    return 0;
+}
+
 static gboolean on_window_state_event(GtkWidget *widget,
         GdkEventWindowState *event, gpointer user_data) {
     if (event->changed_mask & GDK_WINDOW_STATE_FOCUSED) {
         BrowserPlainWindow *window = BROWSER_PLAIN_WINDOW(widget);
-        WebKitWebView *webview = browser_plain_window_get_view(window);
-        purcmc_session *sess = g_object_get_data(
-                G_OBJECT(webview), "purcmc-session");
-        if (!sess) {
-            goto out;
-        }
-        purcmc_endpoint *endpoint;
-        endpoint = purcmc_get_endpoint_by_session(sess);
-
-        struct purcmc_server *server;
-        server = xguitls_get_purcmc_server();
 
         if (event->new_window_state & GDK_WINDOW_STATE_FOCUSED) {
-            post_rdr_page_activate_event(server, endpoint, window,
-                    "pageActivated");
+            window->activated = true;
         } else {
-            post_rdr_page_activate_event(server, endpoint, window,
-                    "pageDeactivated");
+            window->activated = false;
         }
+        browser_plain_window_post_activate_event(window);
     }
 
-out:
     return FALSE;
 }
 

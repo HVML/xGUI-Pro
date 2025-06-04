@@ -373,6 +373,13 @@ user_message_received_callback(WebKitWebView *webview,
             }
             else if (strcmp(strv[0], "page-loaded") == 0) {
                 webkit_web_view_set_display_suppressed(webview, false);
+
+                void *container = g_object_get_data(G_OBJECT(webview),
+                        "purcmc-container");
+                if (BROWSER_IS_PLAIN_WINDOW(container)) {
+                    browser_plain_window_post_activate_event(
+                            BROWSER_PLAIN_WINDOW(container));
+                }
                 goto out;
             }
 

@@ -61,6 +61,7 @@ struct _BrowserPlainWindow {
     gchar *title;
     gchar *level;
     gboolean forHVML;
+    gboolean activated;
 
     int x,y,w,h;
 
@@ -140,6 +141,28 @@ static void post_rdr_page_activate_event(struct purcmc_server *server,
     purcmc_endpoint_post_event(server, endpoint, &event);
 }
 
+
+int browser_plain_window_post_activate_event(BrowserPlainWindow *window)
+{
+    WebKitWebView *webview = browser_pane_get_web_view(window->browserPane);
+    purcmc_session *sess = g_object_get_data(G_OBJECT(webview),
+            "purcmc-session");
+    if (!sess) {
+        goto out;
+    }
+    purcmc_endpoint *endpoint;
+    endpoint = purcmc_get_endpoint_by_session(sess);
+
+    struct purcmc_server *server;
+    server = xguitls_get_purcmc_server();
+
+    const char *type = window->activated ? "pageActivated" : "pageDeactivated";
+    post_rdr_page_activate_event(server, endpoint, window, type);
+
+out:
+    return 0;
+}
+
 static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
@@ -191,20 +214,8 @@ static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
             {
                 BrowserPlainWindow *window = (BrowserPlainWindow *)
                     GetWindowAdditionalData(hWnd);
-                WebKitWebView *webview = browser_pane_get_web_view(
-                        window->browserPane);
-                purcmc_session *sess = g_object_get_data(
-                        G_OBJECT(webview), "purcmc-session");
-                if (!sess) {
-                    break;
-                }
-                purcmc_endpoint *endpoint;
-                endpoint = purcmc_get_endpoint_by_session(sess);
-
-                struct purcmc_server *server;
-                server = xguitls_get_purcmc_server();
-                post_rdr_page_activate_event(server, endpoint, window,
-                        "pageActivated");
+                window->activated = true;
+                browser_plain_window_post_activate_event(window);
             }
             break;
 
@@ -212,20 +223,8 @@ static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
             {
                 BrowserPlainWindow *window = (BrowserPlainWindow *)
                     GetWindowAdditionalData(hWnd);
-                WebKitWebView *webview = browser_pane_get_web_view(
-                        window->browserPane);
-                purcmc_session *sess = g_object_get_data(
-                        G_OBJECT(webview), "purcmc-session");
-                if (!sess) {
-                    break;
-                }
-                purcmc_endpoint *endpoint;
-                endpoint = purcmc_get_endpoint_by_session(sess);
-
-                struct purcmc_server *server;
-                server = xguitls_get_purcmc_server();
-                post_rdr_page_activate_event(server, endpoint, window,
-                        "pageDeactivated");
+                window->activated = false;
+                browser_plain_window_post_activate_event(window);
             }
             break;
     }

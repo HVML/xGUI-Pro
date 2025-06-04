@@ -53,6 +53,7 @@ void browser_plain_window_load_session(BrowserPlainWindow*, const char*);
 void browser_plain_window_set_background_color(BrowserPlainWindow*, GdkRGBA*);
 void browser_plain_window_move(BrowserPlainWindow*, int x, int y, int w,
         int h, bool sync_webview);
+int browser_plain_window_post_activate_event(BrowserPlainWindow*);
 
 G_END_DECLS
 

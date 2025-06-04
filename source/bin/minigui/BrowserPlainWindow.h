@@ -81,6 +81,8 @@ void browser_plain_window_layout(BrowserPlainWindow*, int x, int y, int w,
 void browser_plain_window_move(BrowserPlainWindow*, int x, int y, int w,
         int h, bool sync_webview);
 
+int browser_plain_window_post_activate_event(BrowserPlainWindow*);
+
 G_END_DECLS
 
 #endif
