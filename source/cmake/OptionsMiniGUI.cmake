@@ -20,7 +20,7 @@ add_definitions(-DXGUIPRO_API_VERSION_STRING="${XGUIPRO_API_VERSION}")
 find_package(GLIB 2.44.0 REQUIRED COMPONENTS gio gio-unix gmodule gobject)
 find_package(PurC 0.9.16 REQUIRED)
 find_package(DOMRuler 0.9.16 REQUIRED)
-find_package(MiniGUI 5.2.0 REQUIRED COMPONENTS mGEff)
+find_package(MiniGUI 5.0.16 REQUIRED COMPONENTS mGEff)
 find_package(CairoHBD REQUIRED)
 
 XGUIPRO_OPTION_DEFINE(USE_SOUP2 "Whether to enable usage of Soup 2 instead of Soup 3." PUBLIC ON)

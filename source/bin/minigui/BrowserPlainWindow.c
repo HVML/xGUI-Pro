@@ -120,6 +120,26 @@ static void post_rdr_idle_event(struct purcmc_server *server,
     purcmc_endpoint_post_event(server, endpoint, &event);
 }
 
+static void post_rdr_page_activate_event(struct purcmc_server *server,
+        purcmc_endpoint *endpoint, BrowserPlainWindow *window,
+        const char *type)
+{
+    pcrdr_msg event = { };
+    event.type = PCRDR_MSG_TYPE_EVENT;
+    event.target = PCRDR_MSG_TARGET_PLAINWINDOW;
+    event.targetValue = PTR2U64(window);
+    event.eventName = purc_variant_make_string_static(type, false);
+    /* TODO: use real URI for the sourceURI */
+    event.sourceURI = purc_variant_make_string_static(PCRDR_APP_RENDERER,
+            false);
+    event.elementType = PCRDR_MSG_ELEMENT_TYPE_VOID;
+    event.elementValue = PURC_VARIANT_INVALID;
+    event.property = PURC_VARIANT_INVALID;
+    event.dataType = PCRDR_MSG_DATA_TYPE_VOID;
+
+    purcmc_endpoint_post_event(server, endpoint, &event);
+}
+
 static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
@@ -164,6 +184,48 @@ static LRESULT PlainWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
                 struct purcmc_server *server;
                 server = xguitls_get_purcmc_server();
                 post_rdr_idle_event(server, endpoint, wParam);
+            }
+            break;
+
+        case MSG_SETFOCUS:
+            {
+                BrowserPlainWindow *window = (BrowserPlainWindow *)
+                    GetWindowAdditionalData(hWnd);
+                WebKitWebView *webview = browser_pane_get_web_view(
+                        window->browserPane);
+                purcmc_session *sess = g_object_get_data(
+                        G_OBJECT(webview), "purcmc-session");
+                if (!sess) {
+                    break;
+                }
+                purcmc_endpoint *endpoint;
+                endpoint = purcmc_get_endpoint_by_session(sess);
+
+                struct purcmc_server *server;
+                server = xguitls_get_purcmc_server();
+                post_rdr_page_activate_event(server, endpoint, window,
+                        "pageActivated");
+            }
+            break;
+
+        case MSG_KILLFOCUS:
+            {
+                BrowserPlainWindow *window = (BrowserPlainWindow *)
+                    GetWindowAdditionalData(hWnd);
+                WebKitWebView *webview = browser_pane_get_web_view(
+                        window->browserPane);
+                purcmc_session *sess = g_object_get_data(
+                        G_OBJECT(webview), "purcmc-session");
+                if (!sess) {
+                    break;
+                }
+                purcmc_endpoint *endpoint;
+                endpoint = purcmc_get_endpoint_by_session(sess);
+
+                struct purcmc_server *server;
+                server = xguitls_get_purcmc_server();
+                post_rdr_page_activate_event(server, endpoint, window,
+                        "pageDeactivated");
             }
             break;
     }
